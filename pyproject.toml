@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "onecrawler"
+version = "0.1.0"
+description = "A simple web crawler package built with Python."
+authors = [
+    {name = "Shaun"},
+]
+dependencies = [
+    "beautifulsoup4",
+    "aiohttp",
+    "asyncio",
+    "tqdm",
+    "playwright",
+    "pydantic",
+    "crawl4ai",
+    "trafilatura"
+]
+
+[tool.setuptools]
+packages = ["onecrawler"]

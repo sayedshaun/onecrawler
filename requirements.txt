@@ -1,0 +1,8 @@
+beautifulsoup4
+aiohttp
+asyncio
+tqdm
+playwright
+pydantic
+crawl4ai
+trafilatura
