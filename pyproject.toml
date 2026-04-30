@@ -17,7 +17,9 @@ dependencies = [
     "playwright",
     "pydantic",
     "crawl4ai",
-    "trafilatura"
+    "trafilatura",
+    "lxml",
+    "fnmatch"
 ]
 
 [tool.setuptools]
