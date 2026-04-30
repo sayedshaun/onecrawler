@@ -1,5 +1,6 @@
 import asyncio
 import random
+from fnmatch import fnmatch
 from urllib.parse import unquote
 
 
@@ -16,6 +17,18 @@ async def human_scroll(page, max_scrolls=3):
         print(f"[ERROR] Scroll: {e}")
 
 
-def normalize(text: str) -> str:
-    
+def url_normalize(text: str) -> str:
     return unquote(text).lower().strip().rstrip("/")
+
+
+def wildcard_link_match(
+    link: str, base_prefix: str, include_pattern: list[str] | None
+) -> bool:
+    if not link.startswith(base_prefix):
+        return False
+
+    if include_pattern:
+        if not any(fnmatch(link, pattern) for pattern in include_pattern):
+            return False
+
+    return True
