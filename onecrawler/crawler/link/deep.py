@@ -2,7 +2,7 @@ import asyncio
 import tempfile
 from urllib.parse import urlparse
 from playwright.async_api import async_playwright
-from .helper import human_delay, human_scroll, normalize
+from .helper import human_delay, human_scroll, wildcard_link_match
 
 
 async def detect_page_type(page: object) -> str:
@@ -70,10 +70,10 @@ async def smart_collect_links(page: object, page_type: str) -> list[str]:
     return list(collected)
 
 
-async def bfs_url_extractor(
+async def bfs_link_extractor(
     base_url: str,
-    num_urls: int = 50,
-    filter_tags: list[str] | None = None,
+    num_links: int = 50,
+    include_pattern: list[str] | None = None,
     concurrency: int = 5,
 ):
     visited = set()
@@ -88,22 +88,11 @@ async def bfs_url_extractor(
 
     semaphore = asyncio.Semaphore(concurrency)
 
-    def is_valid(link: str) -> bool:
-        if not link.startswith(base_prefix):
-            return False
-
-        if filter_tags:
-            decoded = normalize(link)
-            if not any(normalize(tag) in decoded for tag in filter_tags):
-                return False
-
-        return True
-
     async def worker(page):
         nonlocal results
 
         while True:
-            if len(results) >= num_urls:
+            if len(results) >= num_links:
                 return
 
             try:
@@ -130,13 +119,13 @@ async def bfs_url_extractor(
                     links = await smart_collect_links(page, page_type)
 
                     for link in links:
-                        if len(results) >= num_urls:
+                        if len(results) >= num_links:
                             break
 
                         if link in seen:
                             continue
 
-                        if not is_valid(link):
+                        if not wildcard_link_match(link, base_prefix, include_pattern):
                             continue
 
                         seen.add(link)
@@ -146,7 +135,7 @@ async def bfs_url_extractor(
                             await queue.put(link)
 
                 except Exception as e:
-                    print(f"[ERROR] {url}: {e}")
+                    raise RuntimeError(f"Error processing {url}: {e}")
 
             queue.task_done()
             await human_delay()
