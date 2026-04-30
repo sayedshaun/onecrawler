@@ -6,3 +6,5 @@ playwright
 pydantic
 crawl4ai
 trafilatura
+lxml
+fnmatch
