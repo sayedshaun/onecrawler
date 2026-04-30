@@ -5,7 +5,7 @@ from crawl4ai import LinkPreviewConfig
 
 async def extract_url_from_current_page(
     parent_url: str,
-    include_url_patterns: Union[List[str], None] = None,
+    include_link_patterns: Union[List[str], None] = None,
     query: Union[str, None] = None,
     concurrency: int = 10,
     max_links: int = 500,
@@ -16,7 +16,7 @@ async def extract_url_from_current_page(
             include_internal=True,
             include_external=False,
             max_links=max_links,
-            include_patterns=include_url_patterns,
+            include_patterns=include_link_patterns,
             exclude_patterns=[
                 "*/login*",
                 "*/admin*",
@@ -31,10 +31,9 @@ async def extract_url_from_current_page(
         result = await crawler.arun(parent_url, config=config)
 
         if not result.success:
-            print(f"❌ Crawl failed: {result.error_message}")
-            return
+            raise RuntimeError(f"Crawling failed: {result.error}")
 
         internal_links = result.links.get("internal", [])
-        internal_urls = [link["href"] for link in internal_links]
-        internal_urls = list(set(internal_urls))
-        return internal_urls
+        internal_links = [link["href"] for link in internal_links]
+        internal_links = list(set(internal_links))
+        return internal_links
