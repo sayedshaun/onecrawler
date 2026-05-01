@@ -1,8 +1,17 @@
 import asyncio
 import tempfile
+import warnings
 from urllib.parse import urlparse
 from playwright.async_api import async_playwright
+from .classifier import classify_link_type, CLASSIFIER_AVAILABLE
 from .helper import human_delay, human_scroll, wildcard_link_match
+
+
+if not CLASSIFIER_AVAILABLE:
+    warnings.warn(
+        "Skipping link classifier model is not available. "
+        "Install 'transformers' and 'torch' to enable it."
+    )
 
 
 async def detect_page_type(page: object) -> str:
@@ -75,6 +84,7 @@ async def bfs_link_extractor(
     num_links: int = 50,
     include_pattern: list[str] | None = None,
     concurrency: int = 5,
+    link_classifier_with_bert: bool = False,
 ):
     visited = set()
     seen = set()
@@ -127,6 +137,11 @@ async def bfs_link_extractor(
 
                         if not wildcard_link_match(link, base_prefix, include_pattern):
                             continue
+
+                        if link_classifier_with_bert and CLASSIFIER_AVAILABLE:
+                            link_type = asyncio.to_thread(classify_link_type(link))
+                            if link_type == "section":
+                                continue
 
                         seen.add(link)
                         results.append(link)
