@@ -8,6 +8,7 @@ class CrawlerSettings:
     link_extraction_strategy: Literal["shallow", "deep"] = "deep"
     link_extraction_limit: int = 50
     include_link_patterns: List[str] = field(default_factory=list)
+    link_classification: bool = False
 
     # content extraction
     scraping_strategy: Literal["heuristic", "genai"] = "heuristic"
