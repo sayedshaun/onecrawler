@@ -2,7 +2,7 @@ from .shallow import extract_url_from_current_page
 from .deep import bfs_link_extractor
 
 
-class LinkExtractorEngine:
+class LinkExtractionEngine:
     def __init__(self, settings):
         self.settings = settings
         self._closed = False
