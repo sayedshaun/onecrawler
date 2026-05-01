@@ -1,5 +1,5 @@
+from functools import lru_cache
 CLASSIFIER_AVAILABLE = True
-
 try:
     import torch
     from transformers import (
@@ -7,7 +7,6 @@ try:
         AutoTokenizer,
         pipeline,
     )
-    from functools import lru_cache
 except ImportError:
     CLASSIFIER_AVAILABLE = False
 
