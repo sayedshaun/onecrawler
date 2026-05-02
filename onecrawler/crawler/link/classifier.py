@@ -10,6 +10,7 @@ try:
 except ImportError:
     CLASSIFIER_AVAILABLE = False
 
+
 if CLASSIFIER_AVAILABLE:
     repo_id = "SayedShaun/distilbert-link-type-classifier"
     torch.set_grad_enabled(False)
