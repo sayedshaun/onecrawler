@@ -1,82 +1,119 @@
+import logging
 import asyncio
-import tempfile
 import warnings
-from urllib.parse import urlparse
-from playwright.async_api import async_playwright
-from .classifier import classify_link_type, CLASSIFIER_AVAILABLE
-from .helper import human_delay, human_scroll, wildcard_link_match
+from collections import deque
+from typing import Optional
+from urllib.parse import urlparse, unquote
+from ...browser import BrowserManager
+from .helper import wildcard_link_match
+from ...config.brawser import BrowserSettings
+
+logger = logging.getLogger(__name__)
 
 
-if not CLASSIFIER_AVAILABLE:
-    warnings.warn(
-        "Skipping link classifier model is not available. "
-        "Install 'transformers' and 'torch' to enable it."
-    )
+class LinkClassifierPipeline:
+    def __init__(self, enabled: bool):
+        self.enabled = enabled
+
+        if self.enabled:
+            from .classifier import classify_link_type, CLASSIFIER_AVAILABLE
+
+            self.model = classify_link_type
+            self.available = CLASSIFIER_AVAILABLE
+
+            if not self.available:
+                warnings.warn(
+                    "Link classifier enabled but dependencies are missing (transformers/torch). "
+                    "Disabling classifier."
+                )
+        else:
+            self.model = None
+            self.available = False
+
+    async def is_valid(self, url: str) -> bool:
+        if not self.enabled or not self.available:
+            return True
+
+        result = await asyncio.to_thread(self.model, unquote(url))
+        return result != "section"
 
 
-async def detect_page_type(page: object) -> str:
-    try:
-        # pagination detection
-        pagination_links = await page.eval_on_selector_all(
-            "a",
-            """els => els.map(e => e.href).filter(h =>
-                h.includes('page=') ||
-                h.match(/\\/page\\/\\d+/) ||
-                h.toLowerCase().includes('next')
-            )""",
-        )
+class BFScheduler:
+    def __init__(self, base_url: str, max_queue_size: int = 5000):
+        self.queue = deque([base_url])
+        self.priority = deque()
 
-        if len(pagination_links) >= 2:
-            return "pagination"
+        self.visited = set()
+        self.in_queue = set([base_url])
 
-        # infinite scroll detection
-        h1 = await page.evaluate("document.body.scrollHeight")
+        self.lock = asyncio.Lock()
+        self.max_queue_size = max_queue_size
 
-        await page.mouse.wheel(0, 1500)
-        await asyncio.sleep(1)
+    async def has_next(self):
+        async with self.lock:
+            return bool(self.queue or self.priority)
 
-        h2 = await page.evaluate("document.body.scrollHeight")
+    async def next(self) -> Optional[str]:
+        async with self.lock:
+            if self.priority:
+                return self.priority.popleft()
+            return self.queue.popleft()
 
-        if h2 > h1:
-            return "infinite"
+    async def add(self, url: str, priority: bool = False) -> None:
+        async with self.lock:
+            if url in self.visited or url in self.in_queue:
+                return
 
-        return "static"
+            if len(self.in_queue) >= self.max_queue_size:
+                return  # prevent explosion
 
-    except Exception:
-        return "static"
+            self.in_queue.add(url)
+
+            if priority:
+                self.priority.append(url)
+            else:
+                self.queue.append(url)
+
+    def mark_visited(self, url: str) -> None:
+        self.visited.add(url)
 
 
-async def smart_collect_links(page: object, page_type: str) -> list[str]:
-    collected = set()
+class BrowserPool:
+    def __init__(self, browser: BrowserManager, size: int):
+        self.browser = browser
+        self.size = size
+        self.pages = asyncio.Queue()
 
-    async def extract():
+    async def init(self) -> None:
+        await self.browser.start()
+        for _ in range(self.size):
+            page = await self.browser.new_page()
+            await self.pages.put(page)
+
+    async def get(self) -> any:
+        return await self.pages.get()
+
+    async def release(self, page):
+        await self.pages.put(page)
+
+    async def close(self):
+        while not self.pages.empty():
+            page = await self.pages.get()
+            await page.close()
+
+        await self.browser.close()
+
+
+class LinkSpider:
+    def __init__(self, base_prefix: str):
+        self.base_prefix = base_prefix
+
+    async def parse(self, page):
         links = await page.eval_on_selector_all(
-            "a", "els => els.map(e => e.href).filter(Boolean)"
+            "a[href]", "els => els.map(e => e.href).filter(Boolean)"
         )
-        collected.update(links)
 
-    if page_type == "pagination":
-        await extract()
-
-    elif page_type == "infinite":
-        last_count = 0
-
-        for _ in range(10):  # safety cap
-            await page.mouse.wheel(0, 1200)
-            await asyncio.sleep(0.8)
-
-            await extract()
-
-            if len(collected) == last_count:
-                break
-
-            last_count = len(collected)
-
-    else:
-        await human_scroll(page, max_scrolls=3)
-        await extract()
-
-    return list(collected)
+        return [link for link in links if link.startswith(self.base_prefix)]
 
 
 async def bfs_link_extractor(
@@ -85,98 +122,83 @@ async def bfs_link_extractor(
     include_pattern: list[str] | None = None,
     concurrency: int = 5,
     link_classifier_with_bert: bool = False,
+    browser_settings: Optional[BrowserSettings] = None,
 ):
-    visited = set()
-    seen = set()
-    results = []
+    logger.info(
+        f"Starting deep link extraction from {base_url} with concurrency {concurrency}"
+    )
 
-    queue = asyncio.Queue()
-    await queue.put(base_url)
-
+    browser = BrowserManager(browser_settings or BrowserSettings())
+    scheduler = BFScheduler(base_url)
+    classifier = LinkClassifierPipeline(enabled=link_classifier_with_bert)
     parsed = urlparse(base_url)
     base_prefix = f"{parsed.scheme}://{parsed.netloc}"
 
-    semaphore = asyncio.Semaphore(concurrency)
+    spider = LinkSpider(base_prefix)
 
-    async def worker(page):
-        nonlocal results
+    browser_pool = BrowserPool(browser, concurrency)
+    await browser_pool.init()
+    logger.debug("Browser pool initialized")
 
-        while True:
+    results = []
+    results_set = set()
+
+    async def worker():
+        while await scheduler.has_next():
             if len(results) >= num_links:
                 return
 
-            try:
-                url = await asyncio.wait_for(queue.get(), timeout=3)
-            except asyncio.TimeoutError:
-                return
+            url = await scheduler.next()
 
-            if url in visited:
-                queue.task_done()
+            if url in scheduler.visited:
                 continue
 
-            visited.add(url)
+            scheduler.mark_visited(url)
+            logger.debug(f"Processing URL: {url}")
 
-            async with semaphore:
-                try:
-                    await page.goto(url, timeout=30000, wait_until="domcontentloaded")
+            page = await browser_pool.get()
 
-                    await human_delay()
+            try:
+                await page.goto(url, wait_until="domcontentloaded")
 
-                    # AUTO-DETECT PAGE TYPE
-                    page_type = await detect_page_type(page)
+                links = await spider.parse(page)
+                logger.debug(f"Extracted {len(links)} links from {url}")
 
-                    # SMART LINK COLLECTION
-                    links = await smart_collect_links(page, page_type)
+                for link in links:
+                    if not link.startswith(base_prefix):
+                        continue
 
-                    for link in links:
-                        if len(results) >= num_links:
-                            break
+                    await scheduler.add(link)
 
-                        if link in seen:
-                            continue
+                    # 🔥 BERT PIPELINE (clean separation)
+                    if not await classifier.is_valid(link):
+                        logger.debug(f"Link filtered by classifier: {link}")
+                        continue
 
+                    if include_pattern:
                         if not wildcard_link_match(link, base_prefix, include_pattern):
+                            logger.debug(f"Link does not match pattern: {link}")
                             continue
 
-                        if link_classifier_with_bert and CLASSIFIER_AVAILABLE:
-                            link_type = asyncio.to_thread(classify_link_type(link))
-                            if link_type == "section":
-                                continue
-
-                        seen.add(link)
+                    if link not in results_set:
+                        results_set.add(link)
                         results.append(link)
+                        logger.debug(f"Added link to results: {link}")
 
-                        if link not in visited:
-                            await queue.put(link)
+                    if len(results) >= num_links:
+                        break
 
-                except Exception as e:
-                    raise RuntimeError(f"Error processing {url}: {e}")
+            except Exception as e:
+                logger.error(f"Error processing {url}: {e}")
 
-            queue.task_done()
-            await human_delay()
+            finally:
+                await browser_pool.release(page)
 
-    async with async_playwright() as p:
-        with tempfile.TemporaryDirectory() as d:
-            context = await p.chromium.launch_persistent_context(
-                user_data_dir=d,
-                headless=True,
-                viewport={"width": 1366, "height": 768},
-                locale="en-US",
-                timezone_id="Asia/Dhaka",
-                user_agent=(
-                    "Mozilla/5.0 (X11; Linux x86_64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/120.0.0.0 Safari/537.36"
-                ),
-                args=[
-                    "--no-sandbox",
-                    "--disable-blink-features=AutomationControlled",
-                ],
-            )
+    tasks = [asyncio.create_task(worker()) for _ in range(concurrency)]
+    logger.info(f"Started {concurrency} worker tasks")
 
-            pages = [await context.new_page() for _ in range(concurrency)]
-            tasks = [asyncio.create_task(worker(page)) for page in pages]
-            await asyncio.gather(*tasks, return_exceptions=True)
-            await context.close()
+    await asyncio.gather(*tasks, return_exceptions=True)
+    await browser_pool.close()
+    logger.info(f"Deep extraction completed, found {len(results)} links")
 
     return results
