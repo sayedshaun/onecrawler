@@ -1,39 +1,53 @@
-from typing import Union, List
-from crawl4ai import AsyncWebCrawler, CrawlerRunConfig
-from crawl4ai import LinkPreviewConfig
+from typing import Optional, List
+from urllib.parse import urljoin, urlparse
+from onecrawler.browser import BrowserManager
+from onecrawler.config.brawser import BrowserSettings
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 async def extract_url_from_current_page(
-    parent_url: str,
-    include_link_patterns: Union[List[str], None] = None,
-    query: Union[str, None] = None,
-    concurrency: int = 10,
-    max_links: int = 500,
-) -> Union[list[str], None]:
+    url: str, browser_config: Optional[BrowserSettings] = None
+) -> List[str]:
+    logger.info(f"Starting shallow link extraction from {url}")
+    links = set()
+    browser = BrowserManager(config=browser_config or BrowserSettings())
+    await browser.start()
+    page = await browser.new_page()
 
-    config = CrawlerRunConfig(
-        link_preview_config=LinkPreviewConfig(
-            include_internal=True,
-            include_external=False,
-            max_links=max_links,
-            include_patterns=include_link_patterns,
-            exclude_patterns=[
-                "*/login*",
-                "*/admin*",
-            ],
-            concurrency=concurrency,
-            timeout=5,
-            query=query,
-            score_threshold=0.7,
+    try:
+        logger.debug(f"Navigating to {url}")
+        await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+
+        hrefs = await page.eval_on_selector_all(
+            "a[href]", "els => els.map(e => e.getAttribute('href'))"
         )
-    )
-    async with AsyncWebCrawler() as crawler:
-        result = await crawler.arun(parent_url, config=config)
+        logger.debug(f"Found {len(hrefs)} anchor elements")
 
-        if not result.success:
-            raise RuntimeError(f"Crawling failed: {result.error}")
+        base_domain = urlparse(url).netloc
 
-        internal_links = result.links.get("internal", [])
-        internal_links = [link["href"] for link in internal_links]
-        internal_links = list(set(internal_links))
-        return internal_links
+        for href in hrefs:
+            if not href:
+                continue
+
+            absolute = urljoin(url, href)
+            parsed = urlparse(absolute)
+
+            if parsed.netloc != base_domain:
+                logger.debug(f"Skipping external link: {absolute}")
+                continue
+
+            if absolute.rstrip("/") == url.rstrip("/"):
+                logger.debug(f"Skipping self-link: {absolute}")
+                continue
+
+            links.add(absolute)
+
+        logger.info(f"Extracted {len(links)} internal links")
+
+    finally:
+        await page.close()
+        await browser.close()
+
+    return list(links)
