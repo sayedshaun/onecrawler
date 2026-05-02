@@ -1,7 +1,7 @@
 import asyncio
 import random
 from fnmatch import fnmatch
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
 
 
 async def human_delay(min_s=0.3, max_s=1.2):
@@ -21,14 +21,13 @@ def url_normalize(text: str) -> str:
     return unquote(text).lower().strip().rstrip("/")
 
 
-def wildcard_link_match(
-    link: str, base_prefix: str, include_pattern: list[str] | None
-) -> bool:
+def wildcard_link_match(link, base_prefix, include_pattern):
     if not link.startswith(base_prefix):
         return False
 
     if include_pattern:
-        if not any(fnmatch(link, pattern) for pattern in include_pattern):
-            return False
+        path = urlparse(link).path
+
+        return any(fnmatch(path, pattern) for pattern in include_pattern)
 
     return True
