@@ -3,7 +3,9 @@ import time
 from typing import Any, Callable, Tuple
 
 
-async def time_function(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Tuple[float, Any]:
+async def calculate_execution_time(
+    func: Callable[..., Any], *args: Any, **kwargs: Any
+) -> Tuple[float, Any]:
     """Measure execution time for sync or async functions.
 
     Args:
