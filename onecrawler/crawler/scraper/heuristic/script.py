@@ -1,27 +1,39 @@
-import logging
+import json
 import asyncio
-from typing import Union, List
-from ..core import fetch_and_extract
-
-logger = logging.getLogger(__name__)
+import trafilatura
+from ..base import BaseStrategy
 
 
-async def heuristic_scraper(
-    url: Union[str, List[str]], output_format: List[str] = "json"
-) -> Union[str, List[str]]:
+class HeuristicStrategy(BaseStrategy):
+    def __init__(self, output_format: str = "json"):
+        self.output_format = output_format
 
-    links = [url] if isinstance(url, str) else url
+    async def extract(self, url: str):
+        html = await asyncio.to_thread(trafilatura.fetch_url, url)
+        if not html:
+            return None
 
-    logger.info(
-        f"Starting heuristic scraper for {len(links)} URL(s), format: {output_format}"
-    )
+        extracted = await asyncio.to_thread(
+            trafilatura.extract,
+            html,
+            output_format=self.output_format,
+            with_metadata=True,
+            fast=True,
+            favor_precision=True,
+            include_tables=True,
+            deduplicate=True,
+        )
 
-    results = await asyncio.gather(*(fetch_and_extract(link) for link in links))
-    output = [r for r in results if r is not None]
+        if not extracted:
+            return None
 
-    logger.info(f"Scraping completed, success: {len(output)}/{len(links)}")
+        if self.output_format == "json":
+            try:
+                data = json.loads(extracted)
+                if not data.get("text") or len(data["text"].strip()) < 200:
+                    return None
+                return data
+            except Exception:
+                return None
 
-    if not output:
-        return []
-
-    return output[0] if len(output) == 1 else output
+        return extracted
