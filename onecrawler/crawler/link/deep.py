@@ -1,41 +1,14 @@
 import logging
 import asyncio
-import warnings
 from collections import deque
 from typing import Optional
-from urllib.parse import urlparse, unquote
-from ...browser import BrowserManager
-from .helper import wildcard_link_match
+from urllib.parse import urlparse
+from ...browser import GoogleChrome
+from .helper import wildcard_link_match, human_delay, human_scroll, human_mouse_move
 from ...config.brawser import BrowserSettings
+from .classifier import LinkClassifierPipeline
 
 logger = logging.getLogger(__name__)
-
-
-class LinkClassifierPipeline:
-    def __init__(self, enabled: bool):
-        self.enabled = enabled
-
-        if self.enabled:
-            from .classifier import classify_link_type, CLASSIFIER_AVAILABLE
-
-            self.model = classify_link_type
-            self.available = CLASSIFIER_AVAILABLE
-
-            if not self.available:
-                warnings.warn(
-                    "Link classifier enabled but dependencies are missing (transformers/torch). "
-                    "Disabling classifier."
-                )
-        else:
-            self.model = None
-            self.available = False
-
-    async def is_valid(self, url: str) -> bool:
-        if not self.enabled or not self.available:
-            return True
-
-        result = await asyncio.to_thread(self.model, unquote(url))
-        return result != "section"
 
 
 class BFScheduler:
@@ -65,7 +38,7 @@ class BFScheduler:
                 return
 
             if len(self.in_queue) >= self.max_queue_size:
-                return  # prevent explosion
+                return
 
             self.in_queue.add(url)
 
@@ -79,7 +52,7 @@ class BFScheduler:
 
 
 class BrowserPool:
-    def __init__(self, browser: BrowserManager, size: int):
+    def __init__(self, browser: GoogleChrome, size: int):
         self.browser = browser
         self.size = size
         self.pages = asyncio.Queue()
@@ -110,7 +83,7 @@ class LinkSpider:
 
     async def parse(self, page):
         links = await page.eval_on_selector_all(
-            "a[href]", "els => els.map(e => e.href).filter(Boolean)"
+            "a", "els => els.map(e => e.href).filter(Boolean)"
         )
 
         return [link for link in links if link.startswith(self.base_prefix)]
@@ -128,7 +101,7 @@ async def bfs_link_extractor(
         f"Starting deep link extraction from {base_url} with concurrency {concurrency}"
     )
 
-    browser = BrowserManager(browser_settings or BrowserSettings())
+    browser = GoogleChrome(browser_settings or BrowserSettings())
     scheduler = BFScheduler(base_url)
     classifier = LinkClassifierPipeline(enabled=link_classifier_with_bert)
     parsed = urlparse(base_url)
@@ -161,6 +134,12 @@ async def bfs_link_extractor(
             try:
                 await page.goto(url, wait_until="domcontentloaded")
 
+                # Human-like behavior to avoid bot detection
+                await human_delay()
+                await human_scroll(page, max_scrolls=3)
+                await human_mouse_move(page)
+                await human_delay(0.5, 1.0)
+
                 links = await spider.parse(page)
                 logger.debug(f"Extracted {len(links)} links from {url}")
 
@@ -170,7 +149,6 @@ async def bfs_link_extractor(
 
                     await scheduler.add(link)
 
-                    # 🔥 BERT PIPELINE (clean separation)
                     if not await classifier.is_valid(link):
                         logger.debug(f"Link filtered by classifier: {link}")
                         continue
