@@ -3,37 +3,10 @@ from typing import Dict, List, Optional
 
 
 @dataclass
-class BrowserSettings:
-    # core behavior
+class LaunchSettings:
     headless: bool = True
     slow_mo: int = 0
 
-    # profile / persistence
-    user_data_dir: str = ".temp/browser_profile"
-
-    # viewport / device emulation
-    viewport: Dict[str, int] = field(
-        default_factory=lambda: {"width": 1366, "height": 768}
-    )
-    device_scale_factor: float = 1.0
-
-    # locale / geo
-    locale: str = "en-US"
-    timezone_id: str = "Asia/Dhaka"
-
-    # identity
-    user_agent: str = (
-        "Mozilla/5.0 (X11; Linux x86_64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    )
-
-    # performance tuning
-    ignore_https_errors: bool = True
-    java_script_enabled: bool = True
-    bypass_csp: bool = True
-
-    # anti-bot / stealth args
     args: List[str] = field(
         default_factory=lambda: [
             "--no-sandbox",
@@ -42,9 +15,64 @@ class BrowserSettings:
         ]
     )
 
-    # request-level behavior
+    executable_path: Optional[str] = None
+    channel: Optional[str] = None
+    env: Optional[Dict[str, str]] = None
+
+
+@dataclass
+class ContextSettings:
+    viewport: Optional[Dict[str, int]] = field(
+        default_factory=lambda: {"width": 1366, "height": 768}
+    )
+    screen: Optional[Dict[str, int]] = None
+    no_viewport: Optional[bool] = None
+
+    user_agent: Optional[str] = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/122.0.0.0 Safari/537.36"
+    )
+    locale: str = "en-US"
+    timezone_id: str = "Asia/Dhaka"
+
+    geolocation: Optional[Dict[str, float]] = None
+    permissions: Optional[List[str]] = None
+
+    extra_http_headers: Optional[Dict[str, str]] = None
+
+    java_script_enabled: bool = True
+    bypass_csp: bool = True
+    ignore_https_errors: bool = True
+
+    offline: bool = False
+    storage_state: Optional[str] = None
+    base_url: Optional[str] = None
+
+
+@dataclass
+class ProxySettings:
+    server: str
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+
+@dataclass
+class RuntimeSettings:
     wait_until: str = "networkidle"
     timeout: int = 30000
+    action_timeout: int = 30000
+    navigation_timeout: int = 30000
 
-    # optional proxy
-    proxy: Optional[Dict[str, str]] = None
+    max_retries: int = 2
+    retry_delay: float = 1.0
+
+
+@dataclass
+class BrowserSettings:
+    user_data_dir: str = ".temp/browser_profile"
+
+    launch: LaunchSettings = field(default_factory=LaunchSettings)
+    context: ContextSettings = field(default_factory=ContextSettings)
+    runtime: RuntimeSettings = field(default_factory=RuntimeSettings)
+    proxy: Optional[ProxySettings] = None
