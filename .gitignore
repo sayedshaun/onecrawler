@@ -57,3 +57,4 @@ Thumbs.db
 *.err
 *.json
 *.jsonl
+*.temp
