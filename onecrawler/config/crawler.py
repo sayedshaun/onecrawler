@@ -27,6 +27,8 @@ class CrawlerSettings:
     genai_api_key: Optional[str] = None
 
     concurrency: int = 10
+    retries: int = 2
+    timeout: int = 10
     browser_settings: Optional[BrowserSettings] = None
     logging: bool = False
     logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
