@@ -1,48 +1,90 @@
+import logging
 from typing import Optional, List
 from urllib.parse import urljoin, urlparse
-from onecrawler.browser import BrowserManager
-from onecrawler.config.brawser import BrowserSettings
-import logging
+from .helper import wildcard_link_match, human_delay, human_scroll, human_mouse_move
+from .classifier import LinkClassifierPipeline
+from ...browser import GoogleChrome
+from ...config.brawser import BrowserSettings
 
 logger = logging.getLogger(__name__)
 
 
 async def extract_url_from_current_page(
-    url: str, browser_config: Optional[BrowserSettings] = None
+    url: str,
+    browser_config: Optional[BrowserSettings] = None,
+    include_link_patterns: Optional[List[str]] = None,
+    link_classification: bool = False,
+    concurrency: int = 10,
+    max_links: Optional[int] = None,
 ) -> List[str]:
+
     logger.info(f"Starting shallow link extraction from {url}")
+
     links = set()
-    browser = BrowserManager(config=browser_config or BrowserSettings())
+    browser = GoogleChrome(config=browser_config or BrowserSettings())
     await browser.start()
     page = await browser.new_page()
 
+    classifier = (
+        LinkClassifierPipeline(enabled=link_classification)
+        if link_classification
+        else None
+    )
     try:
         logger.debug(f"Navigating to {url}")
         await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+        
+        # Human-like behavior to avoid bot detection
+        await human_delay()
+        await human_scroll(page, max_scrolls=3)
+        await human_mouse_move(page)
+        await human_delay(0.5, 1.0)
 
         hrefs = await page.eval_on_selector_all(
-            "a[href]", "els => els.map(e => e.getAttribute('href'))"
+            "a", "els => els.map(e => e.href).filter(h => h)"
         )
-        logger.debug(f"Found {len(hrefs)} anchor elements")
 
-        base_domain = urlparse(url).netloc
+        logger.debug(f"Found {len(hrefs)} anchor elements")
+        parsed_base = urlparse(url)
+        base_domain = parsed_base.netloc
+        base_prefix = f"{parsed_base.scheme}://{parsed_base.netloc}"
 
         for href in hrefs:
             if not href:
                 continue
 
-            absolute = urljoin(url, href)
+            if href.startswith(("javascript:", "mailto:")):
+                continue
+
+            # href is already absolute from e.href
+            absolute = href
             parsed = urlparse(absolute)
 
             if parsed.netloc != base_domain:
-                logger.debug(f"Skipping external link: {absolute}")
                 continue
 
             if absolute.rstrip("/") == url.rstrip("/"):
-                logger.debug(f"Skipping self-link: {absolute}")
                 continue
 
+            logger.debug(f"Considering URL: {absolute}")
+
+            if include_link_patterns:
+                if not wildcard_link_match(
+                    absolute, base_prefix, include_link_patterns
+                ):
+                    logger.debug(f"URL does not match pattern: {absolute}")
+                    continue
+
+            if classifier:
+                if not await classifier.is_valid(absolute):
+                    continue
+
+            logger.debug(f"Adding URL to results: {absolute}")
             links.add(absolute)
+
+            if max_links and len(links) >= max_links:
+                logger.info("Reached max_links limit, stopping early")
+                break
 
         logger.info(f"Extracted {len(links)} internal links")
 
