@@ -8,9 +8,12 @@ from .heuristic.script import HeuristicStrategy
 
 class StrategyFactory:
     @staticmethod
-    def create(config: CrawlerSettings):
+    def create(config: CrawlerSettings, browser_config=None):
         if config.scraping_strategy == "heuristic":
-            return HeuristicStrategy(output_format=config.scraping_output_format)
+            return HeuristicStrategy(
+                output_format=config.scraping_output_format,
+                browser_config=browser_config,
+            )
 
         elif config.scraping_strategy == "genai":
             return GenAIStrategy()
@@ -25,20 +28,24 @@ class ScraperEngine:
         self._closed = False
         self.logger = logging.getLogger(__name__)
 
-        self.strategy = StrategyFactory.create(config)
+        self.strategy = StrategyFactory.create(
+            config, browser_config=config.browser_settings
+        )
 
         self.semaphore = asyncio.Semaphore(config.concurrency)
-        self.retries = config.retries or 2
-        self.timeout = config.timeout or 10
+        self.retries = config.max_retries
+        self.timeout = config.request_timeout
 
         self.logger.info("ScraperEngine initialized")
 
     async def __aenter__(self):
         self._closed = False
+        await self.strategy.__aenter__()
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
         self._closed = True
+        await self.strategy.__aexit__(exc_type, exc, tb)
 
     async def _retry(self, coro):
         for attempt in range(self.retries):
