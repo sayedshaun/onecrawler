@@ -1,4 +1,8 @@
+import asyncio
+from urllib.parse import unquote
+import warnings
 from functools import lru_cache
+
 CLASSIFIER_AVAILABLE = True
 try:
     import torch
@@ -38,7 +42,7 @@ if CLASSIFIER_AVAILABLE:
 @lru_cache(maxsize=10000)
 def classify_link_type(link: str) -> str:
     if not CLASSIFIER_AVAILABLE:
-        return "content" 
+        return "content"
 
     try:
         with torch.no_grad():
@@ -47,3 +51,30 @@ def classify_link_type(link: str) -> str:
 
     except Exception:
         return "section"
+
+
+class LinkClassifierPipeline:
+    def __init__(self, enabled: bool):
+        self.enabled = enabled
+
+        if self.enabled:
+            from .classifier import classify_link_type, CLASSIFIER_AVAILABLE
+
+            self.model = classify_link_type
+            self.available = CLASSIFIER_AVAILABLE
+
+            if not self.available:
+                warnings.warn(
+                    "Link classifier enabled but dependencies are missing (transformers/torch). "
+                    "Disabling classifier."
+                )
+        else:
+            self.model = None
+            self.available = False
+
+    async def is_valid(self, url: str) -> bool:
+        if not self.enabled or not self.available:
+            return True
+
+        result = await asyncio.to_thread(self.model, unquote(url))
+        return result != "section"
