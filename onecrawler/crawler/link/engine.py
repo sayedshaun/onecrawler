@@ -48,11 +48,10 @@ class LinkExtractionEngine:
             self.logger.error(f"Unknown strategy: {strategy}")
             raise ValueError(f"Unknown strategy: {strategy}")
 
-
     async def _run_shallow(self, url: str) -> dict:
         self.logger.debug(f"Starting shallow link extraction for {url}")
         result = await extract_url_from_current_page(
-            parent_url=url,
+            url=url,
             include_link_patterns=self.settings.include_link_patterns,
             link_classification=self.settings.link_classification,
             concurrency=self.settings.concurrency,
@@ -68,7 +67,7 @@ class LinkExtractionEngine:
             num_links=self.settings.link_extraction_limit,
             include_pattern=self.settings.include_link_patterns,
             concurrency=self.settings.concurrency,
-            link_classifier_with_bert=self.settings.link_classification
+            link_classifier_with_bert=self.settings.link_classification,
         )
         self.logger.info(f"Deep extraction completed, found {len(result)} links")
         return result
