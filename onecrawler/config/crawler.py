@@ -24,6 +24,7 @@ class CrawlerSettings:
     concurrency: int = 10
     max_retries: int = 2
     request_timeout: int = 10
+    infinite_scroll_limit: int = 1
 
     browser_settings: BrowserSettings = field(default_factory=BrowserSettings)
 
