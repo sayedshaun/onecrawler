@@ -20,5 +20,12 @@ dependencies = [
     "lxml",
 ]
 
-[tool.setuptools]
-packages = ["find:"]
+[project.optional-dependencies]
+genai = [
+    "langchain",
+    "langgraph",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["tests*"]
