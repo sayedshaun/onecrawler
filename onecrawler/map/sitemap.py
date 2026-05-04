@@ -1,12 +1,13 @@
 import asyncio
 import time
-from typing import Set, Optional, Tuple
+from typing import Set, Tuple
 import aiohttp
 from lxml import etree
 from urllib.parse import urlparse
+from ..config.crawler import CrawlerSettings
 
 
-class Stats:
+class SitemapStats:
     def __init__(self):
         self.start_time = time.time()
         self.urls = 0
@@ -22,26 +23,19 @@ class Stats:
 
 
 class SiteMap:
-    def __init__(
-        self,
-        url: str,
-        filter_pattern: Optional[str] = None,
-        concurrency: int = 10,
-        save: Optional[str] = None,
-        timeout: int = 10,
-    ):
-        self.sitemap_url = (
-            url.rstrip("/") + "/sitemap.xml" if not url.endswith("sitemap.xml") else url
-        )
+    def __init__(self, config: CrawlerSettings):
 
-        self.filter_pattern = filter_pattern
-        self.timeout = timeout
-        self.save = save
-        self.semaphore = asyncio.Semaphore(concurrency)
-
+        self.semaphore = asyncio.Semaphore(config.concurrency)
         self.visited_sitemaps: Set[str] = set()
         self.urls: Set[str] = set()
-        self.stats = Stats()
+        self.stats = SitemapStats()
+        self.timeout = config.browser_settings.runtime.timeout
+        self.filter_pattern = config.include_link_patterns
+
+    def _sitemap_url(self, url: str) -> str:
+        return (
+            url.rstrip("/") + "/sitemap.xml" if not url.endswith("sitemap.xml") else url
+        )
 
     async def _fetch(self, session, url):
         try:
@@ -99,11 +93,12 @@ class SiteMap:
                     self.urls.add(url)
                     self.stats.urls += 1
 
-    async def fetch(self) -> Tuple[Set[str], Stats]:
+    async def fetch(self, url: str) -> Tuple[Set[str], SitemapStats]:
+        self.sitemap_url = self._sitemap_url(url)
         timeout = aiohttp.ClientTimeout(total=self.timeout)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             await self._parse(session, self.sitemap_url)
         return self.urls, self.stats
 
-    def run(self):
-        return asyncio.run(self.fetch())
+    def run(self, url: str):
+        return asyncio.run(self.fetch(url))
