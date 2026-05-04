@@ -132,7 +132,18 @@ async def bfs_link_extractor(
             page = await browser_pool.get()
 
             try:
-                await page.goto(url, wait_until="domcontentloaded")
+                # Retry logic for timeout errors
+                max_retries = browser_settings.runtime.max_retries if browser_settings else 2
+                for attempt in range(max_retries):
+                    try:
+                        await page.goto(url, wait_until="domcontentloaded", timeout=browser_settings.runtime.timeout if browser_settings else 30000)
+                        break
+                    except Exception as e:
+                        if "Timeout" in str(e) and attempt < max_retries - 1:
+                            logger.warning(f"Timeout on attempt {attempt + 1} for {url}, retrying...")
+                            await human_delay(1, 2)  # Wait before retry
+                            continue
+                        raise
 
                 # Human-like behavior to avoid bot detection
                 await human_delay()
