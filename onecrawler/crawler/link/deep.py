@@ -4,7 +4,13 @@ from collections import deque
 from typing import Optional
 from urllib.parse import urlparse
 from ...browser import GoogleChrome
-from .helper import wildcard_link_match, human_delay, human_scroll, human_mouse_move
+from .helper import (
+    wildcard_link_match,
+    human_delay,
+    human_scroll,
+    human_mouse_move,
+    scroll_to_bottom_with_infinite_scroll,
+)
 from ...config.brawser import BrowserSettings
 from .classifier import LinkClassifierPipeline
 
@@ -82,11 +88,19 @@ class LinkSpider:
         self.base_prefix = base_prefix
 
     async def parse(self, page):
-        links = await page.eval_on_selector_all(
+        raw_links = await page.eval_on_selector_all(
             "a", "els => els.map(e => e.href).filter(Boolean)"
         )
 
-        return [link for link in links if link.startswith(self.base_prefix)]
+        links = []
+        for link in raw_links:
+            if isinstance(link, dict):
+                link = link.get("href")
+
+            if isinstance(link, str) and link.startswith(self.base_prefix):
+                links.append(link)
+
+        return links
 
 
 async def bfs_link_extractor(
@@ -95,6 +109,7 @@ async def bfs_link_extractor(
     include_pattern: list[str] | None = None,
     concurrency: int = 5,
     link_classifier_with_bert: bool = False,
+    max_scroll_limit: int = 1,
     browser_settings: Optional[BrowserSettings] = None,
 ):
     logger.info(
@@ -133,23 +148,37 @@ async def bfs_link_extractor(
 
             try:
                 # Retry logic for timeout errors
-                max_retries = browser_settings.runtime.max_retries if browser_settings else 2
+                max_retries = (
+                    browser_settings.runtime.max_retries if browser_settings else 2
+                )
                 for attempt in range(max_retries):
                     try:
-                        await page.goto(url, wait_until="domcontentloaded", timeout=browser_settings.runtime.timeout if browser_settings else 30000)
+                        await page.goto(
+                            url,
+                            wait_until="domcontentloaded",
+                            timeout=browser_settings.runtime.timeout
+                            if browser_settings
+                            else 30000,
+                        )
                         break
                     except Exception as e:
                         if "Timeout" in str(e) and attempt < max_retries - 1:
-                            logger.warning(f"Timeout on attempt {attempt + 1} for {url}, retrying...")
+                            logger.warning(
+                                f"Timeout on attempt {attempt + 1} for {url}, retrying..."
+                            )
                             await human_delay(1, 2)  # Wait before retry
                             continue
                         raise
 
-                # Human-like behavior to avoid bot detection
+                # Human-like behavior to avoid bot detection with infinite scroll support
                 await human_delay()
-                await human_scroll(page, max_scrolls=3)
+                await scroll_to_bottom_with_infinite_scroll(
+                    max_scroll_attempts=max_scroll_limit,
+                    scroll_pause_time=0.1,
+                    check_new_content_time=1,
+                )
                 await human_mouse_move(page)
-                await human_delay(0.5, 1.0)
+                await human_delay(0.1, 1.0)
 
                 links = await spider.parse(page)
                 logger.debug(f"Extracted {len(links)} links from {url}")
