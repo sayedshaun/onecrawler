@@ -33,10 +33,10 @@ async def extract_url_from_current_page(
     try:
         logger.debug(f"Navigating to {url}")
         await page.goto(url, wait_until="domcontentloaded", timeout=15000)
-        
+
         # Human-like behavior to avoid bot detection
         await human_delay()
-        await human_scroll(page, max_scrolls=3)
+        await human_scroll(page, max_scrolls=20)
         await human_mouse_move(page)
         await human_delay(0.5, 1.0)
 
@@ -50,7 +50,7 @@ async def extract_url_from_current_page(
         base_prefix = f"{parsed_base.scheme}://{parsed_base.netloc}"
 
         for href in hrefs:
-            if not href:
+            if not isinstance(href, str) or not href:
                 continue
 
             if href.startswith(("javascript:", "mailto:")):
