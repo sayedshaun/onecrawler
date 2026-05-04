@@ -1,7 +1,7 @@
 import logging
 from typing import Optional, List
-from urllib.parse import urljoin, urlparse
-from .helper import wildcard_link_match, human_delay, human_scroll, human_mouse_move
+from urllib.parse import urlparse
+from .helper import wildcard_link_match
 from .classifier import LinkClassifierPipeline
 from ...browser import GoogleChrome
 from ...config.brawser import BrowserSettings
@@ -33,12 +33,6 @@ async def extract_url_from_current_page(
     try:
         logger.debug(f"Navigating to {url}")
         await page.goto(url, wait_until="domcontentloaded", timeout=15000)
-
-        # Human-like behavior to avoid bot detection
-        await human_delay()
-        await human_scroll(page, max_scrolls=20)
-        await human_mouse_move(page)
-        await human_delay(0.5, 1.0)
 
         hrefs = await page.eval_on_selector_all(
             "a", "els => els.map(e => e.href).filter(h => h)"
