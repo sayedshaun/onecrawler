@@ -9,7 +9,7 @@ async def human_delay(min_s: float = 0.3, max_s: float = 1.2) -> None:
     await asyncio.sleep(random.uniform(min_s, max_s))
 
 
-async def human_scroll(page: any, max_scrolls: int = 3) -> None:
+async def human_scroll(page: any, max_scrolls: int = 20) -> None:
     try:
         for _ in range(max_scrolls):
             await page.mouse.wheel(0, random.randint(400, 800))
@@ -32,7 +32,7 @@ async def human_mouse_move(page: any) -> None:
 def wildcard_link_match(
     link: str, base_prefix: str, include_pattern: list[str]
 ) -> bool:
-    if not link.startswith(base_prefix):
+    if not isinstance(link, str) or not link.startswith(base_prefix):
         return False
 
     if include_pattern:
