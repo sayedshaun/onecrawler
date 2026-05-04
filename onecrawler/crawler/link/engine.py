@@ -68,6 +68,7 @@ class LinkExtractionEngine:
             include_pattern=self.settings.include_link_patterns,
             concurrency=self.settings.concurrency,
             link_classifier_with_bert=self.settings.link_classification,
+            max_scroll_limit=self.settings.infinite_scroll_limit,
             browser_settings=self.settings.browser_settings,
         )
         self.logger.info(f"Deep extraction completed, found {len(result)} links")
