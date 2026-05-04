@@ -5,6 +5,7 @@ import aiohttp
 from lxml import etree
 from urllib.parse import urlparse
 from ..config.crawler import CrawlerSettings
+from ..crawler.link.helper import wildcard_link_match
 
 
 class SitemapStats:
@@ -31,6 +32,13 @@ class SiteMap:
         self.stats = SitemapStats()
         self.timeout = config.browser_settings.runtime.timeout
         self.filter_pattern = config.include_link_patterns
+        self.base_prefix = ""
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        return False
 
     def _sitemap_url(self, url: str) -> str:
         return (
@@ -82,11 +90,10 @@ class SiteMap:
 
                 url = loc.text.strip()
 
-                parsed = urlparse(url)
-                path_segments = parsed.path.strip("/").split("/")
-
                 if self.filter_pattern:
-                    if self.filter_pattern not in path_segments:
+                    if not wildcard_link_match(
+                        url, self.base_prefix, self.filter_pattern
+                    ):
                         continue
 
                 if url not in self.urls:
@@ -95,10 +102,13 @@ class SiteMap:
 
     async def fetch(self, url: str) -> Tuple[Set[str], SitemapStats]:
         self.sitemap_url = self._sitemap_url(url)
+        parsed = urlparse(url)
+        self.base_prefix = f"{parsed.scheme}://{parsed.netloc}"
         timeout = aiohttp.ClientTimeout(total=self.timeout)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             await self._parse(session, self.sitemap_url)
         return self.urls, self.stats
 
-    def run(self, url: str):
-        return asyncio.run(self.fetch(url))
+    async def run(self, url: str):
+        urls, stats = await self.fetch(url)
+        return urls
