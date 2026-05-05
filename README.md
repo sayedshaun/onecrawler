@@ -1,3 +1,5 @@
+![static/onecrawl_logo.png](static/onecrawl_logo.png)
+
 # Onecrawler
 
 Onecrawler is a feature-rich Python web crawling toolkit for extracting links and scraping page content using heuristic or Generative AI strategies.
