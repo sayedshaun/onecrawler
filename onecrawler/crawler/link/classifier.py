@@ -1,6 +1,7 @@
 import asyncio
-from urllib.parse import unquote
 import warnings
+from urllib.parse import unquote
+from typing import List
 from functools import lru_cache
 
 CLASSIFIER_AVAILABLE = True
@@ -17,14 +18,10 @@ except ImportError:
 
 if CLASSIFIER_AVAILABLE:
     repo_id = "SayedShaun/distilbert-link-type-classifier"
+
     torch.set_grad_enabled(False)
 
-    model = AutoModelForSequenceClassification.from_pretrained(
-        repo_id,
-        id2label={0: "section", 1: "content"},
-        label2id={"section": 0, "content": 1},
-    )
-
+    model = AutoModelForSequenceClassification.from_pretrained(repo_id)
     tokenizer = AutoTokenizer.from_pretrained(repo_id)
 
     def get_classifier(device: str = "cpu"):
@@ -39,42 +36,85 @@ if CLASSIFIER_AVAILABLE:
     clf = get_classifier("cuda" if torch.cuda.is_available() else "cpu")
 
 
+def cheap_filter(url: str) -> bool:
+    if not url:
+        return False
+
+    bad_patterns = (
+        "javascript:",
+        "mailto:",
+        "tel:",
+        "#",
+    )
+
+    return not any(p in url for p in bad_patterns)
+
+
 @lru_cache(maxsize=10000)
-def classify_link_type(link: str) -> str:
-    if not CLASSIFIER_AVAILABLE:
-        return "content"
-
-    try:
-        with torch.no_grad():
-            result = clf(link, truncation=True, max_length=128)[0]
-        return result["label"]
-
-    except Exception:
-        return "section"
+def _cached_single_prediction(url: str) -> str:
+    result = clf(url, truncation=True, max_length=128)[0]
+    return result["label"]
 
 
 class LinkClassifierPipeline:
-    def __init__(self, enabled: bool):
-        self.enabled = enabled
+    def __init__(
+        self,
+        confidence_threshold: float = 0.8,
+    ):
+        self.threshold = confidence_threshold
 
-        if self.enabled:
-            from .classifier import classify_link_type, CLASSIFIER_AVAILABLE
-
-            self.model = classify_link_type
-            self.available = CLASSIFIER_AVAILABLE
-
-            if not self.available:
-                warnings.warn(
-                    "Link classifier enabled but dependencies are missing (transformers/torch). "
-                    "Disabling classifier."
-                )
-        else:
-            self.model = None
+        if not CLASSIFIER_AVAILABLE:
+            warnings.warn(
+                "Classifier enabled but transformers/torch not installed. Disabling."
+            )
             self.available = False
+        else:
+            self.available = True
+
+    async def classify_batch(self, urls: List[str]) -> List[bool]:
+        if not self.available:
+            return [True] * len(urls)
+
+        filtered_urls = []
+        index_map = []
+
+        for i, url in enumerate(urls):
+            if cheap_filter(url):
+                filtered_urls.append(unquote(url))
+                index_map.append(i)
+
+        results = [False] * len(urls)
+
+        if not filtered_urls:
+            return results
+
+        try:
+            predictions = await asyncio.to_thread(
+                lambda: clf(filtered_urls, truncation=True, max_length=128)
+            )
+        except Exception:
+            return [True] * len(urls)
+
+        for idx, pred in zip(index_map, predictions):
+            label = pred["label"]
+            score = pred["score"]
+
+            if label == "content" and score >= self.threshold:
+                results[idx] = True
+            else:
+                results[idx] = False
+
+        return results
 
     async def is_valid(self, url: str) -> bool:
-        if not self.enabled or not self.available:
+        if not self.available:
             return True
 
-        result = await asyncio.to_thread(self.model, unquote(url))
-        return result != "section"
+        if not cheap_filter(url):
+            return False
+
+        try:
+            label = await asyncio.to_thread(_cached_single_prediction, unquote(url))
+            return label != "section"
+        except Exception:
+            return True
