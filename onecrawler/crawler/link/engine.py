@@ -62,14 +62,19 @@ class LinkExtractionEngine:
 
     async def _run_deep(self, url: str) -> dict:
         self.logger.debug(f"Starting deep link extraction for {url}")
+        # Update browser settings with crawler timeouts
+        browser_settings = self.settings.browser_settings
+        browser_settings.runtime.timeout = self.settings.request_timeout * 1000  # convert to ms
+        browser_settings.runtime.max_retries = self.settings.max_retries
         result = await bfs_link_extractor(
             base_url=url,
             num_links=self.settings.link_extraction_limit,
             include_pattern=self.settings.include_link_patterns,
             concurrency=self.settings.concurrency,
-            link_classifier_with_bert=self.settings.link_classification,
+            link_classifier_enabled=self.settings.link_classification,
             max_scroll_limit=self.settings.infinite_scroll_limit,
-            browser_settings=self.settings.browser_settings,
+            browser_settings=browser_settings,
+            disable_human_behaviors=self.settings.disable_human_behaviors,
         )
         self.logger.info(f"Deep extraction completed, found {len(result)} links")
         return result
