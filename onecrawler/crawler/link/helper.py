@@ -3,13 +3,14 @@ import logging
 import random
 from fnmatch import fnmatch
 from urllib.parse import urlparse
+from playwright.async_api import Page
 
 
 async def human_delay(min_s: float = 0.3, max_s: float = 1.2) -> None:
     await asyncio.sleep(random.uniform(min_s, max_s))
 
 
-async def human_scroll(page: any, max_scrolls: int = 20) -> None:
+async def human_scroll(page: Page, max_scrolls: int = 20) -> None:
     try:
         for _ in range(max_scrolls):
             await page.mouse.wheel(0, random.randint(400, 800))
@@ -18,55 +19,27 @@ async def human_scroll(page: any, max_scrolls: int = 20) -> None:
         logging.warning(f"Error during human-like scrolling: {e}")
 
 
-async def scroll_to_bottom_with_infinite_scroll(
-    page: any,
-    max_scroll_attempts: int = 50,
-    scroll_pause_time: float = 1.0,
-    check_new_content_time: float = 2.0,
-) -> None:
-    """
-    Scroll to bottom of page with support for infinite scroll loading.
-    Waits for network to settle after each scroll to load new content.
-    """
-    try:
-        previous_height = await page.evaluate("() => document.body.scrollHeight")
-        scroll_attempts = 0
-        no_change_count = 0
+async def scroll_until_no_new_links(
+    page: Page, spider: object, target_count: int = 10, max_rounds: int = 10
+):
+    seen_links = set()
 
-        while scroll_attempts < max_scroll_attempts and no_change_count < 3:
-            await page.evaluate("() => window.scrollBy(0, window.innerHeight)")
+    for _ in range(max_rounds):
+        links = await spider.parse(page)
+        new_links = set(links) - seen_links
 
-            await asyncio.sleep(
-                random.uniform(scroll_pause_time * 0.7, scroll_pause_time * 1.3)
-            )
+        seen_links.update(new_links)
 
-            try:
-                await page.wait_for_load_state(
-                    "domcontentloaded", timeout=check_new_content_time * 1000
-                )
-            except Exception:
-                await asyncio.sleep(check_new_content_time)
+        if len(seen_links) >= target_count:
+            break
 
-            new_height = await page.evaluate("() => document.body.scrollHeight")
+        await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        await asyncio.sleep(1.5)
 
-            if new_height == previous_height:
-                no_change_count += 1
-                logging.debug(f"No new content loaded (attempt {no_change_count}/3)")
-            else:
-                no_change_count = 0
-                logging.debug(
-                    f"New content detected. Height: {previous_height} -> {new_height}"
-                )
-                previous_height = new_height
-
-            scroll_attempts += 1
-
-        logging.debug(f"Infinite scroll completed after {scroll_attempts} attempts")
-    except Exception as e:
-        logging.warning(f"Error during infinite scroll: {e}")
+    return list(seen_links)
 
 
-async def human_mouse_move(page: any) -> None:
+async def human_mouse_move(page: Page) -> None:
     try:
         for _ in range(random.randint(5, 15)):
             x = random.randint(0, 1366)
