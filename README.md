@@ -16,6 +16,13 @@ cd onecrawler
 pip install -e .
 ```
 
+Or 
+
+### From Github
+```bash
+pip install git+https://github.com/sayedshaun/onecrawler.git
+```
+
 
 ## Quick Start
 
@@ -27,7 +34,6 @@ async def main():
     config = CrawlerSettings(
         link_extraction_strategy="deep",
         link_extraction_limit=5,
-        link_classification=True,
         concurrency=2,
         scraping_strategy="heuristic",
         scraping_output_format="json",
