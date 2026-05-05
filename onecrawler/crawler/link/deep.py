@@ -9,7 +9,6 @@ from .helper import (
     human_delay,
     human_scroll,
     human_mouse_move,
-    scroll_to_bottom_with_infinite_scroll,
 )
 from ...config.brawser import BrowserSettings
 from .classifier import LinkClassifierPipeline
@@ -103,14 +102,18 @@ class LinkSpider:
         return links
 
 
+# -------------------------------
+# Main BFS extractor
+# -------------------------------
 async def bfs_link_extractor(
     base_url: str,
     num_links: int = 50,
     include_pattern: list[str] | None = None,
     concurrency: int = 5,
-    link_classifier_with_bert: bool = False,
-    max_scroll_limit: int = 1,
-    browser_settings: Optional[BrowserSettings] = None,
+    link_classifier_enabled: bool = False,
+    max_scroll_limit: int = 5,
+    browser_settings: Optional["BrowserSettings"] = None,
+    disable_human_behaviors: bool = False,
 ):
     logger.info(
         f"Starting deep link extraction from {base_url} with concurrency {concurrency}"
@@ -118,7 +121,8 @@ async def bfs_link_extractor(
 
     browser = GoogleChrome(browser_settings or BrowserSettings())
     scheduler = BFScheduler(base_url)
-    classifier = LinkClassifierPipeline(enabled=link_classifier_with_bert)
+    classifier = LinkClassifierPipeline(link_classifier_enabled)
+
     parsed = urlparse(base_url)
     base_prefix = f"{parsed.scheme}://{parsed.netloc}"
 
@@ -126,31 +130,34 @@ async def bfs_link_extractor(
 
     browser_pool = BrowserPool(browser, concurrency)
     await browser_pool.init()
-    logger.debug("Browser pool initialized")
 
     results = []
     results_set = set()
 
+    results_lock = asyncio.Lock()
+    stop_event = asyncio.Event()
+
     async def worker():
-        while await scheduler.has_next():
-            if len(results) >= num_links:
+        while True:
+            if stop_event.is_set():
                 return
+
+            if not await scheduler.has_next():
+                await asyncio.sleep(0.1)
+                continue
 
             url = await scheduler.next()
 
-            if url in scheduler.visited:
+            if not url or url in scheduler.visited:
                 continue
 
             scheduler.mark_visited(url)
-            logger.debug(f"Processing URL: {url}")
 
             page = await browser_pool.get()
 
             try:
-                # Retry logic for timeout errors
-                max_retries = (
-                    browser_settings.runtime.max_retries if browser_settings else 2
-                )
+                max_retries = browser_settings.runtime.max_retries
+
                 for attempt in range(max_retries):
                     try:
                         await page.goto(
@@ -163,48 +170,44 @@ async def bfs_link_extractor(
                         break
                     except Exception as e:
                         if "Timeout" in str(e) and attempt < max_retries - 1:
-                            logger.warning(
-                                f"Timeout on attempt {attempt + 1} for {url}, retrying..."
-                            )
-                            await human_delay(1, 2)  # Wait before retry
+                            await asyncio.sleep(1.5)
                             continue
                         raise
 
-                # Human-like behavior to avoid bot detection with infinite scroll support
-                await human_delay()
-                await scroll_to_bottom_with_infinite_scroll(
-                    max_scroll_attempts=max_scroll_limit,
-                    scroll_pause_time=0.1,
-                    check_new_content_time=1,
-                )
-                await human_mouse_move(page)
-                await human_delay(0.1, 1.0)
+                if not disable_human_behaviors:
+                    await human_delay()
+
+                if not disable_human_behaviors:
+                    await human_scroll(page, max_scrolls=max_scroll_limit)
 
                 links = await spider.parse(page)
-                logger.debug(f"Extracted {len(links)} links from {url}")
 
-                for link in links:
-                    if not link.startswith(base_prefix):
-                        continue
+                if not disable_human_behaviors:
+                    await human_mouse_move(page)
+                    await human_delay(0.1, 1.0)
 
+                filtered_links = list(
+                    {link for link in links if link.startswith(base_prefix)}
+                )
+
+                if not filtered_links:
+                    continue
+
+                for link in filtered_links:
                     await scheduler.add(link)
-
-                    if not await classifier.is_valid(link):
-                        logger.debug(f"Link filtered by classifier: {link}")
-                        continue
 
                     if include_pattern:
                         if not wildcard_link_match(link, base_prefix, include_pattern):
-                            logger.debug(f"Link does not match pattern: {link}")
                             continue
 
-                    if link not in results_set:
-                        results_set.add(link)
-                        results.append(link)
-                        logger.debug(f"Added link to results: {link}")
+                    async with results_lock:
+                        if link not in results_set:
+                            results_set.add(link)
+                            results.append(link)
 
-                    if len(results) >= num_links:
-                        break
+                            if len(results) >= num_links:
+                                stop_event.set()
+                                return
 
             except Exception as e:
                 logger.error(f"Error processing {url}: {e}")
@@ -213,10 +216,10 @@ async def bfs_link_extractor(
                 await browser_pool.release(page)
 
     tasks = [asyncio.create_task(worker()) for _ in range(concurrency)]
-    logger.info(f"Started {concurrency} worker tasks")
 
     await asyncio.gather(*tasks, return_exceptions=True)
     await browser_pool.close()
-    logger.info(f"Deep extraction completed, found {len(results)} links")
+
+    logger.info(f"Extraction completed, found {len(results)} links")
 
     return results
