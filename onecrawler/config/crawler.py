@@ -24,12 +24,16 @@ class CrawlerSettings:
     concurrency: int = 10
     max_retries: int = 2
     request_timeout: int = 10
+    website_page_type: Literal["infinite", "pagination"] = "pagination"
     infinite_scroll_limit: int = 1
 
     browser_settings: BrowserSettings = field(default_factory=BrowserSettings)
 
     enable_logging: bool = False
     logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+
+    # Performance optimization flags
+    disable_human_behaviors: bool = False
 
     def __post_init__(self):
         if self.scraping_strategy == "genai":
