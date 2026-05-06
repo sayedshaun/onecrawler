@@ -48,7 +48,7 @@ async def main():
         data = await scraper_engine.run(links)
 
     with open("output.json", "w") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+        json.dump(data, f, indent=2)
 
 if __name__ == "__main__":
     import asyncio
