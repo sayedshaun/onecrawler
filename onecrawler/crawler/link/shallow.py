@@ -3,26 +3,23 @@ from typing import Optional, List
 from urllib.parse import urlparse
 from .helper import wildcard_link_match
 from .classifier import LinkClassifierPipeline
-from ...browser import GoogleChrome
-from ...config.brawser import BrowserSettings
+
 
 logger = logging.getLogger(__name__)
 
 
 async def extract_url_from_current_page(
     url: str,
-    browser_config: Optional[BrowserSettings] = None,
+    browser,
     include_link_patterns: Optional[List[str]] = None,
     link_classification: bool = False,
-    concurrency: int = 10,
     max_links: Optional[int] = None,
 ) -> List[str]:
 
     logger.info(f"Starting shallow link extraction from {url}")
 
     links = set()
-    browser = GoogleChrome(config=browser_config or BrowserSettings())
-    await browser.start()
+
     page = await browser.new_page()
 
     classifier = (
@@ -30,15 +27,22 @@ async def extract_url_from_current_page(
         if link_classification
         else None
     )
+
     try:
         logger.debug(f"Navigating to {url}")
-        await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+
+        await page.goto(
+            url,
+            wait_until="domcontentloaded",
+            timeout=15000,
+        )
 
         hrefs = await page.eval_on_selector_all(
             "a", "els => els.map(e => e.href).filter(h => h)"
         )
 
         logger.debug(f"Found {len(hrefs)} anchor elements")
+
         parsed_base = urlparse(url)
         base_domain = parsed_base.netloc
         base_prefix = f"{parsed_base.scheme}://{parsed_base.netloc}"
@@ -50,31 +54,29 @@ async def extract_url_from_current_page(
             if href.startswith(("javascript:", "mailto:")):
                 continue
 
-            # href is already absolute from e.href
-            absolute = href
-            parsed = urlparse(absolute)
+            parsed = urlparse(href)
 
             if parsed.netloc != base_domain:
                 continue
 
-            if absolute.rstrip("/") == url.rstrip("/"):
+            if href.rstrip("/") == url.rstrip("/"):
                 continue
 
-            logger.debug(f"Considering URL: {absolute}")
+            logger.debug(f"Considering URL: {href}")
 
             if include_link_patterns:
                 if not wildcard_link_match(
-                    absolute, base_prefix, include_link_patterns
+                    href,
+                    base_prefix,
+                    include_link_patterns,
                 ):
-                    logger.debug(f"URL does not match pattern: {absolute}")
                     continue
 
             if classifier:
-                if not await classifier.is_valid(absolute):
+                if not await classifier.is_valid(href):
                     continue
 
-            logger.debug(f"Adding URL to results: {absolute}")
-            links.add(absolute)
+            links.add(href)
 
             if max_links and len(links) >= max_links:
                 logger.info("Reached max_links limit, stopping early")
@@ -84,6 +86,5 @@ async def extract_url_from_current_page(
 
     finally:
         await page.close()
-        await browser.close()
 
     return list(links)
