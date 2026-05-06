@@ -1,80 +1,78 @@
+from urllib.parse import urlparse
 from .shallow import extract_url_from_current_page
-from .deep import bfs_link_extractor
-import logging
+from .deep import BFScheduler, BFSRuntime, BrowserPool, LinkSpider
+from ..base import BaseEngine
+from ...browser import GoogleChrome
 
 
-class LinkExtractionEngine:
+class LinkExtractionEngine(BaseEngine):
     def __init__(self, settings):
-        self.settings = settings
-        self._closed = False
-        self.logger = logging.getLogger(__name__)
+        super().__init__()
 
-        # future-ready placeholders (e.g., aiohttp / playwright / llm clients)
+        self.settings = settings
+
+        # future-ready placeholders
         self.session = None
+
         self.logger.info("LinkExtractionEngine initialized")
 
-    # Async context manager
-    async def __aenter__(self):
-        # Initialize async resources here (if needed)
-        # Example:
-        # import aiohttp
-        # self.session = aiohttp.ClientSession()
+    async def start(self):
+        self.browser = GoogleChrome(self.settings.browser_settings)
+        await self.browser.start()
 
-        self._closed = False
-        self.logger.debug("Entering LinkExtractionEngine context")
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb):
-        # Cleanup async resources here
-        # Example:
-        # if self.session:
-        #     await self.session.close()
-
-        self._closed = True
-        self.logger.debug("Exiting LinkExtractionEngine context")
+    async def close(self):
+        if hasattr(self, "browser") and self.browser:
+            await self.browser.close()
 
     async def run(self, url: str) -> dict:
-        if self._closed:
-            raise RuntimeError("Engine is closed. Use 'async with' context.")
+        self._ensure_open()
 
         strategy = self.settings.link_extraction_strategy
         self.logger.info(f"Running link extraction on {url} with strategy: {strategy}")
 
         if strategy == "shallow":
             return await self._run_shallow(url)
-        elif strategy == "deep":
+
+        if strategy == "deep":
             return await self._run_deep(url)
-        else:
-            self.logger.error(f"Unknown strategy: {strategy}")
-            raise ValueError(f"Unknown strategy: {strategy}")
+
+        raise ValueError(f"Unknown strategy: {strategy}")
 
     async def _run_shallow(self, url: str) -> dict:
-        self.logger.debug(f"Starting shallow link extraction for {url}")
-        result = await extract_url_from_current_page(
+        self._ensure_open()
+
+        return await extract_url_from_current_page(
             url=url,
+            browser=self.browser,
             include_link_patterns=self.settings.include_link_patterns,
             link_classification=self.settings.link_classification,
-            concurrency=self.settings.concurrency,
             max_links=self.settings.link_extraction_limit,
         )
-        self.logger.info(f"Shallow extraction completed, found {len(result)} links")
-        return result
 
     async def _run_deep(self, url: str) -> dict:
-        self.logger.debug(f"Starting deep link extraction for {url}")
-        # Update browser settings with crawler timeouts
-        browser_settings = self.settings.browser_settings
-        browser_settings.runtime.timeout = self.settings.request_timeout * 1000  # convert to ms
-        browser_settings.runtime.max_retries = self.settings.max_retries
-        result = await bfs_link_extractor(
-            base_url=url,
-            num_links=self.settings.link_extraction_limit,
+        self._ensure_open()
+
+        parsed = urlparse(url)
+        base_prefix = f"{parsed.scheme}://{parsed.netloc}"
+
+        scheduler = BFScheduler(url)
+        spider = LinkSpider(base_prefix)
+        pool = BrowserPool(self.browser, self.settings.concurrency)
+
+        await pool.init()
+
+        runtime = BFSRuntime(
+            scheduler=scheduler,
+            pool=pool,
+            spider=spider,
+            base_prefix=base_prefix,
+            max_links=self.settings.link_extraction_limit,
             include_pattern=self.settings.include_link_patterns,
-            concurrency=self.settings.concurrency,
-            link_classifier_enabled=self.settings.link_classification,
-            max_scroll_limit=self.settings.infinite_scroll_limit,
-            browser_settings=browser_settings,
             disable_human_behaviors=self.settings.disable_human_behaviors,
+            concurrency=self.settings.concurrency,
         )
-        self.logger.info(f"Deep extraction completed, found {len(result)} links")
-        return result
+
+        try:
+            return await runtime.run()
+        finally:
+            await pool.close()
