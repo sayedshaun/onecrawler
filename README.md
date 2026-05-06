@@ -1,4 +1,4 @@
-![static/onecrawl_logo.png](static/onecrawl_logo.png)
+![onecrawl_logo.png](https://raw.githubusercontent.com/sayedshaun/onecrawler/refs/heads/main/static/onecrawl_logo.png)
 
 # Onecrawler
 
