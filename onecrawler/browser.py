@@ -1,4 +1,5 @@
 from playwright.async_api import async_playwright
+from contextlib import suppress
 from .config.brawser import BrowserSettings
 
 
@@ -6,8 +7,10 @@ class GoogleChrome:
     def __init__(self, config: BrowserSettings):
         self.config = config
         self.playwright = None
+        self.browser = None
         self.context = None
         self._started = False
+        self._closed = False
 
     async def start(self):
         if self._started:
@@ -47,6 +50,7 @@ class GoogleChrome:
         )
 
         self._started = True
+        self._closed = False
 
     async def new_page(self):
         if not self._started:
@@ -61,12 +65,27 @@ class GoogleChrome:
         return page
 
     async def close(self):
+        if self._closed:
+            return
+
+        self._closed = True
+
+        # Close context safely
         if self.context:
-            await self.context.close()
+            with suppress(Exception):
+                await self.context.close()
             self.context = None
 
+        # Close browser (YOU WERE MISSING THIS)
+        if self.browser:
+            with suppress(Exception):
+                await self.browser.close()
+            self.browser = None
+
+        # Stop playwright
         if self.playwright:
-            await self.playwright.stop()
+            with suppress(Exception):
+                await self.playwright.stop()
             self.playwright = None
 
         self._started = False
