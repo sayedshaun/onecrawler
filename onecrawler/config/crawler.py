@@ -12,8 +12,6 @@ class CrawlerSettings:
     include_link_patterns: Optional[List[str]] = None
     exclude_link_patterns: Optional[List[str]] = None
 
-    link_classification: bool = False
-
     scraping_strategy: Literal["heuristic", "genai"] = "heuristic"
     scraping_output_format: Literal[
         "markdown", "json", "csv", "html", "python", "txt", "xml", "xmltei"
@@ -24,8 +22,6 @@ class CrawlerSettings:
     concurrency: int = 10
     max_retries: int = 2
     request_timeout: int = 10
-    website_page_type: Literal["infinite", "pagination"] = "pagination"
-    infinite_scroll_limit: int = 1
 
     browser_settings: BrowserSettings = field(default_factory=BrowserSettings)
 
