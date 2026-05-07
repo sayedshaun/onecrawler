@@ -6,6 +6,18 @@ from .genai import GenerativeAISettings
 
 @dataclass
 class CrawlerSettings:
+    follow_sitemap_index: bool = True
+    sitemap_html_fallback: bool = True
+    max_crawl_depth: int = 3
+    max_crawl_pages: int = 500
+    sitemap_user_agent: str = (
+        "Mozilla/5.0 (compatible; UniversalURLFetcher/1.0; "
+        "+https://github.com/sayedshaun/onecrawler)"
+    )
+    sitemap_respect_robots: bool = True
+    sitemap_deduplicate: bool = True
+    verbose: bool = True
+
     link_extraction_strategy: Literal["shallow", "deep"] = "deep"
     link_extraction_limit: int = 50
 
@@ -22,6 +34,7 @@ class CrawlerSettings:
     concurrency: int = 10
     max_retries: int = 2
     request_timeout: int = 10
+    retry_delay: int = 1
 
     browser_settings: BrowserSettings = field(default_factory=BrowserSettings)
 
