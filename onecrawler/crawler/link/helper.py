@@ -53,6 +53,36 @@ async def human_mouse_move(page: Page) -> None:
 def wildcard_link_match(
     link: str, base_prefix: str, include_pattern: list[str]
 ) -> bool:
+
+    """Return True if *link* belongs to the site and matches the section filter.
+
+    Args:
+        link:             The candidate URL.
+        base_prefix:      Site origin, e.g. ``"https://www.example.com"``.
+        include_patterns: Glob patterns tested against the URL *path*.
+                          An empty list means "accept everything".
+
+    Examples::
+
+        wildcard_link_match(
+            "https://www.example.com/sports/football/123",
+            "https://www.example.com",
+            ["/sports/*"],
+        )  # True
+
+        wildcard_link_match(
+            "https://www.example.com/tech/ai/456",
+            "https://www.example.com",
+            ["/sports/*"],
+        )  # False
+
+        wildcard_link_match(
+            "https://www.example.com/anything",
+            "https://www.example.com",
+            [],            # no filter → always True
+        )  # True
+    """
+
     if not isinstance(link, str) or not link.startswith(base_prefix):
         return False
 
