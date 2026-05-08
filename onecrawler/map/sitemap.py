@@ -3,19 +3,14 @@ import time
 from typing import Set, Tuple
 import aiohttp
 from lxml import etree
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 import gzip
 import logging
 import re
-
 import warnings
-
-
 from typing import Optional
-from urllib.parse import urljoin
 from urllib.robotparser import RobotFileParser
-
-
+from curl_cffi.requests import AsyncSession
 from ..config.crawler import CrawlerSettings
 from ..crawler.link.helper import wildcard_link_match
 from .helper import (
@@ -147,19 +142,13 @@ class HTTPClient:
         self.user_agent = user_agent
         self.max_retries = retries
         self.retry_delay = retry_delay
-        self._session: Optional[aiohttp.ClientSession] = None
+        self._session: Optional[AsyncSession] = None
+        self._semaphore = asyncio.Semaphore(concurrency)
 
     async def __aenter__(self):
-        connector = aiohttp.TCPConnector(
-            limit=self.concurrency,
-            ssl=False,
-            ttl_dns_cache=300,
-        )
-        timeout = aiohttp.ClientTimeout(total=self.timeout)
-        self._session = aiohttp.ClientSession(
-            connector=connector,
-            timeout=timeout,
-            headers={"User-Agent": self.user_agent},
+        self._session = AsyncSession(
+            impersonate="chrome136",  # impersonate latest Chrome TLS fingerprint
+            timeout=self.timeout,
         )
         return self
 
@@ -171,34 +160,39 @@ class HTTPClient:
         """Fetch raw bytes with retry logic. Returns None on failure."""
         for attempt in range(1, self.max_retries + 1):
             try:
-                async with self._session.get(
-                    url,
-                    allow_redirects=True,
-                    max_redirects=10,
-                ) as resp:
-                    if resp.status == 200:
-                        data = await resp.read()
-                        # Handle gzip-compressed sitemaps
-                        if (
-                            url.endswith(".gz")
-                            or resp.headers.get("Content-Encoding") == "gzip"
-                        ):
-                            try:
-                                data = gzip.decompress(data)
-                            except Exception:
-                                pass
-                        return data
-                    elif resp.status in (301, 302, 307, 308):
-                        pass
-                    elif resp.status == 404:
-                        return None
+                async with self._semaphore:
+                    resp = await self._session.get(
+                        url,
+                        allow_redirects=True,
+                        max_redirects=10,
+                    )
+
+                if resp.status_code == 200:
+                    data = resp.content
+                    # Handle gzip-compressed sitemaps
+                    if (
+                        url.endswith(".gz")
+                        or resp.headers.get("Content-Encoding") == "gzip"
+                    ):
+                        try:
+                            data = gzip.decompress(data)
+                        except Exception:
+                            pass
+                    return data
+
+                elif resp.status_code == 404:
+                    return None
+
+                elif resp.status_code in (403, 429):
+                    warnings.warn(
+                        f"HTTP {resp.status_code} for {url} (attempt {attempt}) — "
+                        f"Cf-Mitigated: {resp.headers.get('Cf-Mitigated', 'none')}"
+                    )
 
             except asyncio.TimeoutError:
                 warnings.warn(f"Timeout for {url} (attempt {attempt})")
-            except aiohttp.ClientError as e:
-                warnings.warn(f"Client error for {url}: {e} (attempt {attempt})")
             except Exception as e:
-                warnings.warn(f"Unexpected error for {url}: {e}")
+                warnings.warn(f"Unexpected error for {url}: {e} (attempt {attempt})")
 
             if attempt < self.max_retries:
                 await asyncio.sleep(self.retry_delay * attempt)
@@ -258,29 +252,51 @@ class SitemapParser:
     async def parse_all(
         self, sitemap_urls: list[str]
     ) -> tuple[list[URLRecord], list[str]]:
-        """Recursively parse all sitemaps. Returns (url_records, sitemap_urls_found)."""
+        """Iteratively parse all sitemaps, following nested .xml/.xml.gz links."""
         all_records: list[URLRecord] = []
-        all_sitemaps: list[str] = list(sitemap_urls)
+        all_sitemaps: list[str] = []
 
-        tasks = [self._parse_one(url) for url in sitemap_urls]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        # Seed the queue
+        queue: list[str] = [u for u in sitemap_urls if u not in self._visited_sitemaps]
 
-        for url, result in zip(sitemap_urls, results):
-            if isinstance(result, Exception):
-                continue
-            records, child_sitemaps = result
-            all_records.extend(records)
+        while queue:
+            # Deduplicate current batch against already-visited
+            batch = []
+            for url in queue:
+                if url not in self._visited_sitemaps:
+                    batch.append(url)
 
-            # Recurse into child sitemaps (sitemap index)
-            new_children = [
-                s for s in child_sitemaps if s not in self._visited_sitemaps
-            ]
-            if new_children:
-                all_sitemaps.extend(new_children)
-                child_records, _ = await self.parse_all(new_children)
-                all_records.extend(child_records)
+            queue = []  # Reset for next wave of children
+            if not batch:
+                break
+
+            all_sitemaps.extend(batch)
+
+            # Fetch + parse this batch concurrently
+            tasks = [self._parse_one(url) for url in batch]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            for result in results:
+                if isinstance(result, Exception):
+                    continue
+                records, child_sitemaps = result
+                all_records.extend(records)
+
+                # Only re-queue children that are XML sitemaps and not yet visited
+                for child_url in child_sitemaps:
+                    if (
+                        child_url not in self._visited_sitemaps
+                        and self._is_xml_sitemap_url(child_url)
+                    ):
+                        queue.append(child_url)
 
         return all_records, all_sitemaps
+
+    @staticmethod
+    def _is_xml_sitemap_url(url: str) -> bool:
+        """Return True if the URL looks like an XML sitemap (to be traversed, not scraped)."""
+        path = urlparse(url).path.lower()
+        return path.endswith(".xml") or path.endswith(".xml.gz")
 
     async def _parse_one(self, url: str) -> tuple[list[URLRecord], list[str]]:
         """Parse a single sitemap URL. Returns (records, child_sitemap_urls)."""
@@ -288,13 +304,20 @@ class SitemapParser:
             return [], []
         self._visited_sitemaps.add(url)
 
+        logging.info(f"[sitemap] Fetching: {url}")  # ← add this line
+
         async with self._semaphore:
             data = await self.client.get(url)
 
         if not data:
+            logging.warning(f"[sitemap] No data returned for: {url}")  # ← and this
             return [], []
 
-        return self._parse_xml(data, source=url)
+        records, children = self._parse_xml(data, source=url)
+        logging.info(
+            f"[sitemap] {url} → {len(records)} URLs, {len(children)} child sitemaps"
+        )
+        return records, children
 
     def _parse_xml(self, data: bytes, source: str) -> tuple[list[URLRecord], list[str]]:
         """Parse XML bytes → (URLRecord list, child sitemap URLs) using lxml."""
@@ -428,10 +451,7 @@ class UniversalSiteMap:
         self.config = config
 
     async def run(self, url: str) -> list[str]:
-        """Fetch all page URLs from the given website.
 
-        Returns a deduplicated list of URLs, excluding any .xml / .xml.gz URLs.
-        """
         base_url = self._normalize_base(url)
 
         strategies_used: list[str] = []
@@ -447,12 +467,12 @@ class UniversalSiteMap:
             robots = RobotsParser(client)
             sitemap_parser = SitemapParser(client, self.config.concurrency)
 
-            # ── STRATEGY 1: robots.txt ──────────────────────────────────────
+            # STRATEGY 1: robots.txt
             sitemap_urls = await robots.fetch_sitemaps(base_url)
             if sitemap_urls:
                 strategies_used.append("robots.txt")
 
-            # ── STRATEGY 2: Common sitemap paths ───────────────────────────
+            # STRATEGY 2: Common sitemap paths
             probe_tasks = [
                 self._probe_url(client, urljoin(base_url, path))
                 for path in COMMON_SITEMAP_PATHS
@@ -468,13 +488,13 @@ class UniversalSiteMap:
                 strategies_used.append("common_paths")
                 sitemap_urls.extend(new_common)
 
-            # ── STRATEGY 3: Parse all sitemaps ─────────────────────────────
+            # STRATEGY 3: Parse all sitemaps
             if sitemap_urls:
                 strategies_used.append("sitemap_xml")
                 records, _ = await sitemap_parser.parse_all(sitemap_urls)
                 all_records.extend(records)
 
-            # ── STRATEGY 4: HTML crawl fallback ────────────────────────────
+            # STRATEGY 4: HTML crawl fallback
             if not all_records and self.config.sitemap_html_fallback:
                 strategies_used.append("html_crawl")
                 crawler = HTMLCrawler(
@@ -489,10 +509,10 @@ class UniversalSiteMap:
         if self.config.verbose:
             logging.info(f"Strategies used: {strategies_used}")
 
-        # ── Filter out XML URLs ─────────────────────────────────────────────
+        # Filter out XML URLs
         all_records = [r for r in all_records if not is_xml_url(r.url)]
 
-        # ── Section filter (include_patterns) ──────────────────────────────
+        # Section filter (include_patterns)
         if self.config.include_link_patterns:
             all_records = [
                 r
@@ -500,7 +520,7 @@ class UniversalSiteMap:
                 if wildcard_link_match(r.url, base_url, self.config.include_patterns)
             ]
 
-        # ── Deduplication ───────────────────────────────────────────────────
+        # Deduplication
         if self.config.sitemap_deduplicate:
             seen: set[str] = set()
             deduped: list[URLRecord] = []
@@ -511,7 +531,7 @@ class UniversalSiteMap:
                     deduped.append(rec)
             all_records = deduped
 
-        # ── Cap at max_urls ─────────────────────────────────────────────────
+        # Cap at max_urls
         if len(all_records) > self.config.link_extraction_limit:
             all_records = all_records[: self.config.link_extraction_limit]
 
