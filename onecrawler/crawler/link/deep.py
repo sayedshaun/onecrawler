@@ -1,8 +1,11 @@
 import asyncio
+import logging
 from collections import deque
 from typing import Optional
 
 from .helper import human_delay, human_mouse_move, human_scroll, wildcard_link_match
+
+logger = logging.getLogger(__name__)
 
 
 class BFScheduler:
@@ -34,7 +37,7 @@ class BFScheduler:
                 return
 
             if len(self.in_queue) >= self.max_queue_size:
-                return  # backpressure protection
+                return
 
             self.in_queue.add(url)
 
@@ -56,7 +59,8 @@ class BrowserPool:
         self._closed = False
 
     async def init(self):
-        await self.browser.start()
+        # NOTE: browser.start() must already be called before BrowserPool.init()
+        # We only create pages here — do NOT call self.browser.start() again.
         for _ in range(self.size):
             page = await self.browser.new_page()
             await self.pages.put(page)
@@ -70,12 +74,10 @@ class BrowserPool:
 
     async def close(self):
         self._closed = True
-
         while not self.pages.empty():
             page = await self.pages.get()
             await page.close()
-
-        await self.browser.close()
+        # NOTE: do NOT close the browser here — the engine owns it
 
 
 class LinkSpider:
@@ -86,7 +88,6 @@ class LinkSpider:
         raw = await page.eval_on_selector_all(
             "a", "els => els.map(e => e.href).filter(Boolean)"
         )
-
         return [
             link
             for link in raw
@@ -122,25 +123,49 @@ class BFSRuntime:
         self.results_set = set()
         self.lock = asyncio.Lock()
 
+        # Track how many workers are actively processing a URL
+        self._active_workers = 0
+        self._active_lock = asyncio.Lock()
+
     async def worker(self):
         while not self.stop_event.is_set():
             url = await self.scheduler.next()
 
-            if not url:
+            if url is None:
+                # Queue is empty — check if any other worker is still active.
+                # If not, all work is done and we can exit.
+                async with self._active_lock:
+                    if self._active_workers == 0:
+                        self.stop_event.set()
+                        return
+
+                # Another worker is still processing and may enqueue more URLs.
+                # Wait a bit and retry instead of busy-spinning.
+                await asyncio.sleep(0.2)
                 continue
 
             if url in self.scheduler.visited:
                 continue
 
-            self.scheduler.mark_visited(url)
+            async with self._active_lock:
+                self._active_workers += 1
 
             page = await self.pool.acquire()
 
             try:
-                await page.goto(
+                self.scheduler.mark_visited(url)
+                logger.info(
+                    "Crawled %s/%s urls; current=%s",
+                    len(self.scheduler.visited),
+                    self.max_links,
                     url,
-                    wait_until="domcontentloaded",
                 )
+
+                try:
+                    await page.goto(url, wait_until="domcontentloaded")
+                except Exception as e:
+                    logger.warning("Failed to load %s: %s", url, e)
+                    return
 
                 if not self.disable_human_behaviors:
                     await human_delay()
@@ -152,6 +177,9 @@ class BFSRuntime:
                     await human_mouse_move(page)
 
                 for link in links:
+                    if self.stop_event.is_set():
+                        break
+
                     if not link.startswith(self.base_prefix):
                         continue
 
@@ -172,12 +200,21 @@ class BFSRuntime:
                         self.results_set.add(link)
                         self.results.append(link)
 
+                        logger.info(
+                            "Discovered %s/%s links; link=%s",
+                            len(self.results),
+                            self.max_links,
+                            link,
+                        )
+
                         if len(self.results) >= self.max_links:
                             self.stop_event.set()
                             return
 
             finally:
                 await self.pool.release(page)
+                async with self._active_lock:
+                    self._active_workers -= 1
 
     async def run(self):
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
