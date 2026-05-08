@@ -2,35 +2,54 @@
 
 # Onecrawler
 
+[![CI](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml/badge.svg)](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Package](https://img.shields.io/badge/package-onecrawler-2ea44f.svg)](https://github.com/sayedshaun/onecrawler)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Imports: isort](https://img.shields.io/badge/imports-isort-1674b1.svg)](https://pycqa.github.io/isort/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 Onecrawler is a feature-rich Python web crawling toolkit for extracting links and scraping page content using heuristic or Generative AI strategies.
+
+## Project Info
+
+- Python: `>=3.10`
+- Package manager: `pip`
+- Formatting: `black` and `isort`
+- Test runner: `./test.sh`
+- CI: GitHub Actions on pushes and pull requests to `main`
 
 ## Installation
 
 ### Standard Installation
+
 ```bash
 pip install onecrawler
 ```
 
 ### From Source
+
 ```bash
 git clone https://github.com/sayedshaun/onecrawler.git
 cd onecrawler
 pip install -e .
 ```
 
-Or 
+Or
 
 ### From Github
+
 ```bash
 pip install git+https://github.com/sayedshaun/onecrawler.git
 ```
-
 
 ## Quick Start
 
 ```python
 import json
+
 from onecrawler import CrawlerSettings, LinkExtractionEngine, ScraperEngine
+
 
 async def main():
     config = CrawlerSettings(
@@ -52,9 +71,9 @@ async def main():
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(main())
 ```
-
 
 ## Features
 
