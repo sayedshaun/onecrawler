@@ -1,9 +1,9 @@
 import logging
-from typing import Optional, List
+from typing import List, Optional
 from urllib.parse import urlparse
-from .helper import wildcard_link_match
-from .classifier import LinkClassifierPipeline
 
+from .classifier import LinkClassifierPipeline
+from .helper import wildcard_link_match
 
 logger = logging.getLogger(__name__)
 

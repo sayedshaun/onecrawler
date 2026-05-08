@@ -1,12 +1,13 @@
-import json
 import asyncio
+import json
+
 import trafilatura
 
 
 class HeuristicStrategy:
     def __init__(self, output_format: str = "json", browser=None):
         self.output_format = output_format
-        self.browser = browser  
+        self.browser = browser
 
     async def extract(self, url: str):
         if self.browser:

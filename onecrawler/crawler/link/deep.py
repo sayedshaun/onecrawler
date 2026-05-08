@@ -1,7 +1,8 @@
 import asyncio
 from collections import deque
 from typing import Optional
-from .helper import wildcard_link_match, human_delay, human_scroll, human_mouse_move
+
+from .helper import human_delay, human_mouse_move, human_scroll, wildcard_link_match
 
 
 class BFScheduler:

@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Optional
 from urllib.parse import urlparse, urlunparse
 
-
 SITEMAP_NS = {
     "sm": "http://www.sitemaps.org/schemas/sitemap/0.9",
     "news": "http://www.google.com/schemas/sitemap-news/0.9",
@@ -14,13 +13,14 @@ SITEMAP_NS = {
 
 
 COMMON_SITEMAP_PATHS = [
-    "/sitemap.xml",           # universal default — most likely to exist
-    "/sitemap_index.xml",     # second most common
-    "/wp-sitemap.xml",        # WordPress 5.5+ (often not in robots.txt)
-    "/sitemap.xml.gz",        # compressed variant
-    "/index-sitemap.xml",     # some news CMSes (e.g. somoynews.tv style)
-    "/sitemap/sitemap.xml",   # sites that put sitemap in a subdirectory
+    "/sitemap.xml",  # universal default — most likely to exist
+    "/sitemap_index.xml",  # second most common
+    "/wp-sitemap.xml",  # WordPress 5.5+ (often not in robots.txt)
+    "/sitemap.xml.gz",  # compressed variant
+    "/index-sitemap.xml",  # some news CMSes (e.g. somoynews.tv style)
+    "/sitemap/sitemap.xml",  # sites that put sitemap in a subdirectory
 ]
+
 
 @dataclass
 class URLRecord:

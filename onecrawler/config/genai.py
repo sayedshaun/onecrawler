@@ -1,6 +1,8 @@
 from dataclasses import dataclass
-from typing import Optional, Literal, Type
+from typing import Literal, Optional, Type
+
 from pydantic import BaseModel
+
 
 @dataclass
 class GenerativeAISettings:

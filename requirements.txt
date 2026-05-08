@@ -1,5 +1,5 @@
-beautifulsoup4
 aiohttp
+curl_cffi
 asyncio
 tqdm
 playwright
@@ -7,3 +7,4 @@ pydantic
 trafilatura
 lxml
 fnmatch
+curl_cffi

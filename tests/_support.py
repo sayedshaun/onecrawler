@@ -1,0 +1,76 @@
+from __future__ import annotations
+
+import importlib.util
+import sys
+import types
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def ensure_package(name: str) -> types.ModuleType:
+    module = sys.modules.get(name)
+    if module is None:
+        module = types.ModuleType(name)
+        module.__path__ = []
+        sys.modules[name] = module
+    return module
+
+
+def load_module(name: str, relative_path: str):
+    module = sys.modules.get(name)
+    if module is not None:
+        return module
+
+    path = ROOT / relative_path
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load {name} from {path}")
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_config_modules():
+    ensure_package("onecrawler")
+    ensure_package("onecrawler.config")
+    brawser = load_module("onecrawler.config.brawser", "onecrawler/config/brawser.py")
+    genai = load_module("onecrawler.config.genai", "onecrawler/config/genai.py")
+    crawler = load_module("onecrawler.config.crawler", "onecrawler/config/crawler.py")
+    return brawser, genai, crawler
+
+
+def load_link_modules():
+    ensure_package("onecrawler")
+    ensure_package("onecrawler.crawler")
+    ensure_package("onecrawler.crawler.link")
+    helper = load_module(
+        "onecrawler.crawler.link.helper", "onecrawler/crawler/link/helper.py"
+    )
+    deep = load_module(
+        "onecrawler.crawler.link.deep", "onecrawler/crawler/link/deep.py"
+    )
+    return helper, deep
+
+
+def install_curl_cffi_stub() -> None:
+    if "curl_cffi.requests" in sys.modules:
+        return
+
+    curl_cffi = types.ModuleType("curl_cffi")
+    requests = types.ModuleType("curl_cffi.requests")
+
+    class AsyncSession:
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
+        async def close(self):
+            return None
+
+    requests.AsyncSession = AsyncSession
+    curl_cffi.requests = requests
+    sys.modules["curl_cffi"] = curl_cffi
+    sys.modules["curl_cffi.requests"] = requests

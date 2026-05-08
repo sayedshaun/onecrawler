@@ -1,10 +1,11 @@
 import asyncio
 from typing import List, Union
+
+from ...browser import GoogleChrome
 from ...config.crawler import CrawlerSettings
+from ..base import BaseEngine
 from .genai.executor import GenAIStrategy
 from .heuristic.script import HeuristicStrategy
-from ...browser import GoogleChrome
-from ..base import BaseEngine
 
 
 class ScraperEngine(BaseEngine):

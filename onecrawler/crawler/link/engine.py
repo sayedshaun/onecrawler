@@ -1,8 +1,9 @@
 from urllib.parse import urlparse
-from .shallow import extract_url_from_current_page
-from .deep import BFScheduler, BFSRuntime, BrowserPool, LinkSpider
-from ..base import BaseEngine
+
 from ...browser import GoogleChrome
+from ..base import BaseEngine
+from .deep import BFScheduler, BFSRuntime, BrowserPool, LinkSpider
+from .shallow import extract_url_from_current_page
 
 
 class LinkExtractionEngine(BaseEngine):

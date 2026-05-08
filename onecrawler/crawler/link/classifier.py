@@ -1,17 +1,13 @@
 import asyncio
 import warnings
-from urllib.parse import unquote
-from typing import List
 from functools import lru_cache
+from typing import List
+from urllib.parse import unquote
 
 CLASSIFIER_AVAILABLE = True
 try:
     import torch
-    from transformers import (
-        AutoModelForSequenceClassification,
-        AutoTokenizer,
-        pipeline,
-    )
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 except ImportError:
     CLASSIFIER_AVAILABLE = False
 

@@ -1,5 +1,7 @@
-from playwright.async_api import async_playwright
 from contextlib import suppress
+
+from playwright.async_api import async_playwright
+
 from .config.brawser import BrowserSettings
 
 

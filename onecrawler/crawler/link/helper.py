@@ -3,6 +3,7 @@ import logging
 import random
 from fnmatch import fnmatch
 from urllib.parse import urlparse
+
 from playwright.async_api import Page
 
 
@@ -53,7 +54,6 @@ async def human_mouse_move(page: Page) -> None:
 def wildcard_link_match(
     link: str, base_prefix: str, include_pattern: list[str]
 ) -> bool:
-
     """Return True if *link* belongs to the site and matches the section filter.
 
     Args:

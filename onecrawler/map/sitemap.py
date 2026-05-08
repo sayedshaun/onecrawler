@@ -1,24 +1,25 @@
 import asyncio
-import time
-from typing import Set, Tuple
-import aiohttp
-from lxml import etree
-from urllib.parse import urlparse, urljoin
 import gzip
 import logging
 import re
+import time
 import warnings
-from typing import Optional
+from typing import Optional, Set, Tuple
+from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
+
+import aiohttp
 from curl_cffi.requests import AsyncSession
+from lxml import etree
+
 from ..config.crawler import CrawlerSettings
 from ..crawler.link.helper import wildcard_link_match
 from .helper import (
-    URLRecord,
     COMMON_SITEMAP_PATHS,
-    normalize_url,
-    is_xml_url,
+    URLRecord,
     is_same_origin,
+    is_xml_url,
+    normalize_url,
 )
 
 
