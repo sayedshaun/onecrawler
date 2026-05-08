@@ -121,7 +121,7 @@ class SiteMap:
         timeout = aiohttp.ClientTimeout(total=self.timeout)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             await self._parse(session, self.sitemap_url)
-        return self.urls, self.stats
+        return list(self.urls), self.stats
 
     async def run(self, url: str):
         urls, stats = await self.fetch(url)
