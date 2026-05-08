@@ -517,7 +517,7 @@ class UniversalSiteMap:
             all_records = [
                 r
                 for r in all_records
-                if wildcard_link_match(r.url, base_url, self.config.include_patterns)
+                if wildcard_link_match(r.url, base_url, self.config.include_link_patterns)
             ]
 
         # Deduplication
