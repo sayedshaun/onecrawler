@@ -13,7 +13,7 @@
 [![Imports: isort](https://img.shields.io/badge/imports-isort-1674b1.svg)](https://pycqa.github.io/isort/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-[Installation](#installation) · [Quick Start](#quick-start) · [Configuration](#configuration) · [Examples](#examples) · [Contributing](#development)
+[Installation](#installation) · [Quick Start](#quick-start) · [Documentation](#documentation) · [Development](#development)
 
 </div>
 
@@ -45,6 +45,26 @@ async with ScraperEngine(config) as scraper:
 | **Content Extraction** | Heuristic mode via `trafilatura`; optional Generative AI extraction strategy |
 | **Output Formats** | `markdown`, `json`, `csv`, `html`, `python`, `txt`, `xml`, `xmltei` |
 | **Code Quality** | Pre-commit hooks (Black + isort), GitHub Actions CI across Python 3.10–3.12 |
+
+---
+
+## Documentation
+
+The README gives a quick overview and copy-paste starter examples. The full documentation lives in [`docs/`](docs/index.md):
+
+| Topic | Guide |
+|---|---|
+| Install the package | [Installation](docs/installation.md) |
+| Run your first crawl | [Quick start](docs/quick-start.md) |
+| Tune crawler settings | [Configuration](docs/configuration.md) |
+| Discover URLs from sitemaps | [Sitemap discovery](docs/sitemap-discovery.md) |
+| Extract and filter links | [Link extraction](docs/link-extraction.md) |
+| Scrape page content | [Scraping](docs/scraping.md) |
+| Public classes and exports | [API reference](docs/api-reference.md) |
+| Common fixes | [Troubleshooting](docs/troubleshooting.md) |
+| Contribute locally | [Contributing](docs/contributing.md) |
+
+If you enable GitHub Pages for this repository, publish from the `main` branch and the `/docs` folder so [`docs/index.md`](docs/index.md) becomes the documentation home page. See [Publishing with GitHub Pages](docs/pages-deploy.md) for the setup notes.
 
 ---
 
@@ -116,8 +136,6 @@ if __name__ == "__main__":
 
 ---
 
-## Examples
-
 ### Sitemap Discovery
 
 Use `UniversalSiteMap` to collect URLs from a site's sitemap infrastructure before scraping. Supports `robots.txt` resolution, nested sitemap indexes, and HTML fallback:
@@ -178,21 +196,6 @@ config = CrawlerSettings(
 
 ---
 
-## Configuration
-
-`CrawlerSettings` is the central configuration object. All fields are optional with sensible defaults.
-
-| Parameter | Type | Description |
-|---|---|---|
-| `link_extraction_strategy` | `str` | `"deep"` or `"shallow"` traversal mode |
-| `link_extraction_limit` | `int` | Maximum number of links to extract |
-| `include_link_patterns` | `list[str]` | Wildcard URL path filters (e.g. `["/news/*"]`) |
-| `scraping_strategy` | `str` | `"heuristic"` (trafilatura) or AI-based strategy |
-| `scraping_output_format` | `str` | One of `markdown`, `json`, `csv`, `html`, `txt`, `xml`, `xmltei`, `python` |
-| `concurrency` | `int` | Number of concurrent async workers |
-| `max_retries` | `int` | Retry attempts per failed request |
-| `request_timeout` | `int` | Per-request timeout in seconds |
-
 **Full example:**
 
 ```python
@@ -208,21 +211,6 @@ config = CrawlerSettings(
     max_retries=2,
     request_timeout=3,
 )
-```
-
----
-
-## Project Structure
-
-```
-onecrawler/
-├── config/          # Runtime and crawler configuration
-├── crawler/         # Link extraction and scraping engines
-├── map/             # Sitemap discovery and URL parsing
-└── utils/           # Shared utilities
-
-tests/               # Unit tests
-.github/             # CI workflow configuration
 ```
 
 ---
@@ -253,20 +241,7 @@ Install the pre-commit hook (runs Black and isort automatically before each comm
 pre-commit install
 ```
 
----
 
-## CI
-
-The GitHub Actions pipeline runs on all pushes and pull requests targeting `main`.
-
-**Matrix:** Python `3.10`, `3.11`, `3.12`
-
-**Checks:**
-- Package installation with dev dependencies
-- Code formatting via `pre-commit` (Black + isort)
-- Full test execution via `./test.sh`
-
----
 
 ## License
 
