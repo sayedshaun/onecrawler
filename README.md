@@ -1,13 +1,14 @@
-![onecrawl_logo.png](https://raw.githubusercontent.com/sayedshaun/onecrawler/refs/heads/main/docs/static/onecrawl_logo.png)
-
-# Onecrawler
-
 [![CI](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml/badge.svg)](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![Package](https://img.shields.io/badge/package-onecrawler-2ea44f.svg)](https://github.com/sayedshaun/onecrawler)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/imports-isort-1674b1.svg)](https://pycqa.github.io/isort/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+
+![onecrawl_logo.png](https://raw.githubusercontent.com/sayedshaun/onecrawler/refs/heads/main/docs/static/onecrawl_logo.png)
+
+# Onecrawler
 
 Onecrawler is a feature-rich Python web crawling toolkit for extracting links and scraping page content using heuristic or Generative AI strategies.
 
