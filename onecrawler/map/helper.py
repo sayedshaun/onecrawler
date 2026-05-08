@@ -14,29 +14,13 @@ SITEMAP_NS = {
 
 
 COMMON_SITEMAP_PATHS = [
-    "/sitemap.xml",
-    "/sitemap_index.xml",
-    "/sitemap-index.xml",
-    "/sitemapindex.xml",
-    "/sitemap/sitemap.xml",
-    "/sitemap/index.xml",
-    "/sitemap/sitemap-index.xml",
-    "/wp-sitemap.xml",
-    "/page-sitemap.xml",
-    "/post-sitemap.xml",
-    "/category-sitemap.xml",
-    "/news-sitemap.xml",
-    "/video-sitemap.xml",
-    "/image-sitemap.xml",
-    "/sitemap.xml.gz",
-    "/sitemap_index.xml.gz",
-    "/rss.xml",
-    "/feed",
-    "/atom.xml",
-    "/rss/",
-    "/feed.xml",
+    "/sitemap.xml",           # universal default — most likely to exist
+    "/sitemap_index.xml",     # second most common
+    "/wp-sitemap.xml",        # WordPress 5.5+ (often not in robots.txt)
+    "/sitemap.xml.gz",        # compressed variant
+    "/index-sitemap.xml",     # some news CMSes (e.g. somoynews.tv style)
+    "/sitemap/sitemap.xml",   # sites that put sitemap in a subdirectory
 ]
-
 
 @dataclass
 class URLRecord:
