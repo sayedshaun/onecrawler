@@ -3,6 +3,7 @@ from typing import List, Literal, Optional
 
 from .brawser import BrowserSettings
 from .genai import GenerativeAISettings
+from .simulation import HumanBehaviorSettings
 
 
 @dataclass
@@ -34,7 +35,7 @@ class CrawlerSettings:
 
     concurrency: int = 10
     max_retries: int = 2
-    request_timeout: int = 3
+    request_timeout: int = 10
     retry_delay: int = 1
 
     browser_settings: BrowserSettings = field(default_factory=BrowserSettings)
@@ -43,7 +44,10 @@ class CrawlerSettings:
     logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     # Performance optimization flags
-    disable_human_behaviors: bool = False
+    enable_human_behaviors: bool = False
+    human_behavior_settings: HumanBehaviorSettings = field(
+        default_factory=HumanBehaviorSettings
+    )
 
     def __post_init__(self):
         if self.scraping_strategy == "genai":
