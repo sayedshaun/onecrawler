@@ -2,7 +2,9 @@ import asyncio
 import logging
 from collections import deque
 from typing import Optional
+from urllib.parse import urldefrag
 
+from ...config.simulation import HumanBehaviorSettings
 from .helper import human_delay, human_mouse_move, human_scroll, wildcard_link_match
 
 logger = logging.getLogger(__name__)
@@ -89,7 +91,7 @@ class LinkSpider:
             "a", "els => els.map(e => e.href).filter(Boolean)"
         )
         return [
-            link
+            urldefrag(link).url
             for link in raw
             if isinstance(link, str) and link.startswith(self.base_prefix)
         ]
@@ -103,8 +105,9 @@ class BFSRuntime:
         spider,
         base_prefix: str,
         max_links: int,
+        human_behavior_settings: HumanBehaviorSettings,
         include_pattern: Optional[list] = None,
-        disable_human_behaviors: bool = False,
+        enable_human_behaviors: bool = False,
         concurrency: int = 5,
     ):
         self.scheduler = scheduler
@@ -114,7 +117,8 @@ class BFSRuntime:
         self.base_prefix = base_prefix
         self.max_links = max_links
         self.include_pattern = include_pattern
-        self.disable_human_behaviors = disable_human_behaviors
+        self.enable_human_behaviors = enable_human_behaviors
+        self.human_behavior_settings = human_behavior_settings
         self.concurrency = concurrency
 
         self.stop_event = asyncio.Event()
@@ -154,12 +158,6 @@ class BFSRuntime:
 
             try:
                 self.scheduler.mark_visited(url)
-                logger.info(
-                    "Crawled %s/%s urls; current=%s",
-                    len(self.scheduler.visited),
-                    self.max_links,
-                    url,
-                )
 
                 try:
                     await page.goto(url, wait_until="domcontentloaded")
@@ -167,14 +165,29 @@ class BFSRuntime:
                     logger.warning("Failed to load %s: %s", url, e)
                     return
 
-                if not self.disable_human_behaviors:
-                    await human_delay()
-                    await human_scroll(page)
+                if self.enable_human_behaviors:
+                    await human_delay(
+                        self.human_behavior_settings.min_delay,
+                        self.human_behavior_settings.max_delay,
+                    )
+                    await human_scroll(
+                        page, max_scrolls=self.human_behavior_settings.max_scrolls
+                    )
 
                 links = await self.spider.parse(page)
 
-                if not self.disable_human_behaviors:
-                    await human_mouse_move(page)
+                if self.enable_human_behaviors:
+                    await human_mouse_move(
+                        page,
+                        min_mouse_moves=self.human_behavior_settings.min_mouse_moves,
+                        max_mouse_moves=self.human_behavior_settings.max_mouse_moves,
+                        mouse_width=self.human_behavior_settings.mouse_width,
+                        mouse_height=self.human_behavior_settings.mouse_height,
+                        min_mouse_steps=self.human_behavior_settings.min_mouse_steps,
+                        max_mouse_steps=self.human_behavior_settings.max_mouse_steps,
+                        min_mouse_sleep=self.human_behavior_settings.min_mouse_sleep,
+                        max_mouse_sleep=self.human_behavior_settings.max_mouse_sleep,
+                    )
 
                 for link in links:
                     if self.stop_event.is_set():
