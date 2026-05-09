@@ -69,7 +69,8 @@ class LinkExtractionEngine(BaseEngine):
             base_prefix=base_prefix,
             max_links=self.settings.link_extraction_limit,
             include_pattern=self.settings.include_link_patterns,
-            disable_human_behaviors=self.settings.disable_human_behaviors,
+            enable_human_behaviors=self.settings.enable_human_behaviors,
+            human_behavior_settings=self.settings.human_behavior_settings,
             concurrency=self.settings.concurrency,
         )
 
