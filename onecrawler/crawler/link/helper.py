@@ -6,47 +6,79 @@ from urllib.parse import urlparse
 
 from playwright.async_api import Page
 
+logger = logging.getLogger(__name__)
+
 
 async def human_delay(min_s: float = 0.3, max_s: float = 1.2) -> None:
     await asyncio.sleep(random.uniform(min_s, max_s))
 
 
-async def human_scroll(page: Page, max_scrolls: int = 20) -> None:
+async def human_scroll(page, max_scrolls: int = 10) -> None:
     try:
+        last_height = await page.evaluate("document.body.scrollHeight")
+
         for _ in range(max_scrolls):
-            await page.mouse.wheel(0, random.randint(400, 800))
-            await asyncio.sleep(random.uniform(0.2, 0.6))
+
+            await page.evaluate(
+                """
+                window.scrollTo(
+                    0,
+                    document.body.scrollHeight
+                )
+            """
+            )
+
+            await asyncio.sleep(1)
+
+            new_height = await page.evaluate("document.body.scrollHeight")
+
+            if new_height == last_height:
+                break
+
+            last_height = new_height
+
     except Exception as e:
-        logging.warning(f"Error during human-like scrolling: {e}")
+        logger.warning(f"Scroll error: {e}")
 
 
-async def scroll_until_no_new_links(
-    page: Page, spider: object, target_count: int = 10, max_rounds: int = 10
-):
-    seen_links = set()
-
-    for _ in range(max_rounds):
-        links = await spider.parse(page)
-        new_links = set(links) - seen_links
-
-        seen_links.update(new_links)
-
-        if len(seen_links) >= target_count:
-            break
-
-        await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        await asyncio.sleep(1.5)
-
-    return list(seen_links)
-
-
-async def human_mouse_move(page: Page) -> None:
+async def human_mouse_move(
+    page: Page,
+    *,
+    min_mouse_moves: int,
+    max_mouse_moves: int,
+    mouse_width: int,
+    mouse_height: int,
+    min_mouse_steps: int,
+    max_mouse_steps: int,
+    min_mouse_sleep: float,
+    max_mouse_sleep: float,
+) -> None:
     try:
-        for _ in range(random.randint(5, 15)):
-            x = random.randint(0, 1366)
-            y = random.randint(0, 768)
-            await page.mouse.move(x, y, steps=random.randint(5, 20))
-            await asyncio.sleep(random.uniform(0.1, 0.3))
+        for _ in range(
+            random.randint(
+                min_mouse_moves,
+                max_mouse_moves,
+            )
+        ):
+            x = random.randint(0, mouse_width)
+            y = random.randint(0, mouse_height)
+
+            await page.mouse.move(
+                x,
+                y,
+                steps=random.randint(
+                    min_mouse_steps,
+                    max_mouse_steps,
+                ),
+            )
+
+            await asyncio.sleep(
+                random.uniform(
+                    min_mouse_sleep,
+                    max_mouse_sleep,
+                )
+            )
+
     except Exception as e:
         logging.warning(f"Error during human-like mouse movement: {e}")
 
