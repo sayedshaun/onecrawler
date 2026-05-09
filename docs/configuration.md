@@ -4,41 +4,175 @@ title: Configuration
 
 # Configuration
 
-`CrawlerSettings` is the central configuration object used across the package.
-
-## Common fields
-
-| Field | Type | Description |
-| --- | --- | --- |
-| `link_extraction_strategy` | `str` | `deep` or `shallow` traversal mode |
-| `link_extraction_limit` | `int` | Maximum number of links to extract |
-| `include_link_patterns` | `list[str]` | Wildcard filters such as `["/news/*"]` |
-| `scraping_strategy` | `str` | `heuristic` or an AI-based strategy |
-| `scraping_output_format` | `str` | One of `markdown`, `json`, `csv`, `html`, `txt`, `xml`, `xmltei`, `python` |
-| `concurrency` | `int` | Number of concurrent async workers |
-| `max_retries` | `int` | Retry attempts per failed request |
-| `request_timeout` | `int` | Per-request timeout in seconds |
-
-## Example
+`CrawlerSettings` is the shared configuration object used by sitemap discovery,
+link extraction, and scraping. In production, treat it as the contract for a crawl:
+it defines scope, speed, retry behavior, browser behavior, and output shape.
 
 ```python
 from onecrawler import CrawlerSettings
 
+
 config = CrawlerSettings(
-    link_extraction_strategy="deep",
-    link_extraction_limit=50,
-    include_link_patterns=["/sports/*", "/news/*"],
-    scraping_strategy="heuristic",
-    scraping_output_format="json",
-    concurrency=10,
-    max_retries=2,
-    request_timeout=3,
+    link_extraction_limit=500,
+    include_link_patterns=["/docs/*"],
+    concurrency=8,
+    request_timeout=15,
+    max_retries=3,
 )
 ```
 
-## Suggested defaults
+## Core Settings
 
-- use `deep` when you need recursive traversal
-- use `shallow` when you only want the first layer of discovered links
-- keep `concurrency` conservative at first, then increase gradually
-- set a reasonable `request_timeout` for the target site
+| Field | Default | Use it for |
+| --- | --- | --- |
+| `link_extraction_strategy` | `"deep"` | Browser link discovery mode: `deep` or `shallow` |
+| `link_extraction_limit` | `50` | Hard cap on collected links |
+| `include_link_patterns` | `None` | Allow-list URL paths such as `["/news/*"]` |
+| `exclude_link_patterns` | `None` | Reserved for exclusion-style filtering |
+| `scraping_strategy` | `"heuristic"` | `heuristic` or `genai` extraction |
+| `scraping_output_format` | `"json"` | `markdown`, `json`, `csv`, `html`, `python`, `txt`, `xml`, or `xmltei` |
+| `concurrency` | `10` | Number of async workers |
+| `max_retries` | `2` | Retry attempts for transient failures |
+| `request_timeout` | `10` | Per-request timeout in seconds |
+| `retry_delay` | `1` | Base delay between retries |
+| `enable_logging` | `False` | Whether your app should configure logging |
+| `logging_level` | `"INFO"` | Desired log level |
+
+## Sitemap Settings
+
+| Field | Default | Use it for |
+| --- | --- | --- |
+| `follow_sitemap_index` | `True` | Traverse sitemap indexes and nested XML sitemaps |
+| `sitemap_html_fallback` | `True` | Crawl same-origin HTML pages when no sitemap records are found |
+| `max_crawl_depth` | `3` | Depth limit for HTML fallback |
+| `max_crawl_pages` | `500` | Page cap for HTML fallback |
+| `sitemap_user_agent` | Onecrawler UA | User agent for sitemap HTTP requests |
+| `sitemap_respect_robots` | `True` | Intended robots.txt behavior |
+| `sitemap_deduplicate` | `True` | Normalize and remove duplicate sitemap URLs |
+
+Best practice: keep `sitemap_html_fallback=True` during exploration, then turn it
+off for predictable scheduled jobs if you only trust XML sitemap sources.
+
+## Browser Settings
+
+`browser_settings` controls Playwright launch, context, proxy, and timeout behavior.
+Use it when the target site needs JavaScript rendering, a custom user agent, proxy
+routing, a stored session, or a different viewport.
+
+```python
+from onecrawler import BrowserSettings, ContextSettings, CrawlerSettings
+
+
+config = CrawlerSettings(
+    browser_settings=BrowserSettings(
+        context=ContextSettings(
+            viewport={"width": 1440, "height": 900},
+            locale="en-US",
+            timezone_id="UTC",
+        )
+    )
+)
+```
+
+For authenticated crawling, use Playwright storage state:
+
+```python
+from onecrawler import BrowserSettings, ContextSettings, CrawlerSettings
+
+
+config = CrawlerSettings(
+    browser_settings=BrowserSettings(
+        context=ContextSettings(storage_state="auth-state.json")
+    )
+)
+```
+
+## Human Behavior Settings
+
+`enable_human_behaviors` adds optional delay, scroll, and mouse-move simulation
+during deep browser link extraction.
+
+```python
+from onecrawler import CrawlerSettings, HumanBehaviorSettings
+
+
+config = CrawlerSettings(
+    enable_human_behaviors=True,
+    human_behavior_settings=HumanBehaviorSettings(
+        min_delay=0.5,
+        max_delay=2.0,
+        max_scrolls=20,
+        min_mouse_moves=2,
+        max_mouse_moves=8,
+    ),
+)
+```
+
+Use this sparingly. It can help pages that lazy-load links after scroll, but it also
+slows crawls significantly. For high-volume discovery, prefer sitemaps first, then
+plain deep crawling, then human behavior simulation only where needed.
+
+## GenAI Settings
+
+`GenerativeAISettings` is required when `scraping_strategy="genai"`. GenAI output is
+restricted to JSON because structured model responses should be explicit and
+machine-readable.
+
+```python
+from pydantic import BaseModel
+
+from onecrawler import CrawlerSettings, GenerativeAISettings
+
+
+class Product(BaseModel):
+    name: str
+    price: str | None = None
+    availability: str | None = None
+
+
+config = CrawlerSettings(
+    scraping_strategy="genai",
+    scraping_output_format="json",
+    genai=GenerativeAISettings(
+        provider="openai",
+        model_name="gpt-4o-mini",
+        api_key="YOUR_API_KEY",
+        output_schema=Product,
+    ),
+)
+```
+
+Use GenAI when you need typed fields, normalization, summaries, or extraction that
+requires interpretation. Avoid it for simple bulk text extraction where the heuristic
+strategy is faster, cheaper, and easier to reproduce.
+
+## Performance Tuning
+
+Tune in this order:
+
+1. Narrow `include_link_patterns`.
+2. Set a realistic `link_extraction_limit`.
+3. Start with moderate `concurrency`.
+4. Increase `request_timeout` only for slow sites.
+5. Add retries for flaky targets.
+
+Good starting profiles:
+
+| Scenario | Settings |
+| --- | --- |
+| Small docs site | `concurrency=5`, `link_extraction_limit=100` |
+| News section sitemap | `concurrency=10`, `link_extraction_limit=500`, path filter |
+| JavaScript-heavy site | `concurrency=3`, browser extraction, longer timeout |
+| GenAI extraction | `concurrency=2`, `request_timeout=30`, schema required |
+
+## Caveats
+
+High concurrency is not always faster. Browser pages, network limits, target rate
+limits, and model APIs can all become bottlenecks. Increase concurrency gradually and
+watch error rates.
+
+`include_link_patterns` are matched against URL paths. Prefer patterns like
+`"/news/*"` or `"/docs/*"` instead of full URLs.
+
+`CrawlerSettings` validates GenAI output format at initialization. If you choose
+`scraping_strategy="genai"`, keep `scraping_output_format="json"`.

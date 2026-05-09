@@ -4,78 +4,104 @@ title: Onecrawler Documentation
 
 # Onecrawler
 
-A production-ready Python toolkit for web crawling, sitemap discovery, and structured content extraction.
+Onecrawler is an async Python toolkit for discovering URLs, crawling websites, and
+extracting page content into formats that are easier to store, search, analyze, or
+send into downstream data pipelines.
 
-Onecrawler is designed around three core stages:
+The library is designed around a practical crawler workflow:
 
-1. discover URLs
-2. extract content
-3. shape the output for downstream use
+1. Discover candidate URLs from sitemaps or browser-based link traversal.
+2. Filter and limit those URLs to the section you actually care about.
+3. Scrape the selected pages with either heuristic extraction or structured GenAI
+   extraction.
+4. Save the result in the format your application needs.
 
-## What you get
+## Why Onecrawler Exists
 
-- async-first crawling
-- deep and shallow link extraction
-- sitemap discovery through `robots.txt`, common sitemap paths, nested indexes, and HTML fallback
-- optional Playwright-backed browser crawling
-- heuristic content extraction with `trafilatura`
-- optional AI-based extraction strategy
-- multiple output formats including `markdown`, `json`, `csv`, `html`, `txt`, `xml`, `xmltei`, and `python`
+Many crawling projects start as small scripts and become hard to maintain once they
+need retries, concurrency, browser rendering, sitemap fallback, URL filtering, and
+structured extraction. Onecrawler gives those concerns a shared configuration model
+and a few focused async engines so production scripts stay readable.
 
-## Start here
+Use it when you are building:
 
-- [Installation](installation.md)
-- [Quick start](quick-start.md)
-- [Configuration](configuration.md)
-- [Sitemap discovery](sitemap-discovery.md)
-- [Link extraction](link-extraction.md)
-- [Scraping](scraping.md)
-- [API reference](api-reference.md)
-- [Troubleshooting](troubleshooting.md)
-- [Development](development.md)
+- content ingestion pipelines for news, blogs, catalogs, or documentation sites
+- search indexing jobs
+- data collection scripts for analysis or monitoring
+- internal tools that need repeatable URL discovery and content extraction
+- prototypes that may later become scheduled crawler jobs
 
-## Public API
+## Recommended Workflow
 
-The package exports:
-
-- `CrawlerSettings`
-- `LinkClassifierPipeline`
-- `LinkExtractionEngine`
-- `ScraperEngine`
-- `SiteMap`
-- `SitemapStats`
-- `UniversalSiteMap`
-
-## Typical flow
+Start with sitemap discovery whenever possible. A sitemap is usually the fastest,
+cleanest, and least expensive way to collect URLs because it avoids opening many
+browser pages just to discover links.
 
 ```python
 import asyncio
-import json
 
-from onecrawler import CrawlerSettings, LinkExtractionEngine, ScraperEngine
+from onecrawler import CrawlerSettings, UniversalSiteMap
+
 
 async def main():
     config = CrawlerSettings(
-        link_extraction_strategy="deep",
-        link_extraction_limit=5,
-        concurrency=2,
-        scraping_strategy="heuristic",
-        scraping_output_format="json",
+        link_extraction_limit=500,
+        include_link_patterns=["/news/*"],
+        concurrency=10,
     )
 
-    async with LinkExtractionEngine(config) as link_engine:
-        links = await link_engine.run("https://www.bbc.com/sport")
+    sitemap = UniversalSiteMap(config)
+    urls = await sitemap.run("https://example.com")
+    print(f"Found {len(urls)} URLs")
 
-    async with ScraperEngine(config) as scraper_engine:
-        data = await scraper_engine.run(links)
-
-    with open("output.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-## GitHub Pages note
+If the site has no useful sitemap, use `LinkExtractionEngine`:
 
-Markdown files work well with GitHub Pages because Pages uses Jekyll to build Markdown into a static site. A `docs/` folder is also a supported publishing source. Use a `docs/index.md` file as the landing page. If you are publishing a user site, the repository name must be `sayedshaun/onecrawler.github.io`. For a project site, the default URL is under the repository path, unless you configure a custom domain.
+- `shallow` for links present on one page
+- `deep` for recursive same-site traversal
+
+Then pass the final URL list to `ScraperEngine`.
+
+## Choosing The Right Tool
+
+| Goal | Recommended feature | Why |
+| --- | --- | --- |
+| Collect most public URLs quickly | `UniversalSiteMap` | Uses `robots.txt`, common sitemap paths, nested sitemap indexes, and optional HTML fallback |
+| Inspect one listing page | shallow link extraction | Lower crawl cost and easier to reason about |
+| Explore a site section recursively | deep link extraction | Follows internal links until your configured limit |
+| Extract readable article text | heuristic scraping | Fast, deterministic, and does not require model calls |
+| Produce strongly typed output | GenAI scraping with a Pydantic schema | Best fit when downstream systems require a stable structured shape |
+| Avoid noisy crawls | `include_link_patterns` | Keeps discovery focused on URL paths you trust |
+
+## Documentation Map
+
+- [Installation](installation.md): package setup, browser requirements, optional extras
+- [Quick start](quick-start.md): first complete discovery and scraping workflows
+- [Configuration](configuration.md): every important setting and how to tune it
+- [Sitemap discovery](sitemap-discovery.md): fastest URL collection path and fallbacks
+- [Link extraction](link-extraction.md): shallow versus deep browser crawling
+- [Scraping](scraping.md): heuristic extraction, GenAI extraction, and output choices
+- [API reference](api-reference.md): public classes exported from `onecrawler`
+- [Troubleshooting](troubleshooting.md): common failures and fixes
+- [Development](development.md): local contributor workflow
+
+## Production Principles
+
+Prefer sitemaps before crawling pages. They are faster, friendlier to target sites,
+and usually more complete than what a browser can discover from navigation pages.
+
+Constrain every job. Set `link_extraction_limit`, `include_link_patterns`,
+`concurrency`, `request_timeout`, and `max_retries` explicitly so a crawl behaves
+predictably when the target site changes.
+
+Use heuristic scraping by default. It is cheaper and more repeatable. Move to GenAI
+when you need semantic interpretation, field normalization, or structured output in a
+predefined Pydantic schema.
+
+Treat browser crawling as the heavier tool. It is useful for JavaScript-rendered
+pages and dynamic link discovery, but it has more moving parts than sitemap parsing
+or direct HTTP fetching.
