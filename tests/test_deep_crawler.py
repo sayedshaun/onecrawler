@@ -57,7 +57,7 @@ class DeepCrawlerTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(await spider.parse(page), ["https://example.com/a"])
 
-    async def test_browser_pool_closes_pages_and_browser(self):
+    async def test_browser_pool_closes_pages_without_closing_browser(self):
         class Browser:
             def __init__(self):
                 self.started = False
@@ -81,8 +81,8 @@ class DeepCrawlerTests(unittest.IsolatedAsyncioTestCase):
         await pool.init()
         await pool.close()
 
-        self.assertTrue(browser.started)
-        self.assertTrue(browser.closed)
+        self.assertFalse(browser.started)
+        self.assertFalse(browser.closed)
         self.assertTrue(all(page.closed for page in browser.created))
 
     async def test_runtime_collects_links_until_limit(self):
@@ -106,8 +106,9 @@ class DeepCrawlerTests(unittest.IsolatedAsyncioTestCase):
             spider=Spider(),
             base_prefix="https://example.com",
             max_links=1,
+            human_behavior_settings=deep_module.HumanBehaviorSettings(),
             include_pattern=None,
-            disable_human_behaviors=True,
+            enable_human_behaviors=False,
             concurrency=1,
         )
 

@@ -38,14 +38,17 @@ def load_config_modules():
     ensure_package("onecrawler.config")
     brawser = load_module("onecrawler.config.brawser", "onecrawler/config/brawser.py")
     genai = load_module("onecrawler.config.genai", "onecrawler/config/genai.py")
+    load_module("onecrawler.config.simulation", "onecrawler/config/simulation.py")
     crawler = load_module("onecrawler.config.crawler", "onecrawler/config/crawler.py")
     return brawser, genai, crawler
 
 
 def load_link_modules():
     ensure_package("onecrawler")
+    ensure_package("onecrawler.config")
     ensure_package("onecrawler.crawler")
     ensure_package("onecrawler.crawler.link")
+    load_module("onecrawler.config.simulation", "onecrawler/config/simulation.py")
     helper = load_module(
         "onecrawler.crawler.link.helper", "onecrawler/crawler/link/helper.py"
     )
