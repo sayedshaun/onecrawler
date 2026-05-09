@@ -4,7 +4,7 @@
 
 # Onecrawler
 
-**A production-ready Python toolkit for web crawling, sitemap discovery, and structured content extraction.**
+**An async Python toolkit for sitemap discovery, browser crawling, and structured content extraction.**
 
 [![CI](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml/badge.svg)](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
@@ -21,14 +21,25 @@
 
 ## Overview
 
-Onecrawler is a configurable, async-first web crawling toolkit built for real-world use cases. Rather than a one-off scraping script, it provides a structured, reusable framework with support for deep/shallow link traversal, universal sitemap discovery, browser-backed rendering, and both heuristic and AI-powered content extraction — all with first-class concurrency controls.
+Onecrawler helps you build maintainable crawling and extraction workflows without
+turning every project into a custom scraping script. It gives you a shared
+configuration model, async execution, sitemap discovery, browser-backed link
+extraction, heuristic content extraction, and optional GenAI extraction for typed
+outputs.
+
+The recommended workflow is:
+
+1. Use sitemaps first whenever possible.
+2. Fall back to browser link extraction when sitemap coverage is missing or dynamic.
+3. Scrape the final URL list with heuristic extraction by default.
+4. Use GenAI extraction when you need structured output in a Pydantic schema.
 
 ```python
-async with LinkExtractionEngine(config) as engine:
-    links = await engine.run("https://www.bbc.com/sport")
+sitemap = UniversalSiteMap(config)
+urls = await sitemap.run("https://example.com")
 
 async with ScraperEngine(config) as scraper:
-    data = await scraper.run(links)
+    records = await scraper.run(urls)
 ```
 
 ---
@@ -36,24 +47,180 @@ async with ScraperEngine(config) as scraper:
 ## Features
 
 | Capability | Details |
-|---|---|
-| **Link Extraction** | Deep and shallow crawl modes with configurable depth limits |
-| **Sitemap Discovery** | Universal resolver — `robots.txt`, common paths, nested indexes, HTML fallback |
-| **URL Filtering** | Wildcard pattern matching to include only relevant paths |
-| **Concurrency** | Async engine with tunable worker count, retry logic, and per-request timeouts |
-| **Browser Crawling** | Full Playwright integration for JavaScript-rendered pages |
-| **Content Extraction** | Heuristic mode via `trafilatura`; optional Generative AI extraction strategy |
-| **Output Formats** | `markdown`, `json`, `csv`, `html`, `python`, `txt`, `xml`, `xmltei` |
-| **Code Quality** | Pre-commit hooks (Black + isort), GitHub Actions CI across Python 3.10–3.12 |
+| --- | --- |
+| **Sitemap discovery** | Resolves `robots.txt`, common sitemap paths, nested indexes, `.xml.gz`, feeds, and HTML fallback |
+| **Browser link extraction** | Shallow and deep Playwright-backed discovery for JavaScript-rendered or sitemap-poor sites |
+| **URL filtering** | Wildcard path filters with `include_link_patterns` |
+| **Async performance** | Tunable concurrency, retries, timeouts, and crawl limits |
+| **Content extraction** | Heuristic extraction with `trafilatura` for fast article-like content extraction |
+| **GenAI extraction** | Optional model-assisted extraction for strongly typed Pydantic outputs |
+| **Output formats** | `markdown`, `json`, `csv`, `html`, `python`, `txt`, `xml`, `xmltei` |
+| **Browser controls** | Viewport, user agent, locale, timezone, proxy, storage state, and runtime settings |
+
+---
+
+## When To Use What
+
+| Need | Use | Why |
+| --- | --- | --- |
+| Fast URL discovery from a public site | `UniversalSiteMap` | It is usually the simplest, fastest, and least expensive way to collect URLs |
+| Links from one listing page | Shallow `LinkExtractionEngine` | It reads direct same-site links from the page |
+| Recursive discovery through navigation | Deep `LinkExtractionEngine` | It follows internal links until your configured limit |
+| Bulk article or page text extraction | Heuristic `ScraperEngine` | It is deterministic and avoids model cost |
+| Typed fields or semantic normalization | GenAI extraction | It can produce schema-shaped output for downstream systems |
+
+---
+
+## Installation
+
+```bash
+pip install onecrawler
+```
+
+Install Playwright browser binaries when you use browser-backed crawling or scraping:
+
+```bash
+python -m playwright install chromium
+```
+
+Install optional GenAI dependencies when you use model-assisted extraction:
+
+```bash
+pip install "onecrawler[genai]"
+```
+
+For local development:
+
+```bash
+git clone https://github.com/sayedshaun/onecrawler.git
+cd onecrawler
+python -m pip install -e ".[dev]"
+python -m playwright install chromium
+```
+
+---
+
+## Quick Start
+
+This example uses the production-friendly path: discover URLs from the sitemap, then
+scrape them.
+
+```python
+import asyncio
+import json
+
+from onecrawler import CrawlerSettings, ScraperEngine, UniversalSiteMap
+
+
+async def main():
+    config = CrawlerSettings(
+        link_extraction_limit=100,
+        include_link_patterns=["/articles/*"],
+        scraping_strategy="heuristic",
+        scraping_output_format="json",
+        concurrency=8,
+        request_timeout=15,
+        max_retries=3,
+    )
+
+    sitemap = UniversalSiteMap(config)
+    urls = await sitemap.run("https://example.com")
+
+    async with ScraperEngine(config) as scraper:
+        records = await scraper.run(urls)
+
+    with open("articles.json", "w", encoding="utf-8") as f:
+        json.dump(records, f, indent=2, ensure_ascii=False)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### Browser Link Extraction
+
+Use browser extraction when sitemaps are incomplete, unavailable, or unable to expose
+JavaScript-rendered links.
+
+```python
+import asyncio
+
+from onecrawler import CrawlerSettings, LinkExtractionEngine
+
+
+async def main():
+    config = CrawlerSettings(
+        link_extraction_strategy="deep",
+        link_extraction_limit=250,
+        include_link_patterns=["/news/*"],
+        concurrency=5,
+    )
+
+    async with LinkExtractionEngine(config) as engine:
+        links = await engine.run("https://example.com/news")
+
+    print(f"Collected {len(links)} links")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### GenAI Extraction With A Schema
+
+Use GenAI extraction when you need a strongly typed response shape instead of plain
+content.
+
+```python
+import asyncio
+from typing import Optional
+
+from pydantic import BaseModel
+
+from onecrawler import CrawlerSettings, GenerativeAISettings, ScraperEngine
+
+
+class ArticleSummary(BaseModel):
+    title: str
+    author: Optional[str] = None
+    published_at: Optional[str] = None
+    summary: str
+    topics: list[str]
+
+
+async def main():
+    config = CrawlerSettings(
+        scraping_strategy="genai",
+        scraping_output_format="json",
+        genai=GenerativeAISettings(
+            provider="openai",
+            model_name="gpt-4o-mini",
+            api_key="YOUR_API_KEY",
+            output_schema=ArticleSummary,
+        ),
+        concurrency=2,
+        request_timeout=30,
+    )
+
+    async with ScraperEngine(config) as scraper:
+        result = await scraper.run("https://example.com/articles/story")
+
+    print(result)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
 
 ---
 
 ## Documentation
 
-The README gives a quick overview and copy-paste starter examples. The full documentation lives in [`docs/`](docs/index.md):
+The README is the project overview. The full documentation in [`docs/`](docs/index.md)
+contains production guidance, caveats, performance notes, and copy-paste examples.
 
 | Topic | Guide |
-|---|---|
+| --- | --- |
 | Install the package | [Installation](docs/installation.md) |
 | Run your first crawl | [Quick start](docs/quick-start.md) |
 | Tune crawler settings | [Configuration](docs/configuration.md) |
@@ -63,155 +230,22 @@ The README gives a quick overview and copy-paste starter examples. The full docu
 | Public classes and exports | [API reference](docs/api-reference.md) |
 | Common fixes | [Troubleshooting](docs/troubleshooting.md) |
 | Contribute locally | [Contributing](docs/contributing.md) |
+| Work on the project | [Development](docs/development.md) |
 
-If you enable GitHub Pages for this repository, publish from the `main` branch and the `/docs` folder so [`docs/index.md`](docs/index.md) becomes the documentation home page. See [Publishing with GitHub Pages](docs/pages-deploy.md) for the setup notes.
-
----
-
-## Requirements
-
-- Python `>= 3.10`
-- `pip`
-- Playwright browser binaries (only required for browser-backed crawling)
+See [Contributing](docs/contributing.md) for how to improve the docs.
 
 ---
 
-## Installation
+## Production Tips
 
-**From PyPI (recommended):**
-
-```bash
-pip install onecrawler
-```
-
-**From source:**
-
-```bash
-pip install git+https://github.com/sayedshaun/onecrawler.git
-```
-
-**For local development:**
-
-```bash
-git clone https://github.com/sayedshaun/onecrawler.git
-cd onecrawler
-python -m pip install -e ".[dev]"
-```
-
----
-
-## Quick Start
-
-The following example crawls up to 5 links from a BBC Sport section and writes the scraped content to a JSON file:
-
-```python
-import asyncio
-import json
-
-from onecrawler import CrawlerSettings, LinkExtractionEngine, ScraperEngine
-
-
-async def main():
-    config = CrawlerSettings(
-        link_extraction_strategy="deep",
-        link_extraction_limit=5,
-        concurrency=2,
-        scraping_strategy="heuristic",
-        scraping_output_format="json",
-    )
-
-    async with LinkExtractionEngine(config) as link_engine:
-        links = await link_engine.run("https://www.bbc.com/sport")
-
-    async with ScraperEngine(config) as scraper_engine:
-        data = await scraper_engine.run(links)
-
-    with open("output.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
----
-
-### Sitemap Discovery
-
-Use `UniversalSiteMap` to collect URLs from a site's sitemap infrastructure before scraping. Supports `robots.txt` resolution, nested sitemap indexes, and HTML fallback:
-
-```python
-import asyncio
-
-from onecrawler import CrawlerSettings, UniversalSiteMap
-
-
-async def main():
-    config = CrawlerSettings(
-        link_extraction_limit=100,
-        include_link_patterns=["/news/*"],
-    )
-
-    sitemap = UniversalSiteMap(config)
-    urls = await sitemap.run("https://example.com")
-    print(urls)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-### Filtered Crawl
-
-Restrict crawling to specific URL path patterns using wildcard expressions:
-
-```python
-from onecrawler import CrawlerSettings
-
-config = CrawlerSettings(
-    link_extraction_strategy="deep",
-    link_extraction_limit=200,
-    include_link_patterns=["/sports/*", "/news/*"],
-    concurrency=10,
-)
-```
-
-### High-Volume Scraping with Retries
-
-For resilient production crawls with timeout and retry controls:
-
-```python
-from onecrawler import CrawlerSettings
-
-config = CrawlerSettings(
-    link_extraction_strategy="deep",
-    link_extraction_limit=500,
-    scraping_strategy="heuristic",
-    scraping_output_format="markdown",
-    concurrency=20,
-    max_retries=3,
-    request_timeout=10,
-)
-```
-
----
-
-**Full example:**
-
-```python
-from onecrawler import CrawlerSettings
-
-config = CrawlerSettings(
-    link_extraction_strategy="deep",
-    link_extraction_limit=50,
-    include_link_patterns=["/sports/*", "/news/*"],
-    scraping_strategy="heuristic",
-    scraping_output_format="json",
-    concurrency=10,
-    max_retries=2,
-    request_timeout=3,
-)
-```
+- Prefer `UniversalSiteMap` before browser crawling.
+- Always set `link_extraction_limit` for broad jobs.
+- Use `include_link_patterns` to keep discovery focused.
+- Start with moderate `concurrency`, then increase gradually.
+- Use heuristic scraping for bulk content extraction.
+- Use GenAI extraction for schema-shaped output, summaries, classification, or field
+  normalization.
+- Split discovery and scraping into separate steps for easier retries.
 
 ---
 
@@ -223,25 +257,28 @@ Install with development dependencies:
 python -m pip install -e ".[dev]"
 ```
 
-Run the test suite:
+Run tests:
 
 ```bash
 ./test.sh
 ```
 
-Run all formatting checks:
+Run formatting checks:
 
 ```bash
 pre-commit run --all-files
 ```
 
-Install the pre-commit hook (runs Black and isort automatically before each commit):
+Install hooks:
 
 ```bash
 pre-commit install
 ```
 
+See [Development](docs/development.md) and [Contributing](docs/contributing.md) for
+the full local workflow.
 
+---
 
 ## License
 
@@ -251,6 +288,6 @@ Released under the [MIT License](LICENSE). See `LICENSE` for full terms.
 
 <div align="center">
 
-Made with ♥ by [sayedshaun](https://github.com/sayedshaun)
+Built by [sayedshaun](https://github.com/sayedshaun)
 
 </div>
