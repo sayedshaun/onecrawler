@@ -36,11 +36,44 @@ def load_module(name: str, relative_path: str):
 def load_config_modules():
     ensure_package("onecrawler")
     ensure_package("onecrawler.config")
-    brawser = load_module("onecrawler.config.brawser", "onecrawler/config/brawser.py")
-    genai = load_module("onecrawler.config.genai", "onecrawler/config/genai.py")
-    load_module("onecrawler.config.simulation", "onecrawler/config/simulation.py")
-    crawler = load_module("onecrawler.config.crawler", "onecrawler/config/crawler.py")
-    return brawser, genai, crawler
+    ensure_package("onecrawler.proxy")
+
+    # Load proxy modules first
+    load_module(
+        "onecrawler.config.proxy",
+        "onecrawler/config/proxy.py",
+    )
+    load_module(
+        "onecrawler.proxy.pool",
+        "onecrawler/proxy/pool.py",
+    )
+    load_module(
+        "onecrawler.proxy",
+        "onecrawler/proxy/__init__.py",
+    )
+
+    # Then load other config modules
+    browser = load_module(
+        "onecrawler.config.browser",
+        "onecrawler/config/browser.py",
+    )
+
+    genai = load_module(
+        "onecrawler.config.genai",
+        "onecrawler/config/genai.py",
+    )
+
+    load_module(
+        "onecrawler.config.simulation",
+        "onecrawler/config/simulation.py",
+    )
+
+    crawler = load_module(
+        "onecrawler.config.crawler",
+        "onecrawler/config/crawler.py",
+    )
+
+    return browser, genai, crawler
 
 
 def load_link_modules():

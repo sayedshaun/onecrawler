@@ -2,7 +2,7 @@ import unittest
 
 from tests._support import load_config_modules
 
-_, genai_module, crawler_module = load_config_modules()
+browser_module, genai_module, crawler_module = load_config_modules()
 
 
 class CrawlerSettingsTests(unittest.TestCase):
@@ -46,6 +46,30 @@ class CrawlerSettingsTests(unittest.TestCase):
 
         self.assertEqual(config.genai, settings)
         self.assertEqual(config.scraping_output_format, "json")
+
+    def test_single_proxy_is_attached_to_browser_settings(self):
+        proxy = browser_module.ProxySettings(server="http://proxy.example:8080")
+
+        config = crawler_module.CrawlerSettings(proxy=proxy)
+
+        self.assertEqual(config.browser_settings.proxy, proxy)
+
+    def test_multiple_proxies_use_round_robin_pool(self):
+        first = browser_module.ProxySettings(server="http://proxy-1.example:8080")
+        second = browser_module.ProxySettings(server="http://proxy-2.example:8080")
+
+        config = crawler_module.CrawlerSettings(proxies=[first, second])
+        pool = config.create_proxy_pool()
+
+        self.assertEqual(pool.next(), first)
+        self.assertEqual(pool.next(), second)
+        self.assertEqual(pool.next(), first)
+
+    def test_proxy_and_proxies_are_mutually_exclusive(self):
+        proxy = browser_module.ProxySettings(server="http://proxy.example:8080")
+
+        with self.assertRaisesRegex(ValueError, "either proxy or proxies"):
+            crawler_module.CrawlerSettings(proxy=proxy, proxies=[proxy])
 
 
 if __name__ == "__main__":
