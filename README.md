@@ -55,7 +55,8 @@ async with ScraperEngine(config) as scraper:
 | **Content extraction** | Heuristic extraction with `trafilatura` for fast article-like content extraction |
 | **GenAI extraction** | Optional model-assisted extraction for strongly typed Pydantic outputs |
 | **Output formats** | `markdown`, `json`, `csv`, `html`, `python`, `txt`, `xml`, `xmltei` |
-| **Browser controls** | Viewport, user agent, locale, timezone, proxy, storage state, and runtime settings |
+| **Proxy support** | Single proxy or rotating proxy pools for browser and sitemap workflows |
+| **Browser controls** | Viewport, user agent, locale, timezone, storage state, and runtime settings |
 
 ---
 
@@ -211,6 +212,29 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+
+### Proxy Support
+
+Attach one proxy or a rotating proxy pool directly to `CrawlerSettings`.
+
+```python
+from onecrawler import CrawlerSettings, ProxySettings
+
+
+config = CrawlerSettings(
+    proxies=[
+        ProxySettings(server="http://proxy-1.example:8080"),
+        ProxySettings(
+            server="http://proxy-2.example:8080",
+            username="user",
+            password="pass",
+        ),
+    ],
+    proxy_rotation="round_robin",
+)
+```
+
+Use `proxy=ProxySettings(...)` for one proxy, or `proxies=[...]` for rotation.
 
 ---
 

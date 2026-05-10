@@ -2,7 +2,7 @@ from contextlib import suppress
 
 from playwright.async_api import async_playwright
 
-from .config.brawser import BrowserSettings
+from .config.browser import BrowserSettings
 
 
 class GoogleChrome:
@@ -48,7 +48,7 @@ class GoogleChrome:
             permissions=context.permissions,
             storage_state=context.storage_state,
             base_url=context.base_url,
-            proxy=self.config.proxy.__dict__ if self.config.proxy else None,
+            proxy=self.config.proxy.as_playwright() if self.config.proxy else None,
         )
 
         self._started = True

@@ -1,8 +1,10 @@
 from dataclasses import dataclass, field
 from typing import List, Literal, Optional
 
-from .brawser import BrowserSettings
+from ..proxy.pool import ProxyPool
+from .browser import BrowserSettings
 from .genai import GenerativeAISettings
+from .proxy import ProxySettings
 from .simulation import HumanBehaviorSettings
 
 
@@ -38,6 +40,10 @@ class CrawlerSettings:
     request_timeout: int = 10
     retry_delay: int = 1
 
+    proxy: Optional[ProxySettings] = None
+    proxies: Optional[List[ProxySettings]] = None
+    proxy_rotation_method: Literal["round_robin", "random"] = "round_robin"
+
     browser_settings: BrowserSettings = field(default_factory=BrowserSettings)
 
     enable_logging: bool = False
@@ -50,9 +56,28 @@ class CrawlerSettings:
     )
 
     def __post_init__(self):
+        if self.proxy and self.proxies:
+            raise ValueError("Use either proxy or proxies, not both")
+
+        proxy_pool = self.create_proxy_pool()
+        if not self.browser_settings.proxy:
+            self.browser_settings.proxy = proxy_pool.next()
+
         if self.scraping_strategy == "genai":
             if self.scraping_output_format != "json":
                 raise ValueError("GenAI only supports JSON output")
 
             if not self.genai:
                 raise ValueError("genai config is required for genai strategy")
+
+    def create_proxy_pool(self) -> ProxyPool:
+        if self.proxies:
+            proxies = self.proxies
+        elif self.proxy:
+            proxies = [self.proxy]
+        elif self.browser_settings.proxy:
+            proxies = [self.browser_settings.proxy]
+        else:
+            proxies = []
+
+        return ProxyPool(proxies=proxies, strategy=self.proxy_rotation_method)

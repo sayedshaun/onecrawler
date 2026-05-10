@@ -14,6 +14,7 @@ from lxml import etree
 
 from ..config.crawler import CrawlerSettings
 from ..crawler.link.helper import wildcard_link_match
+from ..proxy.pool import ProxyPool
 from .helper import (
     COMMON_SITEMAP_PATHS,
     URLRecord,
@@ -137,12 +138,14 @@ class HTTPClient:
         user_agent: str,
         retries: int,
         retry_delay: int,
+        proxy_pool: Optional[ProxyPool] = None,
     ):
         self.concurrency = concurrency
         self.timeout = timeout
         self.user_agent = user_agent
         self.max_retries = retries
         self.retry_delay = retry_delay
+        self.proxy_pool = proxy_pool or ProxyPool()
         self._session: Optional[AsyncSession] = None
         self._semaphore = asyncio.Semaphore(concurrency)
 
@@ -161,12 +164,16 @@ class HTTPClient:
         """Fetch raw bytes with retry logic. Returns None on failure."""
         for attempt in range(1, self.max_retries + 1):
             try:
+                proxy = self.proxy_pool.next()
+                request_kwargs = {
+                    "allow_redirects": True,
+                    "max_redirects": 10,
+                }
+                if proxy:
+                    request_kwargs["proxies"] = proxy.as_requests_proxies()
+
                 async with self._semaphore:
-                    resp = await self._session.get(
-                        url,
-                        allow_redirects=True,
-                        max_redirects=10,
-                    )
+                    resp = await self._session.get(url, **request_kwargs)
 
                 if resp.status_code == 200:
                     data = resp.content
@@ -464,6 +471,7 @@ class UniversalSiteMap:
             self.config.sitemap_user_agent,
             self.config.max_retries,
             self.config.retry_delay,
+            self.config.create_proxy_pool(),
         ) as client:
             robots = RobotsParser(client)
             sitemap_parser = SitemapParser(client, self.config.concurrency)

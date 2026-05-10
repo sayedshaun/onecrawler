@@ -27,6 +27,10 @@ class SitemapParserTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.sitemap_module = load_sitemap_module()
+        # Import ProxySettings from config module for tests
+        cls.proxy_settings = load_module(
+            "onecrawler.config.proxy", "onecrawler/config/proxy.py"
+        ).ProxySettings
 
     def test_parse_urlset_records_metadata(self):
         parser = self.sitemap_module.SitemapParser(client=None, concurrency=1)
@@ -122,6 +126,55 @@ class SitemapParserTests(unittest.TestCase):
                 "http://example.com/path"
             ),
             "http://example.com",
+        )
+
+    def test_http_client_applies_rotating_proxy_to_requests(self):
+        first = self.proxy_settings(server="http://proxy-1.example:8080")
+        second = self.proxy_settings(
+            server="http://proxy-2.example:8080",
+            username="user",
+            password="pass",
+        )
+
+        class Response:
+            status_code = 200
+            content = b"ok"
+            headers = {}
+
+        class Session:
+            def __init__(self):
+                self.calls = []
+
+            async def get(self, url, **kwargs):
+                self.calls.append(kwargs)
+                return Response()
+
+        client = self.sitemap_module.HTTPClient(
+            concurrency=1,
+            timeout=10,
+            user_agent="test",
+            retries=1,
+            retry_delay=0,
+            proxy_pool=self.sitemap_module.ProxyPool([first, second]),
+        )
+        client._session = Session()
+
+        self.run_async(client.get("https://example.com/a"))
+        self.run_async(client.get("https://example.com/b"))
+
+        self.assertEqual(
+            client._session.calls[0]["proxies"],
+            {
+                "http": "http://proxy-1.example:8080",
+                "https": "http://proxy-1.example:8080",
+            },
+        )
+        self.assertEqual(
+            client._session.calls[1]["proxies"],
+            {
+                "http": "http://user:pass@proxy-2.example:8080",
+                "https": "http://user:pass@proxy-2.example:8080",
+            },
         )
 
     @staticmethod

@@ -87,6 +87,41 @@ config = CrawlerSettings(
 )
 ```
 
+## Proxy Settings
+
+Use `proxy` for a single proxy or `proxies` for a rotating proxy pool. The top-level
+settings are the recommended API because they can be shared across sitemap discovery
+and browser-backed workflows.
+
+```python
+from onecrawler import CrawlerSettings, ProxySettings
+
+
+config = CrawlerSettings(
+    proxy=ProxySettings(
+        server="http://proxy.example:8080",
+        username="user",
+        password="pass",
+    )
+)
+```
+
+Multiple proxies can rotate with `round_robin` or `random`:
+
+```python
+config = CrawlerSettings(
+    proxies=[
+        ProxySettings(server="http://proxy-1.example:8080"),
+        ProxySettings(server="http://proxy-2.example:8080"),
+    ],
+    proxy_rotation="round_robin",
+)
+```
+
+`proxy` and `proxies` are mutually exclusive. Use one proxy for a stable route and a
+proxy pool when sitemap discovery or future request-heavy workflows should spread
+traffic across multiple endpoints.
+
 ## Human Behavior Settings
 
 `enable_human_behaviors` adds optional delay, scroll, and mouse-move simulation

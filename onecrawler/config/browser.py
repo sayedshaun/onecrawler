@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+from .proxy import ProxySettings
+
 
 @dataclass
 class LaunchSettings:
@@ -51,15 +53,8 @@ class ContextSettings:
 
 
 @dataclass
-class ProxySettings:
-    server: str
-    username: Optional[str] = None
-    password: Optional[str] = None
-
-
-@dataclass
 class RuntimeSettings:
-    wait_until: str = "networkidle"
+    wait_until: str = "domcontentloaded"
     timeout: int = 30000
     action_timeout: int = 30000
     navigation_timeout: int = 30000
