@@ -4,8 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "onecrawler"
-version = "0.1.0"
-description = "A feature-rich web crawler package built with Python."
+version = "0.1.1"
+description = "An async Python toolkit for sitemap discovery, browser crawling, and structured content extraction."
+readme = "README.md"
+license = "MIT"
 authors = [
     { name = "Sayed Shaun" },
 ]
@@ -42,3 +44,7 @@ target-version = ["py310"]
 [tool.isort]
 profile = "black"
 line_length = 88
+
+[project.urls]
+Homepage = "https://github.com/sayedshaun/onecrawler"
+Repository = "https://github.com/sayedshaun/onecrawler"

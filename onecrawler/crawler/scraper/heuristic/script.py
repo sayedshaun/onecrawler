@@ -15,8 +15,8 @@ class HeuristicStrategy:
             try:
                 await page.goto(
                     url,
-                    wait_until=self.settings.browser_settings.wait_until,
-                    timeout=self.settings.browser_settings.timeout,
+                    wait_until=self.settings.browser_settings.runtime.wait_until,
+                    timeout=self.settings.browser_settings.runtime.timeout,
                 )
                 html = await page.content()
             finally:

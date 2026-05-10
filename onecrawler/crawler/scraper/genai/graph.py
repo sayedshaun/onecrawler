@@ -7,12 +7,10 @@ from .prompt import build_scraper_prompt
 from .state import AgentState
 
 
-# ===== utils =====
 async def fetch_html(url: str) -> str:
     return await asyncio.to_thread(trafilatura.fetch_url, url)
 
 
-# ===== nodes =====
 async def url_to_markdown_node(state: AgentState) -> AgentState:
     html = await fetch_html(state["url"])
 
@@ -48,7 +46,6 @@ async def markdown_to_structured_output(state: AgentState) -> AgentState:
     return state
 
 
-# ===== graph builder (SYNC) =====
 def build_graph():
     graph = StateGraph(AgentState)
 

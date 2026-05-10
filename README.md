@@ -168,7 +168,11 @@ if __name__ == "__main__":
 ### GenAI Extraction With A Schema
 
 Use GenAI extraction when you need a strongly typed response shape instead of plain
-content.
+content. This requires installing the GenAI dependencies:
+
+```bash
+pip install "onecrawler[genai]"
+```
 
 ```python
 import asyncio
@@ -187,26 +191,49 @@ class ArticleSummary(BaseModel):
 
 async def main():
     settings = CrawlerSettings(
-        scraping_strategy="genai",
-        scraping_output_format="json",
+        scraping_strategy="genai",  # Required for GenAI extraction
+        scraping_output_format="json",  # GenAI only supports JSON
         genai=GenerativeAISettings(
-            provider="openai",
+            provider="openai",  # Options: "openai", "google", "ollama"
             model_name="gpt-4o-mini",
-            api_key="YOUR_API_KEY",
-            output_schema=ArticleSummary,
+            api_key="YOUR_API_KEY",  # Required for OpenAI/Google, optional for Ollama
+            output_schema=ArticleSummary,  # Pydantic model for structured output
+            # Optional: base_url for custom endpoints (e.g., Ollama)
+            # base_url="https://your-ollama-instance.com/",
         ),
-        concurrency=2,
-        request_timeout=30,
+        concurrency=2,  # Lower concurrency recommended for GenAI
+        request_timeout=30,  # Increase timeout for model responses
     )
 
     async with ScraperEngine(settings) as scraper:
         result = await scraper.run("https://example.com/articles/story")
 
-    print(result)
+    # Convert Pydantic model to dict for JSON serialization
+    print(result.model_dump() if hasattr(result, 'model_dump') else result)
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+```
+
+#### Supported Providers
+
+- **OpenAI**: Requires `api_key`, supports GPT models
+- **Google**: Requires `api_key`, supports Gemini models  
+- **Ollama**: No API key needed, requires `base_url`, supports local models
+
+#### Ollama Example
+
+```python
+settings = CrawlerSettings(
+    scraping_strategy="genai",
+    genai=GenerativeAISettings(
+        provider="ollama",
+        model_name="llama3:8b",
+        base_url="http://localhost:11434/",  # Your Ollama instance
+        output_schema=ArticleSummary,
+    ),
+)
 ```
 
 ### Proxy Support

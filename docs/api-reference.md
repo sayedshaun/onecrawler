@@ -114,25 +114,47 @@ successful results.
 
 ## GenerativeAISettings
 
-settings for model-assisted extraction.
+Settings for model-assisted extraction. Required when `scraping_strategy="genai"`.
 
 ```python
 settings = GenerativeAISettings(
-    provider="openai",
+    provider="openai",  # Options: "openai", "google", "ollama"
     model_name="gpt-4o-mini",
-    api_key="YOUR_API_KEY",
-    output_schema=MyPydanticModel,
+    api_key="YOUR_API_KEY",  # Required for OpenAI/Google, optional for Ollama
+    output_schema=MyPydanticModel,  # Pydantic model for structured output
+    base_url=None,  # Optional: custom endpoint (e.g., Ollama instance)
+    reasoning=False,  # Optional: enable reasoning for supported models
 )
 ```
 
 Fields:
 
-| Field | Purpose |
-| --- | --- |
-| `provider` | `google`, `openai`, or `ollama` |
-| `model_name` | Model identifier |
-| `api_key` | Provider API key |
-| `output_schema` | Optional Pydantic model for structured output |
+| Field | Type | Required | Purpose |
+| --- | --- | --- | --- |
+| `provider` | `str` | Yes | Model provider: `"openai"`, `"google"`, or `"ollama"` |
+| `model_name` | `str` | Yes | Model identifier (e.g., `"gpt-4o-mini"`, `"llama3:8b"`) |
+| `api_key` | `str` | Conditional | API key for OpenAI/Google, optional for Ollama |
+| `output_schema` | `BaseModel` | Conditional | Pydantic model for structured output |
+| `base_url` | `str` | Optional | Custom endpoint URL (required for Ollama) |
+| `reasoning` | `bool` | No | Enable reasoning for supported models |
+
+### Provider-Specific Requirements
+
+#### OpenAI
+- `api_key` required
+- Supports GPT models (gpt-3.5-turbo, gpt-4, gpt-4o, etc.)
+- No `base_url` needed (uses default OpenAI endpoint)
+
+#### Google
+- `api_key` required
+- Supports Gemini models (gemini-pro, gemini-1.5-pro, etc.)
+- No `base_url` needed (uses default Google endpoint)
+
+#### Ollama
+- `base_url` required (e.g., `"http://localhost:11434/"`)
+- `api_key` optional
+- Supports local models (llama3, mistral, codellama, etc.)
+- Must have Ollama server running with the specified model
 
 ## BrowserSettings
 

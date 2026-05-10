@@ -153,32 +153,92 @@ plain deep crawling, then human behavior simulation only where needed.
 restricted to JSON because structured model responses should be explicit and
 machine-readable.
 
+### Installation
+
+First install the GenAI dependencies:
+
+```bash
+pip install "onecrawler[genai]"
+```
+
+### Basic Configuration
+
 ```python
 from pydantic import BaseModel
-
 from onecrawler import CrawlerSettings, GenerativeAISettings
-
 
 class Product(BaseModel):
     name: str
     price: str | None = None
     availability: str | None = None
 
-
 settings = CrawlerSettings(
-    scraping_strategy="genai",
-    scraping_output_format="json",
+    scraping_strategy="genai",  # Required for GenAI extraction
+    scraping_output_format="json",  # GenAI only supports JSON
     genai=GenerativeAISettings(
-        provider="openai",
+        provider="openai",  # Options: "openai", "google", "ollama"
         model_name="gpt-4o-mini",
-        api_key="YOUR_API_KEY",
-        output_schema=Product,
+        api_key="YOUR_API_KEY",  # Required for OpenAI/Google, optional for Ollama
+        output_schema=Product,  # Pydantic model for structured output
     ),
+    concurrency=2,  # Lower concurrency recommended for GenAI
+    request_timeout=30,  # Increase timeout for model responses
 )
 ```
 
+### Provider-Specific Configuration
+
+#### OpenAI
+```python
+genai=GenerativeAISettings(
+    provider="openai",
+    model_name="gpt-4o-mini",
+    api_key="sk-...",  # Your OpenAI API key
+    output_schema=Product,
+)
+```
+
+#### Google
+```python
+genai=GenerativeAISettings(
+    provider="google",
+    model_name="gemini-1.5-pro",
+    api_key="AIza...",  # Your Google API key
+    output_schema=Product,
+)
+```
+
+#### Ollama
+```python
+genai=GenerativeAISettings(
+    provider="ollama",
+    model_name="llama3:8b",
+    base_url="http://localhost:11434/",  # Your Ollama instance
+    output_schema=Product,
+    # api_key optional for Ollama
+)
+```
+
+### All Available Fields
+
+| Field | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `provider` | `str` | Yes | - | Model provider: `"openai"`, `"google"`, or `"ollama"` |
+| `model_name` | `str` | Yes | - | Model identifier |
+| `api_key` | `str` | Conditional | `None` | API key for OpenAI/Google, optional for Ollama |
+| `output_schema` | `BaseModel` | Conditional | `None` | Pydantic model for structured output |
+| `base_url` | `str` | Optional | `None` | Custom endpoint URL (required for Ollama) |
+| `reasoning` | `bool` | No | `False` | Enable reasoning for supported models |
+
+### Usage Tips
+
+- **Lower concurrency**: GenAI calls are slower and more expensive. Use `concurrency=1-3`.
+- **Increase timeout**: Model responses can take 10-30+ seconds. Use `request_timeout=30+`.
+- **Structured schemas**: Define clear Pydantic models for reliable extraction.
+- **Error handling**: GenAI calls may fail due to rate limits or model errors.
+
 Use GenAI when you need typed fields, normalization, summaries, or extraction that
-requires interpretation. Avoid it for simple bulk text extraction where the heuristic
+requires interpretation. Avoid it for simple bulk text extraction where heuristic
 strategy is faster, cheaper, and easier to reproduce.
 
 ## Performance Tuning

@@ -34,10 +34,10 @@ class ScraperEngine(BaseEngine):
             )
 
         elif self.settings.scraping_strategy == "genai":
-            if not self.settings.llm:
-                raise ValueError("LLM is required for GenAI strategy")
+            if not self.settings.genai:
+                raise ValueError("GenAI settings is required for GenAI strategy")
 
-            self.strategy = GenAIStrategy(llm=self.settings.llm)
+            self.strategy = GenAIStrategy(settings=self.settings.genai)
 
             await self.strategy.initialize()
 
