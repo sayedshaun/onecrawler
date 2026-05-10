@@ -25,7 +25,7 @@ from onecrawler import (
 
 ## CrawlerSettings
 
-Central configuration for sitemap discovery, link extraction, and scraping.
+Central settings for sitemap discovery, link extraction, and scraping.
 
 Important fields:
 
@@ -46,7 +46,7 @@ Important fields:
 | `genai` | GenAI provider, model, key, and optional schema |
 
 ```python
-config = CrawlerSettings(
+settings = CrawlerSettings(
     link_extraction_limit=200,
     include_link_patterns=["/news/*"],
     concurrency=8,
@@ -59,7 +59,7 @@ High-level sitemap resolver. It checks `robots.txt`, common sitemap paths, neste
 sitemap indexes, compressed XML, feeds, and optional HTML fallback.
 
 ```python
-sitemap = UniversalSiteMap(config)
+sitemap = UniversalSiteMap(settings)
 urls = await sitemap.run("https://example.com")
 ```
 
@@ -73,7 +73,7 @@ Lower-level sitemap parser that fetches and parses a direct sitemap URL. Most us
 should prefer `UniversalSiteMap`, which includes discovery and fallback behavior.
 
 ```python
-sitemap = SiteMap(config)
+sitemap = SiteMap(settings)
 urls = await sitemap.run("https://example.com/sitemap.xml")
 ```
 
@@ -87,7 +87,7 @@ sitemap count, error count, elapsed time, and URL rate.
 Async browser engine for extracting links from a starting URL.
 
 ```python
-async with LinkExtractionEngine(config) as engine:
+async with LinkExtractionEngine(settings) as engine:
     links = await engine.run("https://example.com/docs")
 ```
 
@@ -99,10 +99,10 @@ context manager.
 Async scraping engine for one URL or a list of URLs.
 
 ```python
-async with ScraperEngine(config) as scraper:
+async with ScraperEngine(settings) as scraper:
     item = await scraper.run("https://example.com/story")
 
-async with ScraperEngine(config) as scraper:
+async with ScraperEngine(settings) as scraper:
     items = await scraper.run([
         "https://example.com/story-1",
         "https://example.com/story-2",
@@ -114,7 +114,7 @@ successful results.
 
 ## GenerativeAISettings
 
-Configuration for model-assisted extraction.
+settings for model-assisted extraction.
 
 ```python
 settings = GenerativeAISettings(
@@ -136,11 +136,11 @@ Fields:
 
 ## BrowserSettings
 
-Top-level browser configuration. It contains launch, context, runtime, and proxy
+Top-level browser settings. It contains launch, context, runtime, and proxy
 settings.
 
 ```python
-config = CrawlerSettings(
+settings = CrawlerSettings(
     browser_settings=BrowserSettings(
         context=ContextSettings(viewport={"width": 1366, "height": 768})
     )
@@ -152,10 +152,10 @@ storage state, HTTPS behavior, and Playwright runtime timeouts.
 
 ## ProxySettings
 
-Proxy configuration for browser and sitemap workflows.
+Proxy settings for browser and sitemap workflows.
 
 ```python
-config = CrawlerSettings(
+settings = CrawlerSettings(
     proxies=[
         ProxySettings(server="http://proxy-1.example:8080"),
         ProxySettings(
@@ -176,7 +176,7 @@ pool. Supported rotation strategies are `round_robin` and `random`.
 Delay, scroll, and mouse movement settings for optional browser behavior simulation.
 
 ```python
-config = CrawlerSettings(
+settings = CrawlerSettings(
     enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(max_scrolls=20),
 )

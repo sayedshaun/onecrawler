@@ -4,9 +4,9 @@ import unittest
 from tests._support import (
     ensure_package,
     install_curl_cffi_stub,
-    load_config_modules,
     load_link_modules,
     load_module,
+    load_settings_modules,
 )
 
 
@@ -16,7 +16,7 @@ def load_sitemap_module():
 
     ensure_package("onecrawler")
     ensure_package("onecrawler.map")
-    load_config_modules()
+    load_settings_modules()
     load_link_modules()
     load_module("onecrawler.map.helper", "onecrawler/map/helper.py")
     install_curl_cffi_stub()
@@ -27,9 +27,9 @@ class SitemapParserTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.sitemap_module = load_sitemap_module()
-        # Import ProxySettings from config module for tests
+        # Import ProxySettings from settings module for tests
         cls.proxy_settings = load_module(
-            "onecrawler.config.proxy", "onecrawler/config/proxy.py"
+            "onecrawler.settings.proxy", "onecrawler/settings/proxy.py"
         ).ProxySettings
 
     def test_parse_urlset_records_metadata(self):

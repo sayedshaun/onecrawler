@@ -5,8 +5,8 @@ import trafilatura
 
 
 class HeuristicStrategy:
-    def __init__(self, output_format: str = "json", browser=None):
-        self.output_format = output_format
+    def __init__(self, settings: object, browser: object = None):
+        self.settings = settings
         self.browser = browser
 
     async def extract(self, url: str):
@@ -15,8 +15,8 @@ class HeuristicStrategy:
             try:
                 await page.goto(
                     url,
-                    wait_until="domcontentloaded",
-                    timeout=30000,
+                    wait_until=self.settings.browser_settings.wait_until,
+                    timeout=self.settings.browser_settings.timeout,
                 )
                 html = await page.content()
             finally:
@@ -30,7 +30,7 @@ class HeuristicStrategy:
         extracted = await asyncio.to_thread(
             trafilatura.extract,
             html,
-            output_format="json",
+            output_format=self.settings.scraping_output_format,
             include_tables=True,
             include_links=True,
             include_comments=True,
@@ -41,7 +41,7 @@ class HeuristicStrategy:
         if not extracted:
             return None
 
-        if self.output_format == "json":
+        if self.settings.scraping_output_format == "json":
             try:
                 return json.loads(extracted)
             except Exception as e:

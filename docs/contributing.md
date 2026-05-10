@@ -11,7 +11,7 @@ documentation that helps users make good crawler decisions.
 
 1. Create a branch for your change.
 2. Add or update tests for behavior changes.
-3. Update docs when configuration, public API, or recommended workflows change.
+3. Update docs when settings, public API, or recommended workflows change.
 4. Run `./test.sh`.
 5. Run `pre-commit run --all-files`.
 6. Open a pull request with a short summary and verification notes.
@@ -34,7 +34,7 @@ For documentation changes:
 
 ## Design Principles
 
-Prefer explicit configuration over hidden behavior. Crawlers can affect external
+Prefer explicit settings over hidden behavior. Crawlers can affect external
 systems, so users should be able to see limits, filters, retries, and concurrency in
 their scripts.
 

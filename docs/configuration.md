@@ -1,10 +1,10 @@
 ---
-title: Configuration
+title: settings
 ---
 
-# Configuration
+# settings
 
-`CrawlerSettings` is the shared configuration object used by sitemap discovery,
+`CrawlerSettings` is the shared settingsuration object used by sitemap discovery,
 link extraction, and scraping. In production, treat it as the contract for a crawl:
 it defines scope, speed, retry behavior, browser behavior, and output shape.
 
@@ -12,7 +12,7 @@ it defines scope, speed, retry behavior, browser behavior, and output shape.
 from onecrawler import CrawlerSettings
 
 
-config = CrawlerSettings(
+settings = CrawlerSettings(
     link_extraction_limit=500,
     include_link_patterns=["/docs/*"],
     concurrency=8,
@@ -35,7 +35,7 @@ config = CrawlerSettings(
 | `max_retries` | `2` | Retry attempts for transient failures |
 | `request_timeout` | `10` | Per-request timeout in seconds |
 | `retry_delay` | `1` | Base delay between retries |
-| `enable_logging` | `False` | Whether your app should configure logging |
+| `enable_logging` | `False` | Whether your app should settingsure logging |
 | `logging_level` | `"INFO"` | Desired log level |
 
 ## Sitemap Settings
@@ -63,7 +63,7 @@ routing, a stored session, or a different viewport.
 from onecrawler import BrowserSettings, ContextSettings, CrawlerSettings
 
 
-config = CrawlerSettings(
+settings = CrawlerSettings(
     browser_settings=BrowserSettings(
         context=ContextSettings(
             viewport={"width": 1440, "height": 900},
@@ -80,7 +80,7 @@ For authenticated crawling, use Playwright storage state:
 from onecrawler import BrowserSettings, ContextSettings, CrawlerSettings
 
 
-config = CrawlerSettings(
+settings = CrawlerSettings(
     browser_settings=BrowserSettings(
         context=ContextSettings(storage_state="auth-state.json")
     )
@@ -97,7 +97,7 @@ and browser-backed workflows.
 from onecrawler import CrawlerSettings, ProxySettings
 
 
-config = CrawlerSettings(
+settings = CrawlerSettings(
     proxy=ProxySettings(
         server="http://proxy.example:8080",
         username="user",
@@ -109,7 +109,7 @@ config = CrawlerSettings(
 Multiple proxies can rotate with `round_robin` or `random`:
 
 ```python
-config = CrawlerSettings(
+settings = CrawlerSettings(
     proxies=[
         ProxySettings(server="http://proxy-1.example:8080"),
         ProxySettings(server="http://proxy-2.example:8080"),
@@ -131,7 +131,7 @@ during deep browser link extraction.
 from onecrawler import CrawlerSettings, HumanBehaviorSettings
 
 
-config = CrawlerSettings(
+settings = CrawlerSettings(
     enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(
         min_delay=0.5,
@@ -165,7 +165,7 @@ class Product(BaseModel):
     availability: str | None = None
 
 
-config = CrawlerSettings(
+settings = CrawlerSettings(
     scraping_strategy="genai",
     scraping_output_format="json",
     genai=GenerativeAISettings(

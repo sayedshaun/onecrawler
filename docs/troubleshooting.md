@@ -47,7 +47,7 @@ For lazy-loaded pages, enable human behavior simulation:
 from onecrawler import CrawlerSettings, HumanBehaviorSettings
 
 
-config = CrawlerSettings(
+settings = CrawlerSettings(
     enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(max_scrolls=30),
 )
@@ -88,13 +88,13 @@ Try:
 For batch jobs, persist failed URLs separately so you can retry them without running
 discovery again.
 
-## GenAI Configuration Errors
+## GenAI settingsuration Errors
 
 If `scraping_strategy="genai"`, you must provide `genai` settings and keep
 `scraping_output_format="json"`.
 
 ```python
-config = CrawlerSettings(
+settings = CrawlerSettings(
     scraping_strategy="genai",
     scraping_output_format="json",
     genai=GenerativeAISettings(
@@ -152,5 +152,5 @@ title: My Page
 ---
 ```
 
-For a project site, configure GitHub Pages to publish from the `main` branch and the
+For a project site, set GitHub Pages to publish from the `main` branch and the
 `/docs` folder.

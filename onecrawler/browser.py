@@ -2,12 +2,12 @@ from contextlib import suppress
 
 from playwright.async_api import async_playwright
 
-from .config.browser import BrowserSettings
+from .settings.browser import BrowserSettings
 
 
 class GoogleChrome:
-    def __init__(self, config: BrowserSettings):
-        self.config = config
+    def __init__(self, settings: BrowserSettings):
+        self.settings = settings
         self.playwright = None
         self.browser = None
         self.context = None
@@ -20,8 +20,8 @@ class GoogleChrome:
 
         self.playwright = await async_playwright().start()
 
-        launch = self.config.launch
-        context = self.config.context
+        launch = self.settings.launch
+        context = self.settings.context
 
         self.browser = await self.playwright.chromium.launch(
             headless=launch.headless,
@@ -48,7 +48,7 @@ class GoogleChrome:
             permissions=context.permissions,
             storage_state=context.storage_state,
             base_url=context.base_url,
-            proxy=self.config.proxy.as_playwright() if self.config.proxy else None,
+            proxy=self.settings.proxy.as_playwright() if self.settings.proxy else None,
         )
 
         self._started = True
@@ -60,7 +60,7 @@ class GoogleChrome:
 
         page = await self.context.new_page()
 
-        runtime = self.config.runtime
+        runtime = self.settings.runtime
         page.set_default_timeout(runtime.action_timeout)
         page.set_default_navigation_timeout(runtime.navigation_timeout)
 
