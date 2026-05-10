@@ -15,6 +15,7 @@ from onecrawler import (
     GenerativeAISettings,
     HumanBehaviorSettings,
     LinkExtractionEngine,
+    ProxySettings,
     ScraperEngine,
     SiteMap,
     SitemapStats,
@@ -38,6 +39,9 @@ Important fields:
 | `concurrency` | Async worker count |
 | `request_timeout` | Timeout in seconds |
 | `max_retries` | Retry attempts |
+| `proxy` | Single package-level proxy |
+| `proxies` | Rotating proxy pool |
+| `proxy_rotation` | `round_robin` or `random` |
 | `browser_settings` | Playwright launch and context settings |
 | `genai` | GenAI provider, model, key, and optional schema |
 
@@ -145,6 +149,27 @@ config = CrawlerSettings(
 
 Use browser settings for custom viewport, user agent, proxy, locale, timezone,
 storage state, HTTPS behavior, and Playwright runtime timeouts.
+
+## ProxySettings
+
+Proxy configuration for browser and sitemap workflows.
+
+```python
+config = CrawlerSettings(
+    proxies=[
+        ProxySettings(server="http://proxy-1.example:8080"),
+        ProxySettings(
+            server="http://proxy-2.example:8080",
+            username="user",
+            password="pass",
+        ),
+    ],
+    proxy_rotation="round_robin",
+)
+```
+
+Use `proxy=ProxySettings(...)` for one proxy. Use `proxies=[...]` for a rotating
+pool. Supported rotation strategies are `round_robin` and `random`.
 
 ## HumanBehaviorSettings
 
