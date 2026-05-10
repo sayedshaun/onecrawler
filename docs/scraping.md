@@ -21,12 +21,11 @@ many content sites.
 
 ```python
 import asyncio
-
 from onecrawler import CrawlerSettings, ScraperEngine
 
 
 async def main():
-    config = CrawlerSettings(
+    settings = CrawlerSettings(
         scraping_strategy="heuristic",
         scraping_output_format="json",
         concurrency=10,
@@ -34,7 +33,7 @@ async def main():
         max_retries=3,
     )
 
-    async with ScraperEngine(config) as scraper:
+    async with ScraperEngine(settings) as scraper:
         result = await scraper.run("https://example.com/articles/story")
 
     print(result)
@@ -47,7 +46,7 @@ if __name__ == "__main__":
 For a batch:
 
 ```python
-async with ScraperEngine(config) as scraper:
+async with ScraperEngine(settings) as scraper:
     records = await scraper.run([
         "https://example.com/articles/one",
         "https://example.com/articles/two",
@@ -80,9 +79,7 @@ plain text extraction.
 ```python
 import asyncio
 from typing import Optional
-
 from pydantic import BaseModel
-
 from onecrawler import CrawlerSettings, GenerativeAISettings, ScraperEngine
 
 
@@ -94,7 +91,7 @@ class CompanyProfile(BaseModel):
 
 
 async def main():
-    config = CrawlerSettings(
+    settings = CrawlerSettings(
         scraping_strategy="genai",
         scraping_output_format="json",
         genai=GenerativeAISettings(
@@ -107,7 +104,7 @@ async def main():
         request_timeout=30,
     )
 
-    async with ScraperEngine(config) as scraper:
+    async with ScraperEngine(settings) as scraper:
         profile = await scraper.run("https://example.com/about")
 
     print(profile)
@@ -132,14 +129,13 @@ Avoid GenAI extraction when:
 For production jobs, split discovery and scraping into separate steps.
 
 ```python
-import asyncio
 import json
-
+import asyncio
 from onecrawler import CrawlerSettings, ScraperEngine, UniversalSiteMap
 
 
 async def main():
-    config = CrawlerSettings(
+    settings = CrawlerSettings(
         link_extraction_limit=500,
         include_link_patterns=["/reports/*"],
         scraping_strategy="heuristic",
@@ -148,10 +144,10 @@ async def main():
         max_retries=3,
     )
 
-    sitemap = UniversalSiteMap(config)
+    sitemap = UniversalSiteMap(settings)
     urls = await sitemap.run("https://example.com")
 
-    async with ScraperEngine(config) as scraper:
+    async with ScraperEngine(settings) as scraper:
         records = await scraper.run(urls)
 
     with open("records.json", "w", encoding="utf-8") as f:

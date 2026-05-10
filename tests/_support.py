@@ -33,15 +33,15 @@ def load_module(name: str, relative_path: str):
     return module
 
 
-def load_config_modules():
+def load_settings_modules():
     ensure_package("onecrawler")
-    ensure_package("onecrawler.config")
+    ensure_package("onecrawler.settings")
     ensure_package("onecrawler.proxy")
 
     # Load proxy modules first
     load_module(
-        "onecrawler.config.proxy",
-        "onecrawler/config/proxy.py",
+        "onecrawler.settings.proxy",
+        "onecrawler/settings/proxy.py",
     )
     load_module(
         "onecrawler.proxy.pool",
@@ -52,25 +52,25 @@ def load_config_modules():
         "onecrawler/proxy/__init__.py",
     )
 
-    # Then load other config modules
+    # Then load other settings modules
     browser = load_module(
-        "onecrawler.config.browser",
-        "onecrawler/config/browser.py",
+        "onecrawler.settings.browser",
+        "onecrawler/settings/browser.py",
     )
 
     genai = load_module(
-        "onecrawler.config.genai",
-        "onecrawler/config/genai.py",
+        "onecrawler.settings.genai",
+        "onecrawler/settings/genai.py",
     )
 
     load_module(
-        "onecrawler.config.simulation",
-        "onecrawler/config/simulation.py",
+        "onecrawler.settings.simulation",
+        "onecrawler/settings/simulation.py",
     )
 
     crawler = load_module(
-        "onecrawler.config.crawler",
-        "onecrawler/config/crawler.py",
+        "onecrawler.settings.crawler",
+        "onecrawler/settings/crawler.py",
     )
 
     return browser, genai, crawler
@@ -78,10 +78,10 @@ def load_config_modules():
 
 def load_link_modules():
     ensure_package("onecrawler")
-    ensure_package("onecrawler.config")
+    ensure_package("onecrawler.settings")
     ensure_package("onecrawler.crawler")
     ensure_package("onecrawler.crawler.link")
-    load_module("onecrawler.config.simulation", "onecrawler/config/simulation.py")
+    load_module("onecrawler.settings.simulation", "onecrawler/settings/simulation.py")
     helper = load_module(
         "onecrawler.crawler.link.helper", "onecrawler/crawler/link/helper.py"
     )

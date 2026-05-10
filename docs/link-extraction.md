@@ -25,18 +25,17 @@ links, and stops at `link_extraction_limit`.
 
 ```python
 import asyncio
-
 from onecrawler import CrawlerSettings, LinkExtractionEngine
 
 
 async def main():
-    config = CrawlerSettings(
+    settings = CrawlerSettings(
         link_extraction_strategy="shallow",
         link_extraction_limit=50,
         include_link_patterns=["/articles/*"],
     )
 
-    async with LinkExtractionEngine(config) as engine:
+    async with LinkExtractionEngine(settings) as engine:
         links = await engine.run("https://example.com/latest")
 
     print(links)
@@ -56,12 +55,11 @@ page pool, and async workers controlled by `concurrency`.
 
 ```python
 import asyncio
-
 from onecrawler import CrawlerSettings, LinkExtractionEngine
 
 
 async def main():
-    config = CrawlerSettings(
+    settings = CrawlerSettings(
         link_extraction_strategy="deep",
         link_extraction_limit=300,
         include_link_patterns=["/docs/*"],
@@ -69,7 +67,7 @@ async def main():
         request_timeout=15,
     )
 
-    async with LinkExtractionEngine(config) as engine:
+    async with LinkExtractionEngine(settings) as engine:
         links = await engine.run("https://example.com/docs")
 
     print(f"Discovered {len(links)} links")
@@ -88,7 +86,7 @@ Always filter broad crawls. `include_link_patterns` are wildcard patterns matche
 against the URL path.
 
 ```python
-config = CrawlerSettings(
+settings = CrawlerSettings(
     include_link_patterns=[
         "/news/*",
         "/analysis/*",
@@ -109,7 +107,7 @@ before all navigation appears.
 from onecrawler import CrawlerSettings, HumanBehaviorSettings
 
 
-config = CrawlerSettings(
+settings = CrawlerSettings(
     link_extraction_strategy="deep",
     enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(
@@ -138,14 +136,14 @@ from onecrawler import CrawlerSettings, LinkExtractionEngine
 
 
 async def main():
-    config = CrawlerSettings(
+    settings = CrawlerSettings(
         link_extraction_strategy="deep",
         link_extraction_limit=1000,
         include_link_patterns=["/guide/*"],
         concurrency=6,
     )
 
-    async with LinkExtractionEngine(config) as engine:
+    async with LinkExtractionEngine(settings) as engine:
         links = await engine.run("https://example.com/guide")
 
     with open("discovered-links.json", "w", encoding="utf-8") as f:

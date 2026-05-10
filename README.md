@@ -23,7 +23,7 @@
 
 Onecrawler helps you build maintainable crawling and extraction workflows without
 turning every project into a custom scraping script. It gives you a shared
-configuration model, async execution, sitemap discovery, browser-backed link
+settingsuration model, async execution, sitemap discovery, browser-backed link
 extraction, heuristic content extraction, and optional GenAI extraction for typed
 outputs.
 
@@ -35,10 +35,10 @@ The recommended workflow is:
 4. Use GenAI extraction when you need structured output in a Pydantic schema.
 
 ```python
-sitemap = UniversalSiteMap(config)
+sitemap = UniversalSiteMap(settings)
 urls = await sitemap.run("https://example.com")
 
-async with ScraperEngine(config) as scraper:
+async with ScraperEngine(settings) as scraper:
     records = await scraper.run(urls)
 ```
 
@@ -66,7 +66,7 @@ async with ScraperEngine(config) as scraper:
 | --- | --- | --- |
 | Fast URL discovery from a public site | `UniversalSiteMap` | It is usually the simplest, fastest, and least expensive way to collect URLs |
 | Links from one listing page | Shallow `LinkExtractionEngine` | It reads direct same-site links from the page |
-| Recursive discovery through navigation | Deep `LinkExtractionEngine` | It follows internal links until your configured limit |
+| Recursive discovery through navigation | Deep `LinkExtractionEngine` | It follows internal links until your settingsured limit |
 | Bulk article or page text extraction | Heuristic `ScraperEngine` | It is deterministic and avoids model cost |
 | Typed fields or semantic normalization | GenAI extraction | It can produce schema-shaped output for downstream systems |
 
@@ -107,14 +107,13 @@ This example uses the production-friendly path: discover URLs from the sitemap, 
 scrape them.
 
 ```python
-import asyncio
 import json
-
+import asyncio
 from onecrawler import CrawlerSettings, ScraperEngine, UniversalSiteMap
 
 
 async def main():
-    config = CrawlerSettings(
+    settings = CrawlerSettings(
         link_extraction_limit=100,
         include_link_patterns=["/articles/*"],
         scraping_strategy="heuristic",
@@ -124,10 +123,10 @@ async def main():
         max_retries=3,
     )
 
-    sitemap = UniversalSiteMap(config)
+    sitemap = UniversalSiteMap(settings)
     urls = await sitemap.run("https://example.com")
 
-    async with ScraperEngine(config) as scraper:
+    async with ScraperEngine(settings) as scraper:
         records = await scraper.run(urls)
 
     with open("articles.json", "w", encoding="utf-8") as f:
@@ -145,19 +144,18 @@ JavaScript-rendered links.
 
 ```python
 import asyncio
-
 from onecrawler import CrawlerSettings, LinkExtractionEngine
 
 
 async def main():
-    config = CrawlerSettings(
+    settings = CrawlerSettings(
         link_extraction_strategy="deep",
         link_extraction_limit=250,
         include_link_patterns=["/news/*"],
         concurrency=5,
     )
 
-    async with LinkExtractionEngine(config) as engine:
+    async with LinkExtractionEngine(settings) as engine:
         links = await engine.run("https://example.com/news")
 
     print(f"Collected {len(links)} links")
@@ -170,14 +168,16 @@ if __name__ == "__main__":
 ### GenAI Extraction With A Schema
 
 Use GenAI extraction when you need a strongly typed response shape instead of plain
-content.
+content. This requires installing the GenAI dependencies:
+
+```bash
+pip install "onecrawler[genai]"
+```
 
 ```python
 import asyncio
 from typing import Optional
-
 from pydantic import BaseModel
-
 from onecrawler import CrawlerSettings, GenerativeAISettings, ScraperEngine
 
 
@@ -190,27 +190,50 @@ class ArticleSummary(BaseModel):
 
 
 async def main():
-    config = CrawlerSettings(
-        scraping_strategy="genai",
-        scraping_output_format="json",
+    settings = CrawlerSettings(
+        scraping_strategy="genai",  # Required for GenAI extraction
+        scraping_output_format="json",  # GenAI only supports JSON
         genai=GenerativeAISettings(
-            provider="openai",
+            provider="openai",  # Options: "openai", "google", "ollama"
             model_name="gpt-4o-mini",
-            api_key="YOUR_API_KEY",
-            output_schema=ArticleSummary,
+            api_key="YOUR_API_KEY",  # Required for OpenAI/Google, optional for Ollama
+            output_schema=ArticleSummary,  # Pydantic model for structured output
+            # Optional: base_url for custom endpoints (e.g., Ollama)
+            # base_url="https://your-ollama-instance.com/",
         ),
-        concurrency=2,
-        request_timeout=30,
+        concurrency=2,  # Lower concurrency recommended for GenAI
+        request_timeout=30,  # Increase timeout for model responses
     )
 
-    async with ScraperEngine(config) as scraper:
+    async with ScraperEngine(settings) as scraper:
         result = await scraper.run("https://example.com/articles/story")
 
-    print(result)
+    # Convert Pydantic model to dict for JSON serialization
+    print(result.model_dump() if hasattr(result, 'model_dump') else result)
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+```
+
+#### Supported Providers
+
+- **OpenAI**: Requires `api_key`, supports GPT models
+- **Google**: Requires `api_key`, supports Gemini models  
+- **Ollama**: No API key needed, requires `base_url`, supports local models
+
+#### Ollama Example
+
+```python
+settings = CrawlerSettings(
+    scraping_strategy="genai",
+    genai=GenerativeAISettings(
+        provider="ollama",
+        model_name="llama3:8b",
+        base_url="http://localhost:11434/",  # Your Ollama instance
+        output_schema=ArticleSummary,
+    ),
+)
 ```
 
 ### Proxy Support
@@ -221,7 +244,7 @@ Attach one proxy or a rotating proxy pool directly to `CrawlerSettings`.
 from onecrawler import CrawlerSettings, ProxySettings
 
 
-config = CrawlerSettings(
+settings = CrawlerSettings(
     proxies=[
         ProxySettings(server="http://proxy-1.example:8080"),
         ProxySettings(
@@ -247,7 +270,7 @@ contains production guidance, caveats, performance notes, and copy-paste example
 | --- | --- |
 | Install the package | [Installation](docs/installation.md) |
 | Run your first crawl | [Quick start](docs/quick-start.md) |
-| Tune crawler settings | [Configuration](docs/configuration.md) |
+| Tune crawler settings | [settings](docs/settings.md) |
 | Discover URLs from sitemaps | [Sitemap discovery](docs/sitemap-discovery.md) |
 | Extract and filter links | [Link extraction](docs/link-extraction.md) |
 | Scrape page content | [Scraping](docs/scraping.md) |
@@ -270,37 +293,6 @@ See [Contributing](docs/contributing.md) for how to improve the docs.
 - Use GenAI extraction for schema-shaped output, summaries, classification, or field
   normalization.
 - Split discovery and scraping into separate steps for easier retries.
-
----
-
-## Development
-
-Install with development dependencies:
-
-```bash
-python -m pip install -e ".[dev]"
-```
-
-Run tests:
-
-```bash
-./test.sh
-```
-
-Run formatting checks:
-
-```bash
-pre-commit run --all-files
-```
-
-Install hooks:
-
-```bash
-pre-commit install
-```
-
-See [Development](docs/development.md) and [Contributing](docs/contributing.md) for
-the full local workflow.
 
 ---
 

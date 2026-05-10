@@ -57,7 +57,7 @@ behavior changes when possible, because it makes reviews easier.
 
 | Path | Purpose |
 | --- | --- |
-| `onecrawler/config/` | Shared settings objects |
+| `onecrawler/settings/` | Shared settings objects |
 | `onecrawler/map/` | Sitemap discovery and fallback crawling |
 | `onecrawler/crawler/link/` | Browser-based link extraction |
 | `onecrawler/crawler/scraper/` | Content extraction strategies |
@@ -68,7 +68,7 @@ behavior changes when possible, because it makes reviews easier.
 
 1. Reproduce the issue or write a focused test.
 2. Make the smallest code change that fixes the behavior.
-3. Update docs when public behavior or configuration changes.
+3. Update docs when public behavior or settings change.
 4. Run tests.
 5. Run pre-commit.
 6. Review the diff before committing.

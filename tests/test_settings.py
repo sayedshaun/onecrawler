@@ -1,8 +1,8 @@
 import unittest
 
-from tests._support import load_config_modules
+from tests._support import load_settings_modules
 
-browser_module, genai_module, crawler_module = load_config_modules()
+browser_module, genai_module, crawler_module = load_settings_modules()
 
 
 class CrawlerSettingsTests(unittest.TestCase):
@@ -16,7 +16,7 @@ class CrawlerSettingsTests(unittest.TestCase):
         self.assertNotIn("--first-only", second.browser_settings.launch.args)
 
     def test_genai_strategy_requires_genai_settings(self):
-        with self.assertRaisesRegex(ValueError, "genai config is required"):
+        with self.assertRaisesRegex(ValueError, "genai settings is required"):
             crawler_module.CrawlerSettings(scraping_strategy="genai")
 
     def test_genai_strategy_requires_json_output(self):
@@ -34,32 +34,32 @@ class CrawlerSettingsTests(unittest.TestCase):
             )
 
     def test_valid_genai_settings_are_accepted(self):
-        settings = genai_module.GenerativeAISettings(
+        genai_settings = genai_module.GenerativeAISettings(
             provider="google",
             model_name="gemini-test",
             api_key="test-key",
         )
 
-        config = crawler_module.CrawlerSettings(
-            scraping_strategy="genai", genai=settings
+        settings = crawler_module.CrawlerSettings(
+            scraping_strategy="genai", genai=genai_settings
         )
 
-        self.assertEqual(config.genai, settings)
-        self.assertEqual(config.scraping_output_format, "json")
+        self.assertEqual(settings.genai, genai_settings)
+        self.assertEqual(settings.scraping_output_format, "json")
 
     def test_single_proxy_is_attached_to_browser_settings(self):
         proxy = browser_module.ProxySettings(server="http://proxy.example:8080")
 
-        config = crawler_module.CrawlerSettings(proxy=proxy)
+        settings = crawler_module.CrawlerSettings(proxy=proxy)
 
-        self.assertEqual(config.browser_settings.proxy, proxy)
+        self.assertEqual(settings.browser_settings.proxy, proxy)
 
     def test_multiple_proxies_use_round_robin_pool(self):
         first = browser_module.ProxySettings(server="http://proxy-1.example:8080")
         second = browser_module.ProxySettings(server="http://proxy-2.example:8080")
 
-        config = crawler_module.CrawlerSettings(proxies=[first, second])
-        pool = config.create_proxy_pool()
+        settings = crawler_module.CrawlerSettings(proxies=[first, second])
+        pool = settings.create_proxy_pool()
 
         self.assertEqual(pool.next(), first)
         self.assertEqual(pool.next(), second)

@@ -2,7 +2,7 @@ import random
 from itertools import cycle
 from typing import List, Literal, Optional
 
-from ..config.proxy import ProxySettings
+from ..settings.proxy import ProxySettings
 
 
 class ProxyPool:

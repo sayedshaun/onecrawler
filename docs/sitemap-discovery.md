@@ -28,12 +28,11 @@ or applying deeper filters.
 
 ```python
 import asyncio
-
 from onecrawler import CrawlerSettings, UniversalSiteMap
 
 
 async def main():
-    config = CrawlerSettings(
+    settings = CrawlerSettings(
         link_extraction_limit=1000,
         include_link_patterns=["/blog/*"],
         concurrency=10,
@@ -41,7 +40,7 @@ async def main():
         max_retries=3,
     )
 
-    sitemap = UniversalSiteMap(config)
+    sitemap = UniversalSiteMap(settings)
     urls = await sitemap.run("https://example.com")
 
     for url in urls:
@@ -79,12 +78,11 @@ sitemap returns too few URLs.
 
 ```python
 import asyncio
-
 from onecrawler import CrawlerSettings, LinkExtractionEngine, UniversalSiteMap
 
 
 async def discover_urls(base_url: str) -> list[str]:
-    config = CrawlerSettings(
+    settings = CrawlerSettings(
         link_extraction_strategy="deep",
         link_extraction_limit=500,
         include_link_patterns=["/docs/*"],
@@ -92,13 +90,13 @@ async def discover_urls(base_url: str) -> list[str]:
         request_timeout=15,
     )
 
-    sitemap = UniversalSiteMap(config)
+    sitemap = UniversalSiteMap(settings)
     urls = await sitemap.run(base_url)
 
     if len(urls) >= 25:
         return urls
 
-    async with LinkExtractionEngine(config) as engine:
+    async with LinkExtractionEngine(settings) as engine:
         return await engine.run(base_url)
 
 
@@ -115,7 +113,7 @@ weak sitemap coverage.
 paths, so these are good filters:
 
 ```python
-config = CrawlerSettings(
+settings = CrawlerSettings(
     include_link_patterns=[
         "/news/*",
         "/features/*",
@@ -141,7 +139,7 @@ For large sites:
 - disable HTML fallback if sitemap-only results are required
 
 ```python
-config = CrawlerSettings(
+settings = CrawlerSettings(
     sitemap_html_fallback=False,
     sitemap_deduplicate=True,
     link_extraction_limit=5000,

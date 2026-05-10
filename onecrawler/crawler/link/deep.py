@@ -4,7 +4,7 @@ from collections import deque
 from typing import Optional
 from urllib.parse import urldefrag
 
-from ...config.simulation import HumanBehaviorSettings
+from ...settings.simulation import HumanBehaviorSettings
 from .helper import human_delay, human_mouse_move, human_scroll, wildcard_link_match
 
 logger = logging.getLogger(__name__)

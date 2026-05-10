@@ -68,7 +68,7 @@ class CrawlerSettings:
                 raise ValueError("GenAI only supports JSON output")
 
             if not self.genai:
-                raise ValueError("genai config is required for genai strategy")
+                raise ValueError("genai settings is required for genai strategy")
 
     def create_proxy_pool(self) -> ProxyPool:
         if self.proxies:

@@ -8,5 +8,7 @@ from pydantic import BaseModel
 class GenerativeAISettings:
     provider: Literal["google", "openai", "ollama"]
     model_name: str
-    api_key: str
+    api_key: Optional[str] = None
     output_schema: Optional[Type[BaseModel]] = None
+    base_url: Optional[str] = None
+    reasoning: bool = False

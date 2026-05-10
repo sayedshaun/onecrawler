@@ -1,10 +1,10 @@
 ---
-title: Configuration
+title: settings
 ---
 
-# Configuration
+# settings
 
-`CrawlerSettings` is the shared configuration object used by sitemap discovery,
+`CrawlerSettings` is the shared settingsuration object used by sitemap discovery,
 link extraction, and scraping. In production, treat it as the contract for a crawl:
 it defines scope, speed, retry behavior, browser behavior, and output shape.
 
@@ -12,7 +12,7 @@ it defines scope, speed, retry behavior, browser behavior, and output shape.
 from onecrawler import CrawlerSettings
 
 
-config = CrawlerSettings(
+settings = CrawlerSettings(
     link_extraction_limit=500,
     include_link_patterns=["/docs/*"],
     concurrency=8,
@@ -35,7 +35,7 @@ config = CrawlerSettings(
 | `max_retries` | `2` | Retry attempts for transient failures |
 | `request_timeout` | `10` | Per-request timeout in seconds |
 | `retry_delay` | `1` | Base delay between retries |
-| `enable_logging` | `False` | Whether your app should configure logging |
+| `enable_logging` | `False` | Whether your app should settingsure logging |
 | `logging_level` | `"INFO"` | Desired log level |
 
 ## Sitemap Settings
@@ -63,7 +63,7 @@ routing, a stored session, or a different viewport.
 from onecrawler import BrowserSettings, ContextSettings, CrawlerSettings
 
 
-config = CrawlerSettings(
+settings = CrawlerSettings(
     browser_settings=BrowserSettings(
         context=ContextSettings(
             viewport={"width": 1440, "height": 900},
@@ -80,7 +80,7 @@ For authenticated crawling, use Playwright storage state:
 from onecrawler import BrowserSettings, ContextSettings, CrawlerSettings
 
 
-config = CrawlerSettings(
+settings = CrawlerSettings(
     browser_settings=BrowserSettings(
         context=ContextSettings(storage_state="auth-state.json")
     )
@@ -97,7 +97,7 @@ and browser-backed workflows.
 from onecrawler import CrawlerSettings, ProxySettings
 
 
-config = CrawlerSettings(
+settings = CrawlerSettings(
     proxy=ProxySettings(
         server="http://proxy.example:8080",
         username="user",
@@ -109,7 +109,7 @@ config = CrawlerSettings(
 Multiple proxies can rotate with `round_robin` or `random`:
 
 ```python
-config = CrawlerSettings(
+settings = CrawlerSettings(
     proxies=[
         ProxySettings(server="http://proxy-1.example:8080"),
         ProxySettings(server="http://proxy-2.example:8080"),
@@ -131,7 +131,7 @@ during deep browser link extraction.
 from onecrawler import CrawlerSettings, HumanBehaviorSettings
 
 
-config = CrawlerSettings(
+settings = CrawlerSettings(
     enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(
         min_delay=0.5,
@@ -153,32 +153,92 @@ plain deep crawling, then human behavior simulation only where needed.
 restricted to JSON because structured model responses should be explicit and
 machine-readable.
 
+### Installation
+
+First install the GenAI dependencies:
+
+```bash
+pip install "onecrawler[genai]"
+```
+
+### Basic Configuration
+
 ```python
 from pydantic import BaseModel
-
 from onecrawler import CrawlerSettings, GenerativeAISettings
-
 
 class Product(BaseModel):
     name: str
     price: str | None = None
     availability: str | None = None
 
-
-config = CrawlerSettings(
-    scraping_strategy="genai",
-    scraping_output_format="json",
+settings = CrawlerSettings(
+    scraping_strategy="genai",  # Required for GenAI extraction
+    scraping_output_format="json",  # GenAI only supports JSON
     genai=GenerativeAISettings(
-        provider="openai",
+        provider="openai",  # Options: "openai", "google", "ollama"
         model_name="gpt-4o-mini",
-        api_key="YOUR_API_KEY",
-        output_schema=Product,
+        api_key="YOUR_API_KEY",  # Required for OpenAI/Google, optional for Ollama
+        output_schema=Product,  # Pydantic model for structured output
     ),
+    concurrency=2,  # Lower concurrency recommended for GenAI
+    request_timeout=30,  # Increase timeout for model responses
 )
 ```
 
+### Provider-Specific Configuration
+
+#### OpenAI
+```python
+genai=GenerativeAISettings(
+    provider="openai",
+    model_name="gpt-4o-mini",
+    api_key="sk-...",  # Your OpenAI API key
+    output_schema=Product,
+)
+```
+
+#### Google
+```python
+genai=GenerativeAISettings(
+    provider="google",
+    model_name="gemini-1.5-pro",
+    api_key="AIza...",  # Your Google API key
+    output_schema=Product,
+)
+```
+
+#### Ollama
+```python
+genai=GenerativeAISettings(
+    provider="ollama",
+    model_name="llama3:8b",
+    base_url="http://localhost:11434/",  # Your Ollama instance
+    output_schema=Product,
+    # api_key optional for Ollama
+)
+```
+
+### All Available Fields
+
+| Field | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `provider` | `str` | Yes | - | Model provider: `"openai"`, `"google"`, or `"ollama"` |
+| `model_name` | `str` | Yes | - | Model identifier |
+| `api_key` | `str` | Conditional | `None` | API key for OpenAI/Google, optional for Ollama |
+| `output_schema` | `BaseModel` | Conditional | `None` | Pydantic model for structured output |
+| `base_url` | `str` | Optional | `None` | Custom endpoint URL (required for Ollama) |
+| `reasoning` | `bool` | No | `False` | Enable reasoning for supported models |
+
+### Usage Tips
+
+- **Lower concurrency**: GenAI calls are slower and more expensive. Use `concurrency=1-3`.
+- **Increase timeout**: Model responses can take 10-30+ seconds. Use `request_timeout=30+`.
+- **Structured schemas**: Define clear Pydantic models for reliable extraction.
+- **Error handling**: GenAI calls may fail due to rate limits or model errors.
+
 Use GenAI when you need typed fields, normalization, summaries, or extraction that
-requires interpretation. Avoid it for simple bulk text extraction where the heuristic
+requires interpretation. Avoid it for simple bulk text extraction where heuristic
 strategy is faster, cheaper, and easier to reproduce.
 
 ## Performance Tuning

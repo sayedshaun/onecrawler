@@ -20,7 +20,7 @@ The library is designed around a practical crawler workflow:
 
 Many crawling projects start as small scripts and become hard to maintain once they
 need retries, concurrency, browser rendering, sitemap fallback, URL filtering, and
-structured extraction. Onecrawler gives those concerns a shared configuration model
+structured extraction. Onecrawler gives those concerns a shared settings model
 and a few focused async engines so production scripts stay readable.
 
 Use it when you are building:
@@ -44,13 +44,13 @@ from onecrawler import CrawlerSettings, UniversalSiteMap
 
 
 async def main():
-    config = CrawlerSettings(
+    settings = CrawlerSettings(
         link_extraction_limit=500,
         include_link_patterns=["/news/*"],
         concurrency=10,
     )
 
-    sitemap = UniversalSiteMap(config)
+    sitemap = UniversalSiteMap(settings)
     urls = await sitemap.run("https://example.com")
     print(f"Found {len(urls)} URLs")
 
@@ -72,7 +72,7 @@ Then pass the final URL list to `ScraperEngine`.
 | --- | --- | --- |
 | Collect most public URLs quickly | `UniversalSiteMap` | Uses `robots.txt`, common sitemap paths, nested sitemap indexes, and optional HTML fallback |
 | Inspect one listing page | shallow link extraction | Lower crawl cost and easier to reason about |
-| Explore a site section recursively | deep link extraction | Follows internal links until your configured limit |
+| Explore a site section recursively | deep link extraction | Follows internal links until your settings limit |
 | Extract readable article text | heuristic scraping | Fast, deterministic, and does not require model calls |
 | Produce strongly typed output | GenAI scraping with a Pydantic schema | Best fit when downstream systems require a stable structured shape |
 | Avoid noisy crawls | `include_link_patterns` | Keeps discovery focused on URL paths you trust |
@@ -81,7 +81,7 @@ Then pass the final URL list to `ScraperEngine`.
 
 - [Installation](installation.md): package setup, browser requirements, optional extras
 - [Quick start](quick-start.md): first complete discovery and scraping workflows
-- [Configuration](configuration.md): every important setting and how to tune it
+- [settings](settings.md): every important setting and how to tune it
 - [Sitemap discovery](sitemap-discovery.md): fastest URL collection path and fallbacks
 - [Link extraction](link-extraction.md): shallow versus deep browser crawling
 - [Scraping](scraping.md): heuristic extraction, GenAI extraction, and output choices

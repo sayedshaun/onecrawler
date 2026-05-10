@@ -4,7 +4,7 @@ from langchain.chat_models import init_chat_model
 from pydantic import BaseModel
 
 
-class LLMAdapter:
+class LLMManager:
     def __init__(
         self,
         schema: Optional[Type[BaseModel]],

@@ -1,11 +1,20 @@
 import asyncio
 
+from ....settings.genai import GenerativeAISettings
 from .graph import build_graph
+from .model import LLMManager
 
 
 class GenAIStrategy:
-    def __init__(self, llm):
-        self.llm = llm
+    def __init__(self, settings: GenerativeAISettings):
+        self.llm = LLMManager(
+            schema=settings.output_schema,
+            model_provider=settings.provider,
+            model_name=settings.model_name,
+            base_url=settings.base_url,
+            reasoning=settings.reasoning,
+            api_key=settings.api_key,
+        )
         self.graph = None
         self._init_lock = asyncio.Lock()
 

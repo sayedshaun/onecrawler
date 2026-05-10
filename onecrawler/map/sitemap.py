@@ -12,9 +12,9 @@ import aiohttp
 from curl_cffi.requests import AsyncSession
 from lxml import etree
 
-from ..config.crawler import CrawlerSettings
 from ..crawler.link.helper import wildcard_link_match
 from ..proxy.pool import ProxyPool
+from ..settings.crawler import CrawlerSettings
 from .helper import (
     COMMON_SITEMAP_PATHS,
     URLRecord,
@@ -40,14 +40,14 @@ class SitemapStats:
 
 
 class SiteMap:
-    def __init__(self, config: CrawlerSettings):
+    def __init__(self, settings: CrawlerSettings):
 
-        self.semaphore = asyncio.Semaphore(config.concurrency)
+        self.semaphore = asyncio.Semaphore(settings.concurrency)
         self.visited_sitemaps: Set[str] = set()
         self.urls: Set[str] = set()
         self.stats = SitemapStats()
-        self.timeout = config.browser_settings.runtime.timeout
-        self.filter_pattern = config.include_link_patterns
+        self.timeout = settings.browser_settings.runtime.timeout
+        self.filter_pattern = settings.include_link_patterns
         self.base_prefix = ""
 
     async def __aenter__(self):
@@ -455,8 +455,8 @@ class HTMLCrawler:
 
 
 class UniversalSiteMap:
-    def __init__(self, config: CrawlerSettings):
-        self.config = config
+    def __init__(self, settings: CrawlerSettings):
+        self.settings = settings
 
     async def run(self, url: str) -> list[str]:
 
@@ -466,15 +466,15 @@ class UniversalSiteMap:
         all_records: list[URLRecord] = []
 
         async with HTTPClient(
-            self.config.concurrency,
-            self.config.request_timeout,
-            self.config.sitemap_user_agent,
-            self.config.max_retries,
-            self.config.retry_delay,
-            self.config.create_proxy_pool(),
+            self.settings.concurrency,
+            self.settings.request_timeout,
+            self.settings.sitemap_user_agent,
+            self.settings.max_retries,
+            self.settings.retry_delay,
+            self.settings.create_proxy_pool(),
         ) as client:
             robots = RobotsParser(client)
-            sitemap_parser = SitemapParser(client, self.config.concurrency)
+            sitemap_parser = SitemapParser(client, self.settings.concurrency)
 
             # STRATEGY 1: robots.txt
             sitemap_urls = await robots.fetch_sitemaps(base_url)
@@ -504,35 +504,35 @@ class UniversalSiteMap:
                 all_records.extend(records)
 
             # STRATEGY 4: HTML crawl fallback
-            if not all_records and self.config.sitemap_html_fallback:
+            if not all_records and self.settings.sitemap_html_fallback:
                 strategies_used.append("html_crawl")
                 crawler = HTMLCrawler(
                     client,
-                    self.config.concurrency,
-                    self.config.max_crawl_pages,
-                    self.config.max_crawl_depth,
+                    self.settings.concurrency,
+                    self.settings.max_crawl_pages,
+                    self.settings.max_crawl_depth,
                 )
                 crawl_records = await crawler.crawl(base_url)
                 all_records.extend(crawl_records)
 
-        if self.config.verbose:
+        if self.settings.verbose:
             logging.info(f"Strategies used: {strategies_used}")
 
         # Filter out XML URLs
         all_records = [r for r in all_records if not is_xml_url(r.url)]
 
         # Section filter (include_patterns)
-        if self.config.include_link_patterns:
+        if self.settings.include_link_patterns:
             all_records = [
                 r
                 for r in all_records
                 if wildcard_link_match(
-                    r.url, base_url, self.config.include_link_patterns
+                    r.url, base_url, self.settings.include_link_patterns
                 )
             ]
 
         # Deduplication
-        if self.config.sitemap_deduplicate:
+        if self.settings.sitemap_deduplicate:
             seen: set[str] = set()
             deduped: list[URLRecord] = []
             for rec in all_records:
@@ -543,8 +543,8 @@ class UniversalSiteMap:
             all_records = deduped
 
         # Cap at max_urls
-        if len(all_records) > self.config.link_extraction_limit:
-            all_records = all_records[: self.config.link_extraction_limit]
+        if len(all_records) > self.settings.link_extraction_limit:
+            all_records = all_records[: self.settings.link_extraction_limit]
 
         # Return plain list of URL strings
         return [rec.url for rec in all_records]
