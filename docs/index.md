@@ -4,6 +4,12 @@ title: Onecrawler Documentation
 
 # Onecrawler
 
+[![PyPI](https://img.shields.io/badge/pypi-onecrawler-6B45A7.svg)](https://pypi.org/project/onecrawler/)
+[![CI](https://img.shields.io/badge/CI-passing-brightgreen.svg)](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-85%25-orange.svg)](https://codecov.io/gh/sayedshaun/onecrawler)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/sayedshaun/onecrawler/blob/main/LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+
 Onecrawler is an async Python toolkit for discovering URLs, crawling websites, and
 extracting page content into formats that are easier to store, search, analyze, or
 send into downstream data pipelines.
