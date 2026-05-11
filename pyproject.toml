@@ -17,13 +17,13 @@ dependencies = [
     "curl_cffi",
     "tqdm",
     "playwright",
-    "pydantic",
     "trafilatura",
     "lxml",
 ]
 
 [project.optional-dependencies]
 genai = [
+    "pydantic",
     "langchain",
     "langgraph",
 ]
@@ -48,6 +48,5 @@ profile = "black"
 line_length = 88
 
 [project.urls]
-Homepage = "https://github.com/sayedshaun/onecrawler"
+Homepage = "https://sayedshaun.github.io/onecrawler/"
 Repository = "https://github.com/sayedshaun/onecrawler"
-Documentation = "https://sayedshaun.github.io/onecrawler/"
