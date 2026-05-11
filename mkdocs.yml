@@ -1,0 +1,138 @@
+site_name: Onecrawler
+site_description: An async Python toolkit for sitemap discovery, browser crawling, and structured content extraction
+site_author: sayedshaun
+site_url: https://sayedshaun.github.io/onecrawler/
+
+# Repository
+repo_name: sayedshaun/onecrawler
+repo_url: https://github.com/sayedshaun/onecrawler
+edit_uri: edit/main/docs/
+
+# Theme
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - toc.follow
+    - search.highlight
+    - search.share
+    - content.code.annotate
+    - content.code.copy
+  logo: static/onecrawl_logo.png
+  favicon: static/onecrawl_logo.png
+
+# Plugins
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
+  - minify:
+      minify_html: true
+
+# Extensions
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - meta
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      title: Table of contents
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      normalize_issue_symbols: true
+      repo_url_shorthand: true
+      user: sayedshaun
+      repo: onecrawler
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      auto_append:
+        - includes/mkdocs.md
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+# Navigation
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: installation.md
+    - Quick Start: quick-start.md
+    - Configuration: configuration.md
+  - Packages:
+    - Link Extraction: packages/link-extraction.md
+    - Sitemap Discovery: packages/sitemap.md
+    - Scraping Engine: packages/scraping.md
+    - Settings Configuration: packages/settings.md
+  - Reference:
+    - API Reference: api-reference.md
+    - Troubleshooting: troubleshooting.md
+  - Development:
+    - Contributing: contributing.md
+    - Development: development.md
+
+# Customization
+extra:
+  analytics:
+    provider: google
+    property: G-XXXXXXXXXX
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/sayedshaun/onecrawler
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/onecrawler/
+
+
+# Copyright
+copyright: Copyright &copy; 2024 sayedshaun
