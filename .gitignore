@@ -15,6 +15,11 @@ dist/
 *.egg-info/
 .eggs/
 
+# MkDocs generated files
+site/
+*.mkdocs/
+mkdocs.yml.local
+
 # IDEs and editors
 .vscode/
 .idea/

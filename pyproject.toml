@@ -31,6 +31,8 @@ dev = [
     "black",
     "isort",
     "pre-commit",
+    "mkdocs-material",
+    "mkdocs-minify-plugin",
 ]
 
 [tool.setuptools.packages.find]
@@ -48,3 +50,4 @@ line_length = 88
 [project.urls]
 Homepage = "https://github.com/sayedshaun/onecrawler"
 Repository = "https://github.com/sayedshaun/onecrawler"
+Documentation = "https://sayedshaun.github.io/onecrawler/"

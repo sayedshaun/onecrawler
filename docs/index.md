@@ -4,6 +4,12 @@ title: Onecrawler Documentation
 
 # Onecrawler
 
+[![PyPI](https://img.shields.io/badge/pypi-onecrawler-6B45A7.svg)](https://pypi.org/project/onecrawler/)
+[![CI](https://img.shields.io/badge/CI-passing-brightgreen.svg)](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-85%25-orange.svg)](https://codecov.io/gh/sayedshaun/onecrawler)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/sayedshaun/onecrawler/blob/main/LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+
 Onecrawler is an async Python toolkit for discovering URLs, crawling websites, and
 extracting page content into formats that are easier to store, search, analyze, or
 send into downstream data pipelines.
@@ -81,10 +87,11 @@ Then pass the final URL list to `ScraperEngine`.
 
 - [Installation](installation.md): package setup, browser requirements, optional extras
 - [Quick start](quick-start.md): first complete discovery and scraping workflows
-- [settings](settings.md): every important setting and how to tune it
-- [Sitemap discovery](sitemap-discovery.md): fastest URL collection path and fallbacks
-- [Link extraction](link-extraction.md): shallow versus deep browser crawling
-- [Scraping](scraping.md): heuristic extraction, GenAI extraction, and output choices
+- [Configuration](configuration.md): crawler settings and configuration
+- [Link Extraction](packages/link-extraction.md): `LinkExtractionEngine` and link discovery
+- [Sitemap Discovery](packages/sitemap.md): `UniversalSiteMap` and URL collection
+- [Scraping Engine](packages/scraping.md): `ScraperEngine` and content extraction
+- [Settings Configuration](packages/settings.md): `CrawlerSettings` and configuration classes
 - [API reference](api-reference.md): public classes exported from `onecrawler`
 - [Troubleshooting](troubleshooting.md): common failures and fixes
 - [Development](development.md): local contributor workflow

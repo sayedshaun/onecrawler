@@ -191,18 +191,16 @@ class ArticleSummary(BaseModel):
 
 async def main():
     settings = CrawlerSettings(
-        scraping_strategy="genai",  # Required for GenAI extraction
-        scraping_output_format="json",  # GenAI only supports JSON
+        scraping_strategy="genai",
+        scraping_output_format="json",
         genai=GenerativeAISettings(
-            provider="openai",  # Options: "openai", "google", "ollama"
+            provider="openai",
             model_name="gpt-4o-mini",
-            api_key="YOUR_API_KEY",  # Required for OpenAI/Google, optional for Ollama
-            output_schema=ArticleSummary,  # Pydantic model for structured output
-            # Optional: base_url for custom endpoints (e.g., Ollama)
-            # base_url="https://your-ollama-instance.com/",
+            api_key="YOUR_API_KEY",
+            output_schema=ArticleSummary,
         ),
-        concurrency=2,  # Lower concurrency recommended for GenAI
-        request_timeout=30,  # Increase timeout for model responses
+        concurrency=2,
+        request_timeout=30,
     )
 
     async with ScraperEngine(settings) as scraper:
@@ -261,28 +259,6 @@ Use `proxy=ProxySettings(...)` for one proxy, or `proxies=[...]` for rotation.
 
 ---
 
-## Documentation
-
-The README is the project overview. The full documentation in [`docs/`](docs/index.md)
-contains production guidance, caveats, performance notes, and copy-paste examples.
-
-| Topic | Guide |
-| --- | --- |
-| Install the package | [Installation](docs/installation.md) |
-| Run your first crawl | [Quick start](docs/quick-start.md) |
-| Tune crawler settings | [settings](docs/settings.md) |
-| Discover URLs from sitemaps | [Sitemap discovery](docs/sitemap-discovery.md) |
-| Extract and filter links | [Link extraction](docs/link-extraction.md) |
-| Scrape page content | [Scraping](docs/scraping.md) |
-| Public classes and exports | [API reference](docs/api-reference.md) |
-| Common fixes | [Troubleshooting](docs/troubleshooting.md) |
-| Contribute locally | [Contributing](docs/contributing.md) |
-| Work on the project | [Development](docs/development.md) |
-
-See [Contributing](docs/contributing.md) for how to improve the docs.
-
----
-
 ## Production Tips
 
 - Prefer `UniversalSiteMap` before browser crawling.
@@ -299,11 +275,3 @@ See [Contributing](docs/contributing.md) for how to improve the docs.
 ## License
 
 Released under the [MIT License](LICENSE). See `LICENSE` for full terms.
-
----
-
-<div align="center">
-
-Built by [sayedshaun](https://github.com/sayedshaun)
-
-</div>
