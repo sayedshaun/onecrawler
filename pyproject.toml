@@ -16,6 +16,7 @@ dependencies = [
     "aiohttp",
     "curl_cffi",
     "tqdm",
+    "pydantic",
     "playwright",
     "trafilatura",
     "lxml",
@@ -23,7 +24,6 @@ dependencies = [
 
 [project.optional-dependencies]
 genai = [
-    "pydantic",
     "langchain",
     "langgraph",
 ]
