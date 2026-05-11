@@ -16,8 +16,8 @@ dependencies = [
     "aiohttp",
     "curl_cffi",
     "tqdm",
-    "playwright",
     "pydantic",
+    "playwright",
     "trafilatura",
     "lxml",
 ]
@@ -48,6 +48,5 @@ profile = "black"
 line_length = 88
 
 [project.urls]
-Homepage = "https://github.com/sayedshaun/onecrawler"
+Homepage = "https://sayedshaun.github.io/onecrawler/"
 Repository = "https://github.com/sayedshaun/onecrawler"
-Documentation = "https://sayedshaun.github.io/onecrawler/"
