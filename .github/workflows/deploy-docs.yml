@@ -14,7 +14,7 @@ jobs:
       with:
         python-version: '3.12'
     - run: |
-        pip install mkdocs-material
+        pip install mkdocs-material mkdocs-minify-plugin
         mkdocs build
     - uses: actions/configure-pages@v4
     - uses: actions/deploy-pages@v4
