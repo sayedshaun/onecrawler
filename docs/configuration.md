@@ -241,6 +241,82 @@ Use GenAI when you need typed fields, normalization, summaries, or extraction th
 requires interpretation. Avoid it for simple bulk text extraction where heuristic
 strategy is faster, cheaper, and easier to reproduce.
 
+## PipelineEngine Configuration
+
+`PipelineEngine` uses the same `CrawlerSettings` object but emphasizes specific fields for its orchestrated workflow:
+
+### Required for Production
+
+**Proxy Configuration (Required):**
+```python
+settings = CrawlerSettings(
+    proxies=[
+        ProxySettings(server="http://proxy1.example.com:8080"),
+        ProxySettings(server="http://proxy2.example.com:8080"),
+    ],
+    proxy_rotation="round_robin",
+)
+```
+
+### Key PipelineEngine Settings
+
+| Field | Recommended for PipelineEngine | Purpose |
+| --- | --- | --- |
+| `link_extraction_limit` | `50-200` | Controls total pages crawled in pipeline |
+| `include_link_patterns` | Strongly recommended | Scope crawling to relevant sections |
+| `concurrency` | `3-8` | Browser workers for link discovery |
+| `enable_human_behaviors` | `False` (default) or `True` | Simulate human browsing patterns |
+| `human_behavior_settings` | Customizable if enabled | Configure delays, scrolls, mouse movements |
+
+### Date Filtering Configuration
+
+PipelineEngine supports date-based content filtering via constructor parameters:
+
+```python
+# Filter content by publication date
+async with PipelineEngine(settings, 
+                         start_date="2024-01-01", 
+                         end_date="2024-12-31") as engine:
+    results = await engine.run("https://example.com/news")
+```
+
+**Date Requirements:**
+- Format: `YYYY-MM-DD`
+- Content must have `filedate` or `date` field
+- Applied after content extraction
+
+### Human Behavior Settings
+
+When `enable_human_behaviors=True`, configure realistic browsing:
+
+```python
+settings = CrawlerSettings(
+    enable_human_behaviors=True,
+    human_behavior_settings=HumanBehaviorSettings(
+        min_delay=1.0,        # Minimum delay between actions (seconds)
+        max_delay=3.0,        # Maximum delay between actions (seconds)
+        max_scrolls=5,        # Maximum scroll gestures per page
+        min_mouse_moves=2,    # Minimum mouse movements
+        max_mouse_moves=5,    # Maximum mouse movements
+        mouse_width=100,      # Mouse movement area width
+        mouse_height=100,     # Mouse movement area height
+        min_mouse_steps=5,    # Minimum steps per movement
+        max_mouse_steps=15,   # Maximum steps per movement
+        min_mouse_sleep=0.1,  # Minimum sleep between steps
+        max_mouse_sleep=0.3,  # Maximum sleep between steps
+    ),
+)
+```
+
+### PipelineEngine Performance Profiles
+
+| Use Case | Recommended Settings |
+| --- | --- |
+| **Small blog** | `link_extraction_limit=50`, `concurrency=3`, no human behaviors |
+| **News site** | `link_extraction_limit=200`, `concurrency=5`, date filtering |
+| **JavaScript-heavy** | `link_extraction_limit=100`, `concurrency=3`, enable human behaviors |
+| **Production crawling** | `link_extraction_limit=150`, `concurrency=4`, proxy pool required |
+
 ## Performance Tuning
 
 Tune in this order:

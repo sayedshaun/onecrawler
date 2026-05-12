@@ -15,12 +15,14 @@ def load_sitemap_module():
         raise unittest.SkipTest("lxml is not installed")
 
     ensure_package("onecrawler")
-    ensure_package("onecrawler.map")
+    ensure_package("onecrawler.crawler.map")
     load_settings_modules()
     load_link_modules()
-    load_module("onecrawler.map.helper", "onecrawler/map/helper.py")
+    load_module("onecrawler.crawler.map.helper", "onecrawler/crawler/map/helper.py")
     install_curl_cffi_stub()
-    return load_module("onecrawler.map.sitemap", "onecrawler/map/sitemap.py")
+    return load_module(
+        "onecrawler.crawler.map.sitemap", "onecrawler/crawler/map/sitemap.py"
+    )
 
 
 class SitemapParserTests(unittest.TestCase):

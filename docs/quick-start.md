@@ -136,6 +136,69 @@ GenAI extraction should be reserved for semantic or typed output needs. For high
 volume article text extraction, start with the heuristic strategy and add GenAI only
 for pages that require interpretation or normalization.
 
+## All-in-One Pipeline: PipelineEngine
+
+Use `PipelineEngine` when you want a single, orchestrated workflow that combines
+link discovery, browser automation, and content extraction.
+
+**⚠️ Important:** Requires proxy configuration for production use.
+
+```python
+import json
+import asyncio
+from onecrawler import PipelineEngine, CrawlerSettings, ProxySettings
+
+
+async def main():
+    settings = CrawlerSettings(
+        link_extraction_limit=50,
+        include_link_patterns=["/news/*"],
+        concurrency=5,
+        # Required for production
+        proxies=[
+            ProxySettings(server="http://proxy1.example.com:8080"),
+            ProxySettings(server="http://proxy2.example.com:8080"),
+        ],
+        proxy_rotation="round_robin",
+    )
+
+    async with PipelineEngine(settings) as engine:
+        results = await engine.run("https://example.com/news")
+
+    with open("news_articles.json", "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+```
+
+**With date filtering:**
+```python
+async with PipelineEngine(
+    settings, 
+    start_date="2024-01-01", 
+    end_date="2024-12-31"
+) as engine:
+    results = await engine.run("https://example.com/news")
+```
+
+**For JavaScript-heavy sites:**
+```python
+from onecrawler import HumanBehaviorSettings
+
+settings = CrawlerSettings(
+    link_extraction_limit=30,
+    concurrency=3,
+    enable_human_behaviors=True,
+    human_behavior_settings=HumanBehaviorSettings(
+        max_scrolls=3,
+        min_delay=1.0,
+        max_delay=2.0,
+    ),
+    proxies=[...],  # Always required for production
+)
+
+async with PipelineEngine(settings) as engine:
+    results = await engine.run("https://spa-example.com")
+```
+
 ## Practical Defaults
 
 Start conservative:

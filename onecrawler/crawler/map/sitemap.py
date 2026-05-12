@@ -12,9 +12,9 @@ import aiohttp
 from curl_cffi.requests import AsyncSession
 from lxml import etree
 
-from ..crawler.link.helper import wildcard_link_match
-from ..proxy.pool import ProxyPool
-from ..settings.crawler import CrawlerSettings
+from ...proxy.pool import ProxyPool
+from ...settings.crawler import CrawlerSettings
+from ..link.helper import wildcard_link_match
 from .helper import (
     COMMON_SITEMAP_PATHS,
     URLRecord,

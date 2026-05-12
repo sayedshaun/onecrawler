@@ -15,6 +15,7 @@ from onecrawler import (
     GenerativeAISettings,
     HumanBehaviorSettings,
     LinkExtractionEngine,
+    PipelineEngine,
     ProxySettings,
     ScraperEngine,
     SiteMap,
@@ -206,6 +207,91 @@ settings = CrawlerSettings(
 
 This affects deep browser link extraction. It is useful for lazy-loaded links but
 reduces throughput.
+
+## PipelineEngine
+
+A comprehensive web crawling pipeline that orchestrates browser automation,
+link extraction, and content scraping in a single unified workflow.
+
+**⚠️ Important:** Proxy configuration is REQUIRED for production use to avoid IP blocking.
+
+```python
+# Basic usage
+settings = CrawlerSettings(
+    link_extraction_limit=100,
+    concurrency=5,
+    proxies=[ProxySettings(server="http://proxy.example.com:8080")]
+)
+
+async with PipelineEngine(settings) as engine:
+    results = await engine.run("https://example.com")
+```
+
+```python
+# With date filtering
+async with PipelineEngine(settings, start_date="2024-01-01", end_date="2024-12-31") as engine:
+    results = await engine.run("https://example.com")
+```
+
+Returns a list of content dictionaries with extracted data from discovered pages.
+
+### Key Features
+
+- **Orchestrated Workflow:** Combines link discovery, browser automation, and content extraction
+- **Date Filtering:** Filter content by publication date range
+- **Human Behavior Simulation:** Optional realistic browsing patterns
+- **Proxy Support:** Built-in proxy rotation for production crawling
+- **Concurrent Processing:** Configurable worker pool for efficient crawling
+
+### Constructor Parameters
+
+| Parameter | Type | Required | Default | Purpose |
+| --- | --- | --- | --- | --- |
+| `settings` | `CrawlerSettings` | Yes | - | Configuration for all crawling components |
+| `start_date` | `str` | No | `None` | Filter content from this date (YYYY-MM-DD) |
+| `end_date` | `str` | No | `None` | Filter content until this date (YYYY-MM-DD) |
+
+### Proxy Configuration
+
+**Required for production use:**
+
+```python
+settings = CrawlerSettings(
+    proxies=[
+        ProxySettings(server="http://proxy1.example.com:8080"),
+        ProxySettings(server="http://proxy2.example.com:8080"),
+    ],
+    proxy_rotation="round_robin",
+)
+```
+
+Without proper proxy configuration, your crawler may be blocked by target websites.
+
+### Usage Patterns
+
+**Simple crawling:**
+```python
+async with PipelineEngine(settings) as engine:
+    content = await engine.run("https://example.com")
+```
+
+**With date filtering:**
+```python
+async with PipelineEngine(settings, 
+                         start_date="2024-01-01", 
+                         end_date="2024-06-30") as engine:
+    content = await engine.run("https://example.com/news")
+```
+
+**Manual lifecycle:**
+```python
+engine = PipelineEngine(settings)
+await engine.start()
+try:
+    content = await engine.run("https://example.com")
+finally:
+    await engine.close()
+```
 
 ## LinkClassifierPipeline
 
