@@ -2,7 +2,9 @@ import unittest
 
 from tests._support import load_module
 
-helper_module = load_module("tests.loaded_map_helper", "onecrawler/map/helper.py")
+helper_module = load_module(
+    "tests.loaded_map_helper", "onecrawler/crawler/map/helper.py"
+)
 
 
 class MapHelperTests(unittest.TestCase):
