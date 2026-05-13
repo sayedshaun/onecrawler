@@ -39,6 +39,9 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
         cls.onecrawler_module = load_pipeline_modules()
+        cls.pipeline_module = load_module(
+            "onecrawler.crawler.pipeline", "onecrawler/crawler/pipeline.py"
+        )
 
         # Load settings modules
         cls.settings_module = load_module(
@@ -216,7 +219,7 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
         )
 
         # Create a PipelineRuntime instance for testing
-        runtime = self.onecrawler_module.PipelineRuntime(
+        runtime = self.pipeline_module.PipelineRuntime(
             scheduler=AsyncMock(),
             pool=AsyncMock(),
             spider=MagicMock(),
@@ -259,7 +262,7 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
             self.mock_settings, start_date="2024-01-01", end_date="2024-12-31"
         )
 
-        runtime = self.onecrawler_module.PipelineRuntime(
+        runtime = self.pipeline_module.PipelineRuntime(
             scheduler=AsyncMock(),
             pool=AsyncMock(),
             spider=MagicMock(),
@@ -283,7 +286,7 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_pipeline_runtime_no_date_filtering(self):
         """Test PipelineRuntime accepts all content when no date filters are set."""
-        runtime = self.onecrawler_module.PipelineRuntime(
+        runtime = self.pipeline_module.PipelineRuntime(
             scheduler=AsyncMock(),
             pool=AsyncMock(),
             spider=MagicMock(),
