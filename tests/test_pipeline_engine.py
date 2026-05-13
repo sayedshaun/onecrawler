@@ -2,7 +2,12 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from tests._support import ensure_package, load_module, load_settings_modules
+from tests._support import (
+    ensure_package,
+    install_trafilatura_stub,
+    load_module,
+    load_settings_modules,
+)
 
 
 def load_pipeline_modules():
@@ -11,33 +16,38 @@ def load_pipeline_modules():
         # Try to import from main package first
         import onecrawler
 
-        return onecrawler
+        if hasattr(onecrawler, "PipelineEngine"):
+            return onecrawler
     except ImportError as e:
-        # If main package fails due to missing dependencies, load modules individually
-        ensure_package("onecrawler")
-        ensure_package("onecrawler.settings")
-        load_settings_modules()
+        pass
 
-        # Create a mock module with PipelineEngine
-        mock_module = MagicMock()
+    # If main package fails due to missing dependencies or has been stubbed by
+    # another test module, load the pipeline module directly.
+    ensure_package("onecrawler")
+    ensure_package("onecrawler.settings")
+    ensure_package("onecrawler.crawler")
+    ensure_package("onecrawler.crawler.scraper")
+    ensure_package("onecrawler.crawler.scraper.heuristic")
+    load_settings_modules()
+    install_trafilatura_stub()
 
-        # Load the pipeline module directly
-        pipeline_module = load_module(
-            "onecrawler.crawler.pipeline", "onecrawler/crawler/pipeline.py"
-        )
+    mock_module = MagicMock()
+    pipeline_module = load_module(
+        "onecrawler.crawler.pipeline", "onecrawler/crawler/pipeline.py"
+    )
 
-        # Extract the classes we need
-        if hasattr(pipeline_module, "PipelineEngine"):
-            mock_module.PipelineEngine = pipeline_module.PipelineEngine
-        if hasattr(pipeline_module, "PipelineRuntime"):
-            mock_module.PipelineRuntime = pipeline_module.PipelineRuntime
+    if hasattr(pipeline_module, "PipelineEngine"):
+        mock_module.PipelineEngine = pipeline_module.PipelineEngine
+    if hasattr(pipeline_module, "PipelineRuntime"):
+        mock_module.PipelineRuntime = pipeline_module.PipelineRuntime
 
-        return mock_module
+    return mock_module
 
 
 class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
+        install_trafilatura_stub()
         cls.onecrawler_module = load_pipeline_modules()
         cls.pipeline_module = load_module(
             "onecrawler.crawler.pipeline", "onecrawler/crawler/pipeline.py"
