@@ -25,8 +25,6 @@ Onecrawler helps you build maintainable crawling and extraction workflows withou
 
 **Recommended workflow:**
 
-The recommended workflow is:
-
 1. Use sitemaps first whenever possible.
 2. Fall back to browser link extraction when sitemap coverage is missing or dynamic.
 3. Scrape the final URL list with heuristic extraction by default.
@@ -103,9 +101,6 @@ python -m playwright install chromium
 ---
 
 ## Quick Start
-
-This example uses the common browser-backed workflow: discover links first, then
-scrape the discovered URLs.
 
 ```python
 import json
