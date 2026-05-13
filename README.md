@@ -35,11 +35,11 @@ The recommended workflow is:
 4. Use GenAI extraction when you need structured output in a Pydantic schema.
 
 ```python
-sitemap = UniversalSiteMap(settings)
-urls = await sitemap.run("https://example.com")
+async with LinkExtractionEngine(settings) as link_engine:
+    links = await link_engine.run("https://example.com")
 
-async with ScraperEngine(settings) as scraper:
-    records = await scraper.run(urls)
+async with ScraperEngine(settings) as scraper_engine:
+    records = await scraper_engine.run(links)
 ```
 
 ---
@@ -66,7 +66,7 @@ async with ScraperEngine(settings) as scraper:
 | --- | --- | --- |
 | Fast URL discovery from a public site | `UniversalSiteMap` | It is usually the simplest, fastest, and least expensive way to collect URLs |
 | Links from one listing page | Shallow `LinkExtractionEngine` | It reads direct same-site links from the page |
-| Recursive discovery through navigation | Deep `LinkExtractionEngine` | It follows internal links until your settingsured limit |
+| Recursive discovery through navigation | Deep `LinkExtractionEngine` | It follows internal links until your configured limit |
 | Bulk article or page text extraction | Heuristic `ScraperEngine` | It is deterministic and avoids model cost |
 | Typed fields or semantic normalization | GenAI extraction | It can produce schema-shaped output for downstream systems |
 
@@ -103,67 +103,42 @@ python -m playwright install chromium
 
 ## Quick Start
 
-This example uses the production-friendly path: discover URLs from the sitemap, then
-scrape them.
+This example uses the common browser-backed workflow: discover links first, then
+scrape the discovered URLs.
 
 ```python
 import json
-import asyncio
-from onecrawler import CrawlerSettings, ScraperEngine, UniversalSiteMap
-
-
-async def main():
-    settings = CrawlerSettings(
-        link_extraction_limit=100,
-        include_link_patterns=["/articles/*"],
-        scraping_strategy="heuristic",
-        scraping_output_format="json",
-        concurrency=8,
-        request_timeout=15,
-        max_retries=3,
-    )
-
-    sitemap = UniversalSiteMap(settings)
-    urls = await sitemap.run("https://example.com")
-
-    async with ScraperEngine(settings) as scraper:
-        records = await scraper.run(urls)
-
-    with open("articles.json", "w", encoding="utf-8") as f:
-        json.dump(records, f, indent=2, ensure_ascii=False)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-### Browser Link Extraction
-
-Use browser extraction when sitemaps are incomplete, unavailable, or unable to expose
-JavaScript-rendered links.
-
-```python
-import asyncio
-from onecrawler import CrawlerSettings, LinkExtractionEngine
+from onecrawler import CrawlerSettings, LinkExtractionEngine, ScraperEngine
 
 
 async def main():
     settings = CrawlerSettings(
         link_extraction_strategy="deep",
-        link_extraction_limit=250,
-        include_link_patterns=["/news/*"],
-        concurrency=5,
+        link_extraction_limit=10,
+        concurrency=7,
+        scraping_strategy="heuristic",
+        scraping_output_format="json",
+        enable_human_behaviors=True,
     )
 
-    async with LinkExtractionEngine(settings) as engine:
-        links = await engine.run("https://example.com/news")
+    async with LinkExtractionEngine(settings) as link_engine:
+        links = await link_engine.run("https://www.example.com/")
 
-    print(f"Collected {len(links)} links")
+    async with ScraperEngine(settings) as scraper_engine:
+        results = await scraper_engine.run(links)
+
+    with open("output.json", "w", encoding="utf-8") as f:
+        json.dump(results, f, ensure_ascii=False, indent=4)
 
 
 if __name__ == "__main__":
+    import asyncio
+
     asyncio.run(main())
 ```
+
+For a large production crawl, add `include_link_patterns` to keep discovery focused
+and use a proxy or proxy pool when the target site requires it.
 
 ### GenAI Extraction With A Schema
 
@@ -259,7 +234,7 @@ Use `proxy=ProxySettings(...)` for one proxy, or `proxies=[...]` for rotation.
 
 ---
 
-## Production Tips
+## Few Tips
 
 - Prefer `UniversalSiteMap` before browser crawling.
 - Always set `link_extraction_limit` for broad jobs.
