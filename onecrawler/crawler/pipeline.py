@@ -27,7 +27,7 @@ class PipelineRuntime:
         spider,
         base_prefix: str,
         max_links: int,
-        strategy: HeuristicStrategy = HeuristicStrategy,
+        strategy: Optional[HeuristicStrategy] = None,
         human_behavior_settings: HumanBehaviorSettings = HumanBehaviorSettings,
         include_pattern: Optional[list] = None,
         enable_human_behaviors: bool = False,
@@ -38,6 +38,10 @@ class PipelineRuntime:
         self.scheduler = scheduler
         self.pool = pool
         self.spider = spider
+        if strategy is None:
+            raise ValueError(
+                "PipelineRuntime requires an initialized scraping strategy"
+            )
         self.strategy = strategy
 
         self.base_prefix = base_prefix
@@ -133,6 +137,10 @@ class PipelineRuntime:
                     await self.scheduler.add(link)
 
                     async with self.lock:
+                        if len(self.results) >= self.max_links:
+                            self.stop_event.set()
+                            return
+
                         if link in self.results_set:
                             continue
 
@@ -173,6 +181,9 @@ class PipelineRuntime:
                     self._active_workers -= 1
 
     def _is_valid_content(self, content: dict) -> bool:
+        if not self.start_date and not self.end_date:
+            return True
+
         date = content.get("filedate") or content.get("date")
         if date is None:
             logger.info("No date found in content")
@@ -282,6 +293,7 @@ class PipelineEngine(BaseEngine):
         self.end_date = end_date
 
         self.strategy = None
+        self.browser = None
 
         # future-ready placeholders
         self.session = None
@@ -289,6 +301,7 @@ class PipelineEngine(BaseEngine):
         self.logger.info("PipelineEngine initialized")
 
     async def start(self):
+        self._closed = False
         self.browser = GoogleChrome(self.settings.browser_settings)
         await self.browser.start()
         self.strategy = HeuristicStrategy(settings=self.settings, browser=self.browser)
@@ -317,6 +330,7 @@ class PipelineEngine(BaseEngine):
             scheduler=scheduler,
             pool=pool,
             spider=spider,
+            strategy=self.strategy,
             base_prefix=base_prefix,
             max_links=self.settings.link_extraction_limit,
             include_pattern=self.settings.include_link_patterns,
