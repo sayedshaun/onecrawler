@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "onecrawler"
 version = "0.1.2"
-description = "OneCrawler is an async Python crawling library for discovering URLs, extracting links, and scraping structured content."
+description = "An async Python crawling library for discovering URLs, extracting links, and scraping structured content."
 readme = "README.md"
 license = "MIT"
 authors = [

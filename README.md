@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/sayedshaun/onecrawler/refs/heads/main/docs/static/onecrawl_logo.png" alt="OneCrawler" width="200"/>
+<img src="https://raw.githubusercontent.com/sayedshaun/onecrawler/refs/heads/main/docs/static/onecrawl_logo.png" alt="Onecrawler" width="180"/>
 
-# OneCrawler
+# Onecrawler
 
-**OneCrawler is an async Python crawling library for discovering URLs, extracting links, and scraping structured content.**
+**An async Python crawling library for discovering URLs, extracting links, and scraping structured content.**
 
 [![CI](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml/badge.svg)](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
@@ -13,7 +13,7 @@
 [![Imports: isort](https://img.shields.io/badge/imports-isort-1674b1.svg)](https://pycqa.github.io/isort/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-[Installation](#installation) · [Quick Start](#quick-start) · [Documentation](#documentation) · [Development](#development)
+[Installation](#installation) · [Quick Start](#quick-start) · [Documentation](https://sayedshaun.github.io/onecrawler/)
 
 </div>
 
@@ -21,11 +21,9 @@
 
 ## Overview
 
-OneCrawler helps you build maintainable crawling and extraction workflows without
-turning every project into a custom scraping script. It gives you a shared
-configuration model, async execution, sitemap discovery, browser-backed link
-extraction, heuristic content extraction, and optional GenAI extraction for typed
-outputs.
+Onecrawler helps you build maintainable crawling and extraction workflows without turning every project into a custom scraping script. It provides a shared configuration model, async execution, sitemap discovery, browser-backed link extraction, heuristic content extraction, and optional GenAI extraction for typed outputs.
+
+**Recommended workflow:**
 
 The recommended workflow is:
 
@@ -52,7 +50,7 @@ async with ScraperEngine(settings) as scraper_engine:
 | **Browser link extraction** | Shallow and deep Playwright-backed discovery for JavaScript-rendered or sitemap-poor sites |
 | **URL filtering** | Wildcard path filters with `include_link_patterns` |
 | **Async performance** | Tunable concurrency, retries, timeouts, and crawl limits |
-| **Content extraction** | Heuristic extraction with `trafilatura` for fast article-like content extraction |
+| **Content extraction** | Heuristic extraction with `trafilatura` for fast article-like content |
 | **GenAI extraction** | Optional model-assisted extraction for strongly typed Pydantic outputs |
 | **Output formats** | `markdown`, `json`, `csv`, `html`, `python`, `txt`, `xml`, `xmltei` |
 | **Proxy support** | Single proxy or rotating proxy pools for browser and sitemap workflows |
@@ -64,11 +62,11 @@ async with ScraperEngine(settings) as scraper_engine:
 
 | Need | Use | Why |
 | --- | --- | --- |
-| Fast URL discovery from a public site | `UniversalSiteMap` | It is usually the simplest, fastest, and least expensive way to collect URLs |
-| Links from one listing page | Shallow `LinkExtractionEngine` | It reads direct same-site links from the page |
-| Recursive discovery through navigation | Deep `LinkExtractionEngine` | It follows internal links until your configured limit |
-| Bulk article or page text extraction | Heuristic `ScraperEngine` | It is deterministic and avoids model cost |
-| Typed fields or semantic normalization | GenAI extraction | It can produce schema-shaped output for downstream systems |
+| Fast URL discovery from a public site | `UniversalSiteMap` | Simplest, fastest, and least expensive way to collect URLs |
+| Links from one listing page | Shallow `LinkExtractionEngine` | Reads direct same-site links from the page |
+| Recursive discovery through navigation | Deep `LinkExtractionEngine` | Follows internal links until your configured limit |
+| Bulk article or page text extraction | Heuristic `ScraperEngine` | Deterministic and avoids model cost |
+| Typed fields or semantic normalization | GenAI extraction | Produces schema-shaped output for downstream systems |
 
 ---
 
@@ -89,6 +87,9 @@ Install optional GenAI dependencies when you use model-assisted extraction:
 ```bash
 pip install "onecrawler[genai]"
 ```
+
+> [!NOTE]
+> GenAI extraction requires an API key from your chosen provider (OpenAI, Google) or a running Ollama instance. See [GenAI Extraction](#genai-extraction-with-a-schema) for details.
 
 For local development:
 
@@ -137,13 +138,49 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-For a large production crawl, add `include_link_patterns` to keep discovery focused
-and use a proxy or proxy pool when the target site requires it.
+> [!TIP]
+> Always set `link_extraction_limit` when crawling broad sites. Without it, discovery can run indefinitely on large domains.
 
-### GenAI Extraction With A Schema
+---
 
-Use GenAI extraction when you need a strongly typed response shape instead of plain
-content. This requires installing the GenAI dependencies:
+## Browser Link Extraction
+
+Use browser extraction when sitemaps are incomplete, unavailable, or unable to expose JavaScript-rendered links.
+
+```python
+import asyncio
+from onecrawler import CrawlerSettings, LinkExtractionEngine
+
+
+async def main():
+    settings = CrawlerSettings(
+        link_extraction_strategy="deep",
+        link_extraction_limit=250,
+        include_link_patterns=["/news/*"],
+        concurrency=5,
+    )
+
+    async with LinkExtractionEngine(settings) as engine:
+        links = await engine.run("https://example.com/news")
+
+    print(f"Collected {len(links)} links")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+> [!TIP]
+> Use `include_link_patterns` to keep discovery focused on relevant paths. For example, `["/blog/*", "/docs/*"]` prevents the crawler from wandering into auth pages, admin routes, or unrelated sections.
+
+> [!NOTE]
+> Deep extraction follows internal links recursively. Use `shallow` strategy when you only need links visible on a single listing page — it's significantly faster.
+
+---
+
+## GenAI Extraction With a Schema
+
+Use GenAI extraction when you need a strongly typed response shape instead of plain content.
 
 ```bash
 pip install "onecrawler[genai]"
@@ -181,21 +218,32 @@ async def main():
     async with ScraperEngine(settings) as scraper:
         result = await scraper.run("https://example.com/articles/story")
 
-    # Convert Pydantic model to dict for JSON serialization
-    print(result.model_dump() if hasattr(result, 'model_dump') else result)
+    print(result.model_dump() if hasattr(result, "model_dump") else result)
 
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-#### Supported Providers
+> [!TIP]
+> Keep `concurrency` low (2–4) for GenAI extraction. Each page triggers a model call; high concurrency can exhaust rate limits quickly and inflate costs.
 
-- **OpenAI**: Requires `api_key`, supports GPT models
-- **Google**: Requires `api_key`, supports Gemini models  
-- **Ollama**: No API key needed, requires `base_url`, supports local models
+> [!WARNING]
+> Never hardcode your API key in source files. Use environment variables or a secrets manager instead:
+> ```python
+> import os
+> api_key=os.environ["OPENAI_API_KEY"]
+> ```
 
-#### Ollama Example
+### Supported Providers
+
+| Provider | Requires | Models |
+| --- | --- | --- |
+| **OpenAI** | `api_key` | GPT-4o, GPT-4o-mini, etc. |
+| **Google** | `api_key` | Gemini models |
+| **Ollama** | `base_url` (no key needed) | Any locally hosted model |
+
+### Ollama Example
 
 ```python
 settings = CrawlerSettings(
@@ -203,13 +251,18 @@ settings = CrawlerSettings(
     genai=GenerativeAISettings(
         provider="ollama",
         model_name="llama3:8b",
-        base_url="http://localhost:11434/",  # Your Ollama instance
+        base_url="http://localhost:11434/",
         output_schema=ArticleSummary,
     ),
 )
 ```
 
-### Proxy Support
+> [!NOTE]
+> Ollama requires a running local instance. Install it from [ollama.com](https://ollama.com) and pull your model (`ollama pull llama3:8b`) before running.
+
+---
+
+## Proxy Support
 
 Attach one proxy or a rotating proxy pool directly to `CrawlerSettings`.
 
@@ -226,24 +279,30 @@ settings = CrawlerSettings(
             password="pass",
         ),
     ],
-    proxy_rotation_method="round_robin",
+    proxy_rotation="round_robin",
 )
 ```
 
-Use `proxy=ProxySettings(...)` for one proxy, or `proxies=[...]` for rotation.
+Use `proxy=ProxySettings(...)` for a single proxy, or `proxies=[...]` with `proxy_rotation` for a pool.
+
+> [!TIP]
+> `round_robin` rotation distributes requests evenly across your proxy pool. For rate-limited targets, pair this with a modest `concurrency` value and a `request_delay` to avoid triggering bans.
 
 ---
 
-## Few Tips
+## Production Tips
 
-- Prefer `UniversalSiteMap` before browser crawling.
-- Always set `link_extraction_limit` for broad jobs.
-- Use `include_link_patterns` to keep discovery focused.
-- Start with moderate `concurrency`, then increase gradually.
-- Use heuristic scraping for bulk content extraction.
-- Use GenAI extraction for schema-shaped output, summaries, classification, or field
-  normalization.
-- Split discovery and scraping into separate steps for easier retries.
+> [!IMPORTANT]
+> Split URL discovery and scraping into separate pipeline steps. Collecting all URLs first gives you a checkpoint to resume from if scraping fails partway through — without re-running discovery.
+
+> [!TIP]
+> Start with `UniversalSiteMap` before reaching for browser extraction. Sitemap-based discovery is faster, cheaper, and more complete on well-maintained sites. Fall back to `LinkExtractionEngine` only when sitemaps are missing or stale.
+
+> [!TIP]
+> Use heuristic scraping (`scraping_strategy="heuristic"`) for bulk content extraction. Reserve GenAI extraction for cases where you genuinely need structured, schema-shaped output — it adds latency and cost at scale.
+
+> [!CAUTION]
+> Respect `robots.txt` and a site's terms of service before crawling. Onecrawler does not enforce crawl policies automatically — you are responsible for staying within allowed access patterns.
 
 ---
 
