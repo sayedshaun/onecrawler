@@ -166,9 +166,9 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch("onecrawler.crawler.pipeline.GoogleChrome") as mock_chrome,
             patch("onecrawler.crawler.pipeline.HeuristicStrategy") as mock_strategy,
-            patch("onecrawler.crawler.link.deep.BFScheduler") as mock_scheduler,
-            patch("onecrawler.crawler.link.deep.LinkSpider") as mock_spider,
-            patch("onecrawler.crawler.link.deep.BrowserPool") as mock_pool,
+            patch("onecrawler.crawler.pipeline.BFScheduler") as mock_scheduler,
+            patch("onecrawler.crawler.pipeline.LinkSpider") as mock_spider,
+            patch("onecrawler.crawler.pipeline.BrowserPool") as mock_pool,
         ):
 
             # Setup mocks
@@ -192,14 +192,18 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
                 {"url": "https://example.com/test", "content": "test"}
             ]
 
-            with patch.object(
-                self.onecrawler_module, "PipelineRuntime", return_value=mock_runtime
-            ):
+            with patch(
+                "onecrawler.crawler.pipeline.PipelineRuntime", return_value=mock_runtime
+            ) as mock_runtime_cls:
                 await engine.start()
                 result = await engine.run("https://example.com")
 
                 self.assertEqual(
                     result, [{"url": "https://example.com/test", "content": "test"}]
+                )
+                self.assertEqual(
+                    mock_runtime_cls.call_args.kwargs["strategy"],
+                    mock_strategy_instance,
                 )
                 mock_runtime.run.assert_called_once()
 
@@ -216,6 +220,7 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
             scheduler=AsyncMock(),
             pool=AsyncMock(),
             spider=MagicMock(),
+            strategy=AsyncMock(),
             base_prefix="https://example.com",
             max_links=5,
             include_pattern=None,
@@ -258,6 +263,7 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
             scheduler=AsyncMock(),
             pool=AsyncMock(),
             spider=MagicMock(),
+            strategy=AsyncMock(),
             base_prefix="https://example.com",
             max_links=5,
             include_pattern=None,
@@ -281,6 +287,7 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
             scheduler=AsyncMock(),
             pool=AsyncMock(),
             spider=MagicMock(),
+            strategy=AsyncMock(),
             base_prefix="https://example.com",
             max_links=5,
             include_pattern=None,
