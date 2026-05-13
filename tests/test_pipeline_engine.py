@@ -2,7 +2,12 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from tests._support import ensure_package, load_module, load_settings_modules
+from tests._support import (
+    ensure_package,
+    install_trafilatura_stub,
+    load_module,
+    load_settings_modules,
+)
 
 
 def load_pipeline_modules():
@@ -11,34 +16,42 @@ def load_pipeline_modules():
         # Try to import from main package first
         import onecrawler
 
-        return onecrawler
+        if hasattr(onecrawler, "PipelineEngine"):
+            return onecrawler
     except ImportError as e:
-        # If main package fails due to missing dependencies, load modules individually
-        ensure_package("onecrawler")
-        ensure_package("onecrawler.settings")
-        load_settings_modules()
+        pass
 
-        # Create a mock module with PipelineEngine
-        mock_module = MagicMock()
+    # If main package fails due to missing dependencies or has been stubbed by
+    # another test module, load the pipeline module directly.
+    ensure_package("onecrawler")
+    ensure_package("onecrawler.settings")
+    ensure_package("onecrawler.crawler")
+    ensure_package("onecrawler.crawler.scraper")
+    ensure_package("onecrawler.crawler.scraper.heuristic")
+    load_settings_modules()
+    install_trafilatura_stub()
 
-        # Load the pipeline module directly
-        pipeline_module = load_module(
-            "onecrawler.crawler.pipeline", "onecrawler/crawler/pipeline.py"
-        )
+    mock_module = MagicMock()
+    pipeline_module = load_module(
+        "onecrawler.crawler.pipeline", "onecrawler/crawler/pipeline.py"
+    )
 
-        # Extract the classes we need
-        if hasattr(pipeline_module, "PipelineEngine"):
-            mock_module.PipelineEngine = pipeline_module.PipelineEngine
-        if hasattr(pipeline_module, "PipelineRuntime"):
-            mock_module.PipelineRuntime = pipeline_module.PipelineRuntime
+    if hasattr(pipeline_module, "PipelineEngine"):
+        mock_module.PipelineEngine = pipeline_module.PipelineEngine
+    if hasattr(pipeline_module, "PipelineRuntime"):
+        mock_module.PipelineRuntime = pipeline_module.PipelineRuntime
 
-        return mock_module
+    return mock_module
 
 
 class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
+        install_trafilatura_stub()
         cls.onecrawler_module = load_pipeline_modules()
+        cls.pipeline_module = load_module(
+            "onecrawler.crawler.pipeline", "onecrawler/crawler/pipeline.py"
+        )
 
         # Load settings modules
         cls.settings_module = load_module(
@@ -166,9 +179,9 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch("onecrawler.crawler.pipeline.GoogleChrome") as mock_chrome,
             patch("onecrawler.crawler.pipeline.HeuristicStrategy") as mock_strategy,
-            patch("onecrawler.crawler.link.deep.BFScheduler") as mock_scheduler,
-            patch("onecrawler.crawler.link.deep.LinkSpider") as mock_spider,
-            patch("onecrawler.crawler.link.deep.BrowserPool") as mock_pool,
+            patch("onecrawler.crawler.pipeline.BFScheduler") as mock_scheduler,
+            patch("onecrawler.crawler.pipeline.LinkSpider") as mock_spider,
+            patch("onecrawler.crawler.pipeline.BrowserPool") as mock_pool,
         ):
 
             # Setup mocks
@@ -192,14 +205,18 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
                 {"url": "https://example.com/test", "content": "test"}
             ]
 
-            with patch.object(
-                self.onecrawler_module, "PipelineRuntime", return_value=mock_runtime
-            ):
+            with patch(
+                "onecrawler.crawler.pipeline.PipelineRuntime", return_value=mock_runtime
+            ) as mock_runtime_cls:
                 await engine.start()
                 result = await engine.run("https://example.com")
 
                 self.assertEqual(
                     result, [{"url": "https://example.com/test", "content": "test"}]
+                )
+                self.assertEqual(
+                    mock_runtime_cls.call_args.kwargs["strategy"],
+                    mock_strategy_instance,
                 )
                 mock_runtime.run.assert_called_once()
 
@@ -212,10 +229,11 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
         )
 
         # Create a PipelineRuntime instance for testing
-        runtime = self.onecrawler_module.PipelineRuntime(
+        runtime = self.pipeline_module.PipelineRuntime(
             scheduler=AsyncMock(),
             pool=AsyncMock(),
             spider=MagicMock(),
+            strategy=AsyncMock(),
             base_prefix="https://example.com",
             max_links=5,
             include_pattern=None,
@@ -254,10 +272,11 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
             self.mock_settings, start_date="2024-01-01", end_date="2024-12-31"
         )
 
-        runtime = self.onecrawler_module.PipelineRuntime(
+        runtime = self.pipeline_module.PipelineRuntime(
             scheduler=AsyncMock(),
             pool=AsyncMock(),
             spider=MagicMock(),
+            strategy=AsyncMock(),
             base_prefix="https://example.com",
             max_links=5,
             include_pattern=None,
@@ -277,10 +296,11 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_pipeline_runtime_no_date_filtering(self):
         """Test PipelineRuntime accepts all content when no date filters are set."""
-        runtime = self.onecrawler_module.PipelineRuntime(
+        runtime = self.pipeline_module.PipelineRuntime(
             scheduler=AsyncMock(),
             pool=AsyncMock(),
             spider=MagicMock(),
+            strategy=AsyncMock(),
             base_prefix="https://example.com",
             max_links=5,
             include_pattern=None,

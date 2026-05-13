@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "onecrawler"
-version = "0.1.1"
-description = "An async Python toolkit for sitemap discovery, browser crawling, and structured content extraction."
+version = "0.1.2"
+description = "An async Python crawling library for discovering URLs, extracting links, and scraping structured content."
 readme = "README.md"
 license = "MIT"
 authors = [
-    { name = "Sayed Shaun" },
+    { name = "Sayed Shaun", email = "sayedshaun4@gmail.com" },
 ]
 requires-python = ">=3.10"
 dependencies = [
@@ -48,5 +48,5 @@ profile = "black"
 line_length = 88
 
 [project.urls]
-Homepage = "https://sayedshaun.github.io/onecrawler/"
-Repository = "https://github.com/sayedshaun/onecrawler"
+Homepage = "https://github.com/sayedshaun/onecrawler"
+Documentation = "https://sayedshaun.github.io/onecrawler/"

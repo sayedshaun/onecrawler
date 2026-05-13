@@ -10,10 +10,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def ensure_package(name: str) -> types.ModuleType:
     module = sys.modules.get(name)
+    package_path = ROOT.joinpath(*name.split("."))
     if module is None:
         module = types.ModuleType(name)
-        module.__path__ = []
+        module.__path__ = [str(package_path)] if package_path.is_dir() else []
         sys.modules[name] = module
+    elif hasattr(module, "__path__") and package_path.is_dir():
+        path = str(package_path)
+        if path not in module.__path__:
+            module.__path__.append(path)
     return module
 
 
@@ -110,3 +115,20 @@ def install_curl_cffi_stub() -> None:
     curl_cffi.requests = requests
     sys.modules["curl_cffi"] = curl_cffi
     sys.modules["curl_cffi.requests"] = requests
+
+
+def install_trafilatura_stub() -> None:
+    if "trafilatura" in sys.modules:
+        return
+
+    trafilatura = types.ModuleType("trafilatura")
+
+    def fetch_url(*args, **kwargs):
+        return None
+
+    def extract(*args, **kwargs):
+        return None
+
+    trafilatura.fetch_url = fetch_url
+    trafilatura.extract = extract
+    sys.modules["trafilatura"] = trafilatura

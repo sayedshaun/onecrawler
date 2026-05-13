@@ -4,7 +4,13 @@ title: Scraping Engine
 
 # Scraping Engine Package
 
-The `onecrawler.scraper` package provides content extraction engines for scraping web pages with both heuristic and AI-powered approaches.
+The scraping package provides content extraction engines for scraping web pages with
+both heuristic and AI-powered approaches.
+
+!!! tip "Start with heuristic extraction"
+    Use the heuristic strategy for bulk article, blog, documentation, or catalog
+    text extraction. Add GenAI only when you need typed fields, summaries,
+    normalization, or semantic interpretation.
 
 ## Classes
 
@@ -32,6 +38,10 @@ async with ScraperEngine(settings) as scraper:
 
 - **Heuristic**: Fast, rule-based extraction using trafilatura
 - **GenAI**: AI-powered extraction with structured output
+
+!!! note "Single URL vs list behavior"
+    `ScraperEngine.run()` returns one item for a single URL and a list for multiple
+    URLs. Failed extractions are omitted from list results.
 
 ### HeuristicStrategy
 
@@ -130,6 +140,10 @@ if __name__ == "__main__":
     asyncio.run(scrape_with_ai())
 ```
 
+!!! warning "GenAI has operational cost"
+    Model extraction is slower and can hit provider rate limits. Keep
+    `concurrency` low, increase `request_timeout`, and monitor cost per page.
+
 ### Batch Scraping
 
 ```python
@@ -151,6 +165,10 @@ async def scrape_multiple():
     
     return results
 ```
+
+!!! tip "Persist failed URLs"
+    For large batches, save failed or empty URLs separately. Retrying only failures
+    is faster than repeating discovery and scraping the whole batch.
 
 ## Configuration
 
@@ -179,6 +197,11 @@ Scraping behavior is controlled through `CrawlerSettings`:
 - **JSON**: Structured output matching Pydantic schema
 - **Custom formats**: Based on your schema definition
 
+!!! warning "GenAI output is JSON-only"
+    Configure `scraping_output_format="json"` when using
+    `scraping_strategy="genai"`. Other formats are rejected during settings
+    validation.
+
 ## Performance Considerations
 
 ### Heuristic Scraping
@@ -194,6 +217,10 @@ Scraping behavior is controlled through `CrawlerSettings`:
 - **Expensive**: API costs per request
 - **Limited concurrency**: Lower parallelism
 - **Variable**: Response time depends on model
+
+!!! tip "Split discovery and scraping"
+    Discover URLs once, store them, then scrape in controlled batches. This makes
+    retries, rate-limit recovery, and cost tracking much easier.
 
 ## Best Practices
 
@@ -285,3 +312,7 @@ settings = CrawlerSettings(
     logging_level="DEBUG"
 )
 ```
+
+!!! note "Empty content is not always an error"
+    Some pages are navigation, search, login, or media-only pages with little
+    extractable text. Use URL filters to keep these out of scraping batches.

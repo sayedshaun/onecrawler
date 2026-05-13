@@ -7,6 +7,11 @@ title: API reference
 This page summarizes the public objects exported from `onecrawler`. The guide pages
 explain when and why to use them; this page is for quick lookup.
 
+!!! note "Public imports"
+    User-facing code should prefer `from onecrawler import ...`. Internal classes
+    such as runtime helpers should be imported from their concrete modules only when
+    you are extending OneCrawler itself.
+
 ```python
 from onecrawler import (
     BrowserSettings,
@@ -42,7 +47,7 @@ Important fields:
 | `max_retries` | Retry attempts |
 | `proxy` | Single package-level proxy |
 | `proxies` | Rotating proxy pool |
-| `proxy_rotation` | `round_robin` or `random` |
+| `proxy_rotation_method` | `round_robin` or `random` |
 | `browser_settings` | Playwright launch and context settings |
 | `genai` | GenAI provider, model, key, and optional schema |
 
@@ -67,6 +72,10 @@ urls = await sitemap.run("https://example.com")
 Returns a list of URL strings.
 
 Use this before browser crawling whenever possible.
+
+!!! tip "Sitemaps are the cheapest discovery path"
+    `UniversalSiteMap` avoids opening browser pages for discovery. Use it first for
+    public sites, then fall back to browser extraction only when coverage is missing.
 
 ## SiteMap
 
@@ -95,6 +104,10 @@ async with LinkExtractionEngine(settings) as engine:
 Returns a list of URL strings. The engine owns its browser lifecycle inside the async
 context manager.
 
+!!! warning "Scope browser crawling"
+    Use `link_extraction_limit` and `include_link_patterns` with browser crawling,
+    especially when `link_extraction_strategy="deep"`.
+
 ## ScraperEngine
 
 Async scraping engine for one URL or a list of URLs.
@@ -112,6 +125,10 @@ async with ScraperEngine(settings) as scraper:
 
 For a single URL, returns one result or `None`. For a list, returns a list of
 successful results.
+
+!!! note "List results omit failures"
+    When scraping a list, failed or empty extractions are filtered out. Keep your
+    original URL list if you need to reconcile successes and failures.
 
 ## GenerativeAISettings
 
@@ -157,6 +174,10 @@ Fields:
 - Supports local models (llama3, mistral, codellama, etc.)
 - Must have Ollama server running with the specified model
 
+!!! warning "Model names change over time"
+    Check your provider's current model list before publishing examples or running
+    scheduled jobs. Keep model identifiers configurable in production.
+
 ## BrowserSettings
 
 Top-level browser settings. It contains launch, context, runtime, and proxy
@@ -187,7 +208,7 @@ settings = CrawlerSettings(
             password="pass",
         ),
     ],
-    proxy_rotation="round_robin",
+    proxy_rotation_method="round_robin",
 )
 ```
 
@@ -208,12 +229,18 @@ settings = CrawlerSettings(
 This affects deep browser link extraction. It is useful for lazy-loaded links but
 reduces throughput.
 
+!!! tip "Use only where needed"
+    Human behavior simulation is helpful for lazy-loaded pages, but it should not be
+    a default for every crawl.
+
 ## PipelineEngine
 
 A comprehensive web crawling pipeline that orchestrates browser automation,
 link extraction, and content scraping in a single unified workflow.
 
-**⚠️ Important:** Proxy configuration is REQUIRED for production use to avoid IP blocking.
+!!! warning "Proxy configuration is required for production"
+    `PipelineEngine` performs browser discovery and content extraction together. Use
+    explicit proxy settings and conservative concurrency for production runs.
 
 ```python
 # Basic usage
@@ -261,11 +288,15 @@ settings = CrawlerSettings(
         ProxySettings(server="http://proxy1.example.com:8080"),
         ProxySettings(server="http://proxy2.example.com:8080"),
     ],
-    proxy_rotation="round_robin",
+    proxy_rotation_method="round_robin",
 )
 ```
 
 Without proper proxy configuration, your crawler may be blocked by target websites.
+
+!!! note "Date filtering depends on extracted metadata"
+    `start_date` and `end_date` work when extracted content includes a `filedate` or
+    `date` field in `YYYY-MM-DD` format.
 
 ### Usage Patterns
 

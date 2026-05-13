@@ -4,7 +4,13 @@ title: Link Extraction
 
 # Link Extraction Package
 
-The `onecrawler.link` package provides classes for discovering and extracting links from web pages using browser automation.
+The link extraction package provides classes for discovering links from rendered web
+pages using browser automation.
+
+!!! note "Use this after sitemaps"
+    Browser link extraction is best when sitemaps are missing, incomplete, or unable
+    to expose JavaScript-rendered links. If a sitemap is available, start with
+    `UniversalSiteMap`.
 
 ## Classes
 
@@ -33,6 +39,10 @@ async with LinkExtractionEngine(settings) as engine:
 - **Deep extraction**: Recursively follow same-site links
 - **URL filtering**: Include/exclude patterns for targeted extraction
 - **Human behavior simulation**: Optional delays and interactions
+
+!!! tip "Choose shallow before deep"
+    Use `shallow` for listing pages where all target links are visible on one page.
+    Use `deep` only when you need recursive discovery.
 
 ### LinkClassifierPipeline
 
@@ -99,6 +109,11 @@ if __name__ == "__main__":
     asyncio.run(extract_deep())
 ```
 
+!!! warning "Deep extraction needs guardrails"
+    Always set `link_extraction_limit` for deep crawls. Add
+    `include_link_patterns` whenever you only care about one section, such as
+    `/news/*` or `/docs/*`.
+
 ### With Human Behavior Simulation
 
 ```python
@@ -114,6 +129,10 @@ settings = CrawlerSettings(
     )
 )
 ```
+
+!!! tip "Human behavior is for lazy loading"
+    Enable human behavior simulation when links appear after scrolling or delayed
+    rendering. Keep it disabled for normal pages because it slows down every worker.
 
 ## Configuration
 
@@ -135,6 +154,10 @@ The link extraction behavior is controlled through `CrawlerSettings`:
 - **Rate limiting**: Respect target site's capacity
 - **Timeouts**: Adjust for slow-loading pages
 
+!!! warning "Watch browser resource usage"
+    Each concurrent worker may hold a browser page. If memory, CPU, or target errors
+    climb, reduce `concurrency` before increasing timeouts or retries.
+
 ## Best Practices
 
 1. **Use sitemaps first**: Prefer `UniversalSiteMap` when available
@@ -142,3 +165,7 @@ The link extraction behavior is controlled through `CrawlerSettings`:
 3. **Set limits**: Always specify `link_extraction_limit`
 4. **Monitor resources**: Watch memory and CPU usage
 5. **Handle errors**: Implement retry logic for failed pages
+
+!!! note "Filtering happens on URL paths"
+    `include_link_patterns` should usually look like `"/articles/*"` or
+    `"/docs/*"`, not full absolute URLs.

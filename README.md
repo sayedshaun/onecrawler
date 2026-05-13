@@ -4,7 +4,7 @@
 
 # Onecrawler
 
-**An async Python toolkit for sitemap discovery, browser crawling, and structured content extraction.**
+**An async Python crawling library for discovering URLs, extracting links, and scraping structured content.**
 
 [![CI](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml/badge.svg)](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
@@ -13,7 +13,7 @@
 [![Imports: isort](https://img.shields.io/badge/imports-isort-1674b1.svg)](https://pycqa.github.io/isort/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-[Installation](#installation) · [Quick Start](#quick-start) · [Documentation](#documentation) · [Development](#development)
+[Installation](#installation) · [Quick Start](#quick-start) · [Documentation](https://sayedshaun.github.io/onecrawler/)
 
 </div>
 
@@ -31,11 +31,11 @@ Onecrawler helps you build maintainable crawling and extraction workflows withou
 4. Use GenAI extraction when you need structured output in a Pydantic schema.
 
 ```python
-sitemap = UniversalSiteMap(settings)
-urls = await sitemap.run("https://example.com")
+async with LinkExtractionEngine(settings) as link_engine:
+    links = await link_engine.run("https://example.com")
 
-async with ScraperEngine(settings) as scraper:
-    records = await scraper.run(urls)
+async with ScraperEngine(settings) as scraper_engine:
+    records = await scraper_engine.run(links)
 ```
 
 ---
@@ -102,36 +102,34 @@ python -m playwright install chromium
 
 ## Quick Start
 
-This example uses the production-friendly path: discover URLs from the sitemap, then scrape them.
-
 ```python
 import json
-import asyncio
-from onecrawler import CrawlerSettings, ScraperEngine, UniversalSiteMap
+from onecrawler import CrawlerSettings, LinkExtractionEngine, ScraperEngine
 
 
 async def main():
     settings = CrawlerSettings(
-        link_extraction_limit=100,
-        include_link_patterns=["/articles/*"],
+        link_extraction_strategy="deep",
+        link_extraction_limit=10,
+        concurrency=7,
         scraping_strategy="heuristic",
         scraping_output_format="json",
-        concurrency=8,
-        request_timeout=15,
-        max_retries=3,
+        enable_human_behaviors=True,
     )
 
-    sitemap = UniversalSiteMap(settings)
-    urls = await sitemap.run("https://example.com")
+    async with LinkExtractionEngine(settings) as link_engine:
+        links = await link_engine.run("https://www.example.com/")
 
-    async with ScraperEngine(settings) as scraper:
-        records = await scraper.run(urls)
+    async with ScraperEngine(settings) as scraper_engine:
+        results = await scraper_engine.run(links)
 
-    with open("articles.json", "w", encoding="utf-8") as f:
-        json.dump(records, f, indent=2, ensure_ascii=False)
+    with open("output.json", "w", encoding="utf-8") as f:
+        json.dump(results, f, ensure_ascii=False, indent=4)
 
 
 if __name__ == "__main__":
+    import asyncio
+
     asyncio.run(main())
 ```
 
