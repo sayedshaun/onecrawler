@@ -6,6 +6,11 @@ title: Settings Configuration
 
 The `onecrawler.settings` package provides comprehensive configuration classes for all crawler components.
 
+!!! tip "Treat settings as the crawl contract"
+    Put scope, limits, concurrency, retries, proxy behavior, and output format in
+    `CrawlerSettings`. Explicit settings make crawls easier to review, reproduce,
+    and schedule.
+
 ## Classes
 
 ### CrawlerSettings
@@ -38,6 +43,10 @@ settings = CrawlerSettings(
 | `max_retries` | `int` | `2` | Retry attempts for failed requests |
 | `retry_delay` | `int` | `1` | Base delay between retries |
 
+!!! warning "Do not run broad crawls without limits"
+    `link_extraction_limit` and `include_link_patterns` are your main safety rails.
+    Set them before using deep browser discovery or `PipelineEngine`.
+
 #### Sitemap Settings
 
 | Setting | Type | Default | Description |
@@ -64,6 +73,10 @@ settings = CrawlerSettings(
 | `proxies` | `List[ProxySettings]` | `None` | Multiple proxies for rotation |
 | `proxy_rotation_method` | `str` | `"round_robin"` | Proxy rotation strategy |
 
+!!! note "Use top-level proxy settings"
+    Prefer `proxy` or `proxies` on `CrawlerSettings` so sitemap, browser, and
+    pipeline workflows share the same network configuration.
+
 #### GenAI Settings
 
 | Setting | Type | Default | Description |
@@ -84,6 +97,10 @@ genai = GenerativeAISettings(
     output_schema=ArticleModel
 )
 ```
+
+!!! warning "Keep API keys out of source"
+    Pass provider keys through environment variables or your secret manager. Avoid
+    committing keys in examples, settings files, or notebooks.
 
 #### Fields
 
@@ -111,6 +128,10 @@ browser_settings = BrowserSettings(
     )
 )
 ```
+
+!!! tip "Use storage state for authenticated pages"
+    For logged-in crawls, create a Playwright `storage_state` file and reference it
+    from `ContextSettings`. Keep that file private because it may contain cookies.
 
 #### Context Settings
 
@@ -169,6 +190,10 @@ human_settings = HumanBehaviorSettings(
 | `max_scrolls` | `int` | `20` | Maximum scroll actions |
 | `min_mouse_moves` | `int` | `2` | Minimum mouse movements |
 | `max_mouse_moves` | `int` | `8` | Maximum mouse movements |
+
+!!! note "Simulation trades speed for coverage"
+    Human behavior settings can reveal lazy-loaded links, but each delay and scroll
+    lowers throughput. Enable it only for pages that need it.
 
 ## Usage Examples
 
@@ -258,6 +283,10 @@ except ValueError as e:
 2. **Proxy configuration**: Cannot use both `proxy` and `proxies` simultaneously
 3. **Human behavior**: Only applies to deep link extraction
 4. **Output formats**: GenAI extraction limited to JSON format
+
+!!! tip "Let validation fail early"
+    Build `CrawlerSettings` near application startup. Invalid proxy combinations or
+    GenAI output formats will fail before a long crawl begins.
 
 ## Environment Variables
 

@@ -8,6 +8,10 @@ This page lists common failure modes and the first things to check. Most crawler
 issues come from scope, browser setup, target-site behavior, or overly aggressive
 concurrency.
 
+!!! tip "Debug in stages"
+    Separate discovery from scraping while troubleshooting. First confirm the URL
+    list, then scrape one URL, then scale to batches.
+
 ## Sitemap Discovery Returns No URLs
 
 Check whether the site publishes a sitemap:
@@ -27,6 +31,11 @@ Then try:
 
 Some sites put sitemaps on a different host or subdomain. If `robots.txt` points
 there, use the main site URL and let `UniversalSiteMap` follow the sitemap directive.
+
+!!! note "Try the canonical host"
+    `https://example.com`, `https://www.example.com`, and regional subdomains can
+    publish different `robots.txt` and sitemap files. Start from the public URL users
+    actually visit.
 
 ## Link Extraction Finds Too Few Links
 
@@ -53,6 +62,11 @@ settings = CrawlerSettings(
 )
 ```
 
+!!! warning "Some links are not real anchors"
+    Pages that navigate with buttons, forms, or client-side router state may not
+    expose normal `<a href>` links. Those pages may need custom handling outside
+    generic link extraction.
+
 ## Playwright Browser Errors
 
 Install browser binaries:
@@ -71,6 +85,11 @@ If browser launch fails in CI, check sandbox restrictions and system libraries. 
 default launch args include `--no-sandbox`, but some environments still need
 Playwright's dependency installer.
 
+!!! tip "Verify Playwright separately"
+    Before debugging crawler code, run a tiny Playwright script or browser install
+    check in the same environment. That isolates dependency problems from crawler
+    configuration problems.
+
 ## Scraping Returns `None`
 
 `None` means the page could not be fetched, did not contain extractable content, or
@@ -88,7 +107,11 @@ Try:
 For batch jobs, persist failed URLs separately so you can retry them without running
 discovery again.
 
-## GenAI settingsuration Errors
+!!! note "Check page type"
+    Search pages, login pages, image galleries, and policy pages often return little
+    or no article-like content. Filter them out with `include_link_patterns`.
+
+## GenAI Configuration Errors
 
 If `scraping_strategy="genai"`, you must provide `genai` settings and keep
 `scraping_output_format="json"`.
@@ -108,6 +131,10 @@ settings = CrawlerSettings(
 
 Use low concurrency for GenAI workflows to avoid provider rate limits.
 
+!!! warning "GenAI failures may be provider-side"
+    Rate limits, model availability, schema validation, and network failures can all
+    look similar in batch logs. Capture failed URLs and error messages for retry.
+
 ## Slow Crawls
 
 Slow crawls usually come from browser overhead, target latency, retries, or simulated
@@ -125,6 +152,10 @@ Improve throughput in this order:
 If failures rise as speed increases, back off. A slightly slower crawl with stable
 results is better than a fast crawl full of retries and missing pages.
 
+!!! tip "Tune from narrow to broad"
+    Start with one section, a small limit, and low concurrency. Increase scope only
+    after results and error rates look healthy.
+
 ## Rate Limits And Blocking
 
 Symptoms include `403`, `429`, timeouts, or many empty pages.
@@ -140,6 +171,10 @@ Recommended response:
 
 Avoid treating blocking as only a technical problem. Production crawling should be
 predictable and respectful.
+
+!!! warning "Respect target sites"
+    Proxies, retries, and delays are operational tools, not permission to ignore
+    robots.txt, terms, or rate limits.
 
 ## GitHub Pages Markdown Does Not Render
 

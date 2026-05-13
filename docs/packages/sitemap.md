@@ -4,7 +4,12 @@ title: Sitemap Discovery
 
 # Sitemap Discovery Package
 
-The `onecrawler.map` package provides comprehensive sitemap discovery and parsing capabilities for efficient URL collection.
+The sitemap package provides discovery and parsing utilities for efficient URL
+collection.
+
+!!! tip "Prefer sitemap discovery first"
+    Sitemaps are usually faster, cheaper, and more stable than browser crawling.
+    Start here before reaching for `LinkExtractionEngine`.
 
 ## Classes
 
@@ -26,6 +31,10 @@ urls = await sitemap.run("https://example.com")
 - **Nested index parsing**: Handles sitemap index files
 - **HTML fallback**: Crawls pages when no sitemaps are found
 - **Compression support**: Handles .xml.gz compressed sitemaps
+
+!!! note "Use the public import"
+    Most user code should import `UniversalSiteMap` from `onecrawler`, not from an
+    internal package path.
 
 ### SiteMap
 
@@ -49,7 +58,7 @@ urls = await sitemap.run("https://example.com/sitemap.xml")
 Statistics tracking for sitemap operations.
 
 ```python
-from onecrawler.map.sitemap import SitemapStats
+from onecrawler import SitemapStats
 
 stats = SitemapStats()
 print(f"Discovered {stats.url_count} URLs")
@@ -103,6 +112,11 @@ settings = CrawlerSettings(
 sitemap = UniversalSiteMap(settings)
 ```
 
+!!! warning "HTML fallback can broaden scope"
+    `sitemap_html_fallback=True` is useful during exploration, but it can crawl
+    same-origin pages when XML sitemaps are missing. Pair it with
+    `link_extraction_limit` and `include_link_patterns`.
+
 ### Direct Sitemap Parsing
 
 ```python
@@ -142,6 +156,10 @@ UniversalSiteMap follows this discovery order:
    - `/sitemaps.xml`
 3. **Nested indexes**: Parse sitemap index files recursively
 4. **HTML fallback**: Crawl pages if no sitemaps found
+
+!!! tip "Disable fallback for strict sitemap jobs"
+    If a scheduled job should only trust XML sitemap sources, set
+    `sitemap_html_fallback=False` after you confirm the sitemap URLs you need.
 
 ## Sitemap Formats Supported
 
@@ -183,6 +201,10 @@ Supports `.xml.gz` compressed sitemaps for faster downloads.
 4. **Monitor stats**: Track discovery rates and errors
 5. **Fallback control**: Disable HTML fallback for predictable jobs
 
+!!! note "Metadata availability varies"
+    Sitemap fields such as `lastmod`, `changefreq`, and `priority` are optional.
+    Treat them as hints from the publisher, not guaranteed freshness signals.
+
 ## Error Handling
 
 The sitemap system gracefully handles:
@@ -199,3 +221,8 @@ The sitemap system gracefully handles:
 3. **Set reasonable limits**: Don't overwhelm target servers
 4. **Monitor performance**: Track discovery success rates
 5. **Handle errors gracefully**: Implement retry logic
+
+!!! warning "Respect crawl policies"
+    Even sitemap discovery can produce a large URL list. Keep limits reasonable,
+    identify your crawler with a user agent when appropriate, and follow the target
+    site's crawling policies.

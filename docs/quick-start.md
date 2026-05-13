@@ -4,7 +4,7 @@ title: Quick start
 
 # Quick Start
 
-This guide shows the fastest useful paths through Onecrawler. The examples are
+This guide shows the fastest useful paths through OneCrawler. The examples are
 small enough to paste into a script, but they use the same structure you would keep
 in a scheduled production job.
 
@@ -17,6 +17,11 @@ python -m playwright install chromium
 
 Install the Playwright browser only when you plan to use browser-backed link
 extraction or browser-backed scraping.
+
+!!! tip "Start with the lightest workflow"
+    If a site has a sitemap, use `UniversalSiteMap` before opening browser pages.
+    Browser workflows are more flexible, but they cost more time, memory, and
+    operational care.
 
 ## Best First Workflow: Sitemap Then Scrape
 
@@ -57,6 +62,10 @@ if __name__ == "__main__":
 This workflow is ideal for news sections, blogs, documentation sites, catalogs, and
 any site that exposes stable URL metadata.
 
+!!! note "Save discovered URLs"
+    For production jobs, persist the URL list before scraping. It makes retries much
+    easier because failed extraction can be rerun without repeating discovery.
+
 ## Browser Discovery Workflow
 
 Use browser-based link extraction when the site does not publish useful sitemaps, or
@@ -87,6 +96,11 @@ if __name__ == "__main__":
 
 Choose `shallow` when the start page is a listing page and you only need its direct
 links. Choose `deep` when you need recursive traversal within the same site.
+
+!!! warning "Keep deep crawls scoped"
+    Always combine deep crawling with `link_extraction_limit` and
+    `include_link_patterns`. A broad start page can quickly discover login,
+    search, tag, archive, and policy URLs you did not intend to scrape.
 
 ## Structured GenAI Workflow
 
@@ -136,12 +150,19 @@ GenAI extraction should be reserved for semantic or typed output needs. For high
 volume article text extraction, start with the heuristic strategy and add GenAI only
 for pages that require interpretation or normalization.
 
+!!! tip "Use GenAI selectively"
+    A good pattern is heuristic extraction first, then GenAI only for records that
+    need classification, summarization, field normalization, or schema-shaped output.
+
 ## All-in-One Pipeline: PipelineEngine
 
 Use `PipelineEngine` when you want a single, orchestrated workflow that combines
 link discovery, browser automation, and content extraction.
 
-**⚠️ Important:** Requires proxy configuration for production use.
+!!! warning "Use proxies for production pipeline crawls"
+    `PipelineEngine` opens browser pages and extracts content as it discovers links.
+    For production crawls, configure a single proxy or proxy pool and keep
+    concurrency conservative.
 
 ```python
 import json
@@ -159,7 +180,7 @@ async def main():
             ProxySettings(server="http://proxy1.example.com:8080"),
             ProxySettings(server="http://proxy2.example.com:8080"),
         ],
-        proxy_rotation="round_robin",
+        proxy_rotation_method="round_robin",
     )
 
     async with PipelineEngine(settings) as engine:
@@ -210,3 +231,8 @@ Start conservative:
 - `include_link_patterns` on every broad crawl
 
 Then increase throughput only after you know the target site responds reliably.
+
+!!! warning "High concurrency can reduce success"
+    More workers are not always faster. Browser pages, proxy limits, server rate
+    limits, and model provider limits can all turn high concurrency into retries and
+    empty results.

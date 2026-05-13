@@ -1,10 +1,10 @@
 ---
-title: settings
+title: Settings
 ---
 
-# settings
+# Settings
 
-`CrawlerSettings` is the shared settingsuration object used by sitemap discovery,
+`CrawlerSettings` is the shared configuration object used by sitemap discovery,
 link extraction, and scraping. In production, treat it as the contract for a crawl:
 it defines scope, speed, retry behavior, browser behavior, and output shape.
 
@@ -20,6 +20,10 @@ settings = CrawlerSettings(
     max_retries=3,
 )
 ```
+
+!!! tip "Make scope explicit"
+    Set `link_extraction_limit` and `include_link_patterns` before running broad
+    discovery. These two fields are the easiest way to keep crawls predictable.
 
 ## Core Settings
 
@@ -46,12 +50,17 @@ settings = CrawlerSettings(
 | `sitemap_html_fallback` | `True` | Crawl same-origin HTML pages when no sitemap records are found |
 | `max_crawl_depth` | `3` | Depth limit for HTML fallback |
 | `max_crawl_pages` | `500` | Page cap for HTML fallback |
-| `sitemap_user_agent` | Onecrawler UA | User agent for sitemap HTTP requests |
+| `sitemap_user_agent` | OneCrawler UA | User agent for sitemap HTTP requests |
 | `sitemap_respect_robots` | `True` | Intended robots.txt behavior |
 | `sitemap_deduplicate` | `True` | Normalize and remove duplicate sitemap URLs |
 
 Best practice: keep `sitemap_html_fallback=True` during exploration, then turn it
 off for predictable scheduled jobs if you only trust XML sitemap sources.
+
+!!! note "HTML fallback is discovery, not scraping"
+    Sitemap HTML fallback is only for finding URLs when XML sources are missing. Use
+    `ScraperEngine` or `PipelineEngine` to extract page content after URLs are
+    discovered.
 
 ## Browser Settings
 
@@ -87,6 +96,10 @@ settings = CrawlerSettings(
 )
 ```
 
+!!! warning "Do not commit storage state"
+    Playwright storage state can contain cookies or authenticated session data. Keep
+    those files out of version control and rotate them like credentials.
+
 ## Proxy Settings
 
 Use `proxy` for a single proxy or `proxies` for a rotating proxy pool. The top-level
@@ -114,13 +127,17 @@ settings = CrawlerSettings(
         ProxySettings(server="http://proxy-1.example:8080"),
         ProxySettings(server="http://proxy-2.example:8080"),
     ],
-    proxy_rotation="round_robin",
+    proxy_rotation_method="round_robin",
 )
 ```
 
 `proxy` and `proxies` are mutually exclusive. Use one proxy for a stable route and a
 proxy pool when sitemap discovery or future request-heavy workflows should spread
 traffic across multiple endpoints.
+
+!!! warning "Proxy settings are mutually exclusive"
+    Configure either `proxy` or `proxies`, not both. `CrawlerSettings` raises a
+    validation error when both are provided.
 
 ## Human Behavior Settings
 
@@ -146,6 +163,10 @@ settings = CrawlerSettings(
 Use this sparingly. It can help pages that lazy-load links after scroll, but it also
 slows crawls significantly. For high-volume discovery, prefer sitemaps first, then
 plain deep crawling, then human behavior simulation only where needed.
+
+!!! tip "Use human behavior for lazy-loaded links"
+    Enable human behavior simulation when links appear after scrolling. Keep it off
+    for static pages because it deliberately slows every page.
 
 ## GenAI Settings
 
@@ -241,20 +262,30 @@ Use GenAI when you need typed fields, normalization, summaries, or extraction th
 requires interpretation. Avoid it for simple bulk text extraction where heuristic
 strategy is faster, cheaper, and easier to reproduce.
 
+!!! warning "GenAI requires JSON output"
+    When `scraping_strategy="genai"`, keep `scraping_output_format="json"` and
+    provide `GenerativeAISettings`. Other output formats are rejected during
+    settings validation.
+
 ## PipelineEngine Configuration
 
 `PipelineEngine` uses the same `CrawlerSettings` object but emphasizes specific fields for its orchestrated workflow:
 
 ### Required for Production
 
-**Proxy Configuration (Required):**
+!!! warning "Proxy configuration is required for production"
+    `PipelineEngine` combines browser navigation and extraction across multiple
+    pages. Use a proxy or proxy pool for production jobs to reduce blocking and keep
+    traffic routing explicit.
+
+**Proxy Configuration:**
 ```python
 settings = CrawlerSettings(
     proxies=[
         ProxySettings(server="http://proxy1.example.com:8080"),
         ProxySettings(server="http://proxy2.example.com:8080"),
     ],
-    proxy_rotation="round_robin",
+    proxy_rotation_method="round_robin",
 )
 ```
 
@@ -347,3 +378,8 @@ watch error rates.
 
 `CrawlerSettings` validates GenAI output format at initialization. If you choose
 `scraping_strategy="genai"`, keep `scraping_output_format="json"`.
+
+!!! tip "Tune one variable at a time"
+    When performance changes, adjust filters, limits, concurrency, timeout, and
+    retries separately. Changing them together makes failures much harder to
+    diagnose.

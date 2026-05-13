@@ -1,8 +1,8 @@
 ---
-title: Onecrawler Documentation
+title: OneCrawler Documentation
 ---
 
-# Onecrawler
+# OneCrawler
 
 [![PyPI](https://img.shields.io/badge/pypi-onecrawler-6B45A7.svg)](https://pypi.org/project/onecrawler/)
 [![CI](https://img.shields.io/badge/CI-passing-brightgreen.svg)](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml)
@@ -10,9 +10,8 @@ title: Onecrawler Documentation
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/sayedshaun/onecrawler/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 
-Onecrawler is an async Python toolkit for discovering URLs, crawling websites, and
-extracting page content into formats that are easier to store, search, analyze, or
-send into downstream data pipelines.
+OneCrawler is an async Python crawling library for discovering URLs, extracting
+links, and scraping structured content.
 
 The library is designed around a practical crawler workflow:
 
@@ -22,12 +21,20 @@ The library is designed around a practical crawler workflow:
    extraction.
 4. Save the result in the format your application needs.
 
-## Why Onecrawler Exists
+!!! tip "Recommended first path"
+    Start with sitemap discovery, store the URL list, then scrape those URLs in a
+    separate step. This gives you cleaner retries and easier debugging.
+
+## Why OneCrawler Exists
 
 Many crawling projects start as small scripts and become hard to maintain once they
 need retries, concurrency, browser rendering, sitemap fallback, URL filtering, and
-structured extraction. Onecrawler gives those concerns a shared settings model
+structured extraction. OneCrawler gives those concerns a shared settings model
 and a few focused async engines so production scripts stay readable.
+
+!!! warning "Crawling needs boundaries"
+    Always set reasonable limits, filters, retries, and concurrency. Clear crawl
+    boundaries protect both your job and the target site.
 
 Use it when you are building:
 
@@ -36,6 +43,11 @@ Use it when you are building:
 - data collection scripts for analysis or monitoring
 - internal tools that need repeatable URL discovery and content extraction
 - prototypes that may later become scheduled crawler jobs
+
+!!! note "Use GenAI for semantics, not bulk text"
+    Heuristic extraction is the better default for large text extraction jobs. Use
+    GenAI when you need summaries, classification, field normalization, or a typed
+    schema.
 
 ## Recommended Workflow
 

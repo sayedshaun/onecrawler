@@ -4,7 +4,7 @@ title: Development
 
 # Development
 
-This guide is for contributors working on Onecrawler locally.
+This guide is for contributors working on OneCrawler locally.
 
 ## Local Setup
 
@@ -23,6 +23,10 @@ Install GenAI dependencies only when you are working on model-assisted extractio
 python -m pip install -e ".[dev,genai]"
 ```
 
+!!! tip "Keep optional dependencies optional"
+    Install the GenAI extra only when you are changing model-assisted extraction.
+    This keeps normal sitemap, browser, and scraper development lighter.
+
 ## Run Tests
 
 ```bash
@@ -31,6 +35,10 @@ python -m pip install -e ".[dev,genai]"
 
 The test suite uses `unittest`. Some tests may skip optional integrations when a
 dependency is not installed.
+
+!!! note "Use the virtualenv Python if needed"
+    If `python` is not on your shell path, run tests with `.venv/bin/python -m
+    unittest` or the project test script from an activated environment.
 
 ## Formatting
 
@@ -52,6 +60,10 @@ pre-commit install
 
 The current hooks run Black and isort. Keep formatting-only changes separate from
 behavior changes when possible, because it makes reviews easier.
+
+!!! tip "Separate mechanical changes"
+    Formatting-only diffs are easiest to review when they are separate from behavior
+    fixes, documentation changes, or dependency updates.
 
 ## Project Structure
 
@@ -87,6 +99,11 @@ For browser-heavy behavior, keep tests isolated with fakes where possible. Full
 browser tests are useful, but they are slower and more sensitive to environment
 differences.
 
+!!! warning "Browser tests are environment-sensitive"
+    CI containers, Linux sandboxing, missing browser dependencies, and slow target
+    pages can all affect Playwright tests. Prefer focused fakes unless the browser
+    behavior itself is what you are testing.
+
 ## Documentation Guidance
 
 Documentation should explain the decision behind a feature, not only the method call.
@@ -101,6 +118,10 @@ When adding or changing a feature, include:
 
 Examples should be copy-pasteable and use explicit `CrawlerSettings` values so users
 can see the operational tradeoffs.
+
+!!! note "Document the tradeoff"
+    When adding a setting, explain what users gain and what it costs: speed,
+    reliability, memory, API cost, target-site load, or reproducibility.
 
 ## CI
 

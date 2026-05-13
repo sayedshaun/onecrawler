@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/sayedshaun/onecrawler/refs/heads/main/docs/static/onecrawl_logo.png" alt="Onecrawler" width="200"/>
+<img src="https://raw.githubusercontent.com/sayedshaun/onecrawler/refs/heads/main/docs/static/onecrawl_logo.png" alt="OneCrawler" width="200"/>
 
-# Onecrawler
+# OneCrawler
 
-**An async Python toolkit for sitemap discovery, browser crawling, and structured content extraction.**
+**OneCrawler is an async Python crawling library for discovering URLs, extracting links, and scraping structured content.**
 
 [![CI](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml/badge.svg)](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
@@ -21,9 +21,9 @@
 
 ## Overview
 
-Onecrawler helps you build maintainable crawling and extraction workflows without
+OneCrawler helps you build maintainable crawling and extraction workflows without
 turning every project into a custom scraping script. It gives you a shared
-settingsuration model, async execution, sitemap discovery, browser-backed link
+configuration model, async execution, sitemap discovery, browser-backed link
 extraction, heuristic content extraction, and optional GenAI extraction for typed
 outputs.
 
@@ -251,7 +251,7 @@ settings = CrawlerSettings(
             password="pass",
         ),
     ],
-    proxy_rotation="round_robin",
+    proxy_rotation_method="round_robin",
 )
 ```
 

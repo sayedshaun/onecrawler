@@ -4,8 +4,12 @@ title: Contributing
 
 # Contributing
 
-Thanks for improving Onecrawler. The project values small, well-tested changes and
+Thanks for improving OneCrawler. The project values small, well-tested changes and
 documentation that helps users make good crawler decisions.
+
+!!! tip "Small PRs are easier to merge"
+    A focused change with tests and a short explanation is usually better than a
+    broad cleanup that mixes behavior, formatting, and documentation.
 
 ## Workflow
 
@@ -44,6 +48,10 @@ Prefer deterministic extraction before GenAI extraction. GenAI is powerful when 
 need typed or semantic output, but it should not be the default for simple text
 extraction.
 
+!!! warning "Crawler changes affect external systems"
+    Be careful with defaults that increase concurrency, retries, browser usage, or
+    crawl breadth. They can change how much traffic users send to target sites.
+
 ## Before Opening A Pull Request
 
 Run:
@@ -54,6 +62,10 @@ pre-commit run --all-files
 ```
 
 If you cannot run a check, mention it in the pull request with the reason.
+
+!!! note "Verification notes matter"
+    Include the exact commands you ran and any checks you skipped. It helps reviewers
+    understand residual risk without guessing.
 
 ## Commit Messages
 
