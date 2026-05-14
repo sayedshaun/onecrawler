@@ -11,12 +11,12 @@ from tests._support import (
 
 
 def load_pipeline_modules():
-    """Load required modules for PipelineEngine testing"""
+    """Load required modules for Pipeline testing"""
     try:
         # Try to import from main package first
         import onecrawler
 
-        if hasattr(onecrawler, "PipelineEngine"):
+        if hasattr(onecrawler, "Pipeline"):
             return onecrawler
     except ImportError as e:
         pass
@@ -36,15 +36,15 @@ def load_pipeline_modules():
         "onecrawler.crawler.pipeline", "onecrawler/crawler/pipeline.py"
     )
 
-    if hasattr(pipeline_module, "PipelineEngine"):
-        mock_module.PipelineEngine = pipeline_module.PipelineEngine
+    if hasattr(pipeline_module, "Pipeline"):
+        mock_module.Pipeline = pipeline_module.Pipeline
     if hasattr(pipeline_module, "PipelineRuntime"):
         mock_module.PipelineRuntime = pipeline_module.PipelineRuntime
 
     return mock_module
 
 
-class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
+class PipelineTests(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
         install_trafilatura_stub()
@@ -64,10 +64,10 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
             "onecrawler.settings.simulation", "onecrawler/settings/simulation.py"
         )
 
-        # Skip if PipelineEngine is not available
-        if not hasattr(cls.onecrawler_module, "PipelineEngine"):
+        # Skip if Pipeline is not available
+        if not hasattr(cls.onecrawler_module, "Pipeline"):
             raise unittest.SkipTest(
-                "PipelineEngine not available due to missing dependencies"
+                "Pipeline not available due to missing dependencies"
             )
 
     def setUp(self):
@@ -94,8 +94,8 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_pipeline_engine_initialization(self):
-        """Test PipelineEngine can be initialized with basic settings."""
-        engine = self.onecrawler_module.PipelineEngine(self.mock_settings)
+        """Test Pipeline can be initialized with basic settings."""
+        engine = self.onecrawler_module.Pipeline(self.mock_settings)
 
         self.assertEqual(engine.settings, self.mock_settings)
         self.assertIsNone(engine.start_date)
@@ -104,11 +104,11 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(engine.session)
 
     async def test_pipeline_engine_initialization_with_date_filters(self):
-        """Test PipelineEngine initialization with date filters."""
+        """Test Pipeline initialization with date filters."""
         start_date = "2024-01-01"
         end_date = "2024-12-31"
 
-        engine = self.onecrawler_module.PipelineEngine(
+        engine = self.onecrawler_module.Pipeline(
             self.mock_settings, start_date=start_date, end_date=end_date
         )
 
@@ -117,7 +117,7 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_pipeline_engine_start_initializes_browser_and_strategy(self):
         """Test that start() method properly initializes browser and strategy."""
-        engine = self.onecrawler_module.PipelineEngine(self.mock_settings)
+        engine = self.onecrawler_module.Pipeline(self.mock_settings)
 
         # Mock GoogleChrome and HeuristicStrategy
         with (
@@ -147,7 +147,7 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_pipeline_engine_close_cleans_up_resources(self):
         """Test that close() method properly cleans up browser resources."""
-        engine = self.onecrawler_module.PipelineEngine(self.mock_settings)
+        engine = self.onecrawler_module.Pipeline(self.mock_settings)
 
         # Mock browser
         mock_browser = AsyncMock()
@@ -159,21 +159,21 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_pipeline_engine_close_with_no_browser(self):
         """Test that close() handles case when browser is not initialized."""
-        engine = self.onecrawler_module.PipelineEngine(self.mock_settings)
+        engine = self.onecrawler_module.Pipeline(self.mock_settings)
 
         # Should not raise exception
         await engine.close()
 
     async def test_pipeline_engine_run_requires_engine_to_be_open(self):
         """Test that run() method raises error when engine is not started."""
-        engine = self.onecrawler_module.PipelineEngine(self.mock_settings)
+        engine = self.onecrawler_module.Pipeline(self.mock_settings)
 
         with self.assertRaises(RuntimeError):
             await engine.run("https://example.com")
 
     async def test_pipeline_engine_run_with_valid_url(self):
         """Test that run() method executes pipeline with valid URL."""
-        engine = self.onecrawler_module.PipelineEngine(self.mock_settings)
+        engine = self.onecrawler_module.Pipeline(self.mock_settings)
 
         # Mock all dependencies
         with (
@@ -224,7 +224,7 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
         """Test PipelineRuntime correctly filters content by date range."""
         from datetime import datetime
 
-        engine = self.onecrawler_module.PipelineEngine(
+        engine = self.onecrawler_module.Pipeline(
             self.mock_settings, start_date="2024-01-01", end_date="2024-12-31"
         )
 
@@ -268,7 +268,7 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_pipeline_runtime_invalid_date_format(self):
         """Test PipelineRuntime handles invalid date formats gracefully."""
-        engine = self.onecrawler_module.PipelineEngine(
+        engine = self.onecrawler_module.Pipeline(
             self.mock_settings, start_date="2024-01-01", end_date="2024-12-31"
         )
 
@@ -323,10 +323,10 @@ class PipelineEngineTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(runtime._is_valid_content(content_with_date))
 
     def test_pipeline_engine_docstring_exists(self):
-        """Test that PipelineEngine has proper documentation."""
-        self.assertIsNotNone(self.onecrawler_module.PipelineEngine.__doc__)
-        self.assertIn("proxy", self.onecrawler_module.PipelineEngine.__doc__.lower())
-        self.assertIn("crawler", self.onecrawler_module.PipelineEngine.__doc__.lower())
+        """Test that Pipeline has proper documentation."""
+        self.assertIsNotNone(self.onecrawler_module.Pipeline.__doc__)
+        self.assertIn("proxy", self.onecrawler_module.Pipeline.__doc__.lower())
+        self.assertIn("crawler", self.onecrawler_module.Pipeline.__doc__.lower())
 
 
 if __name__ == "__main__":
