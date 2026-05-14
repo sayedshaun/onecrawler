@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def ensure_package(name: str) -> types.ModuleType:
     module = sys.modules.get(name)
     package_path = ROOT.joinpath(*name.split("."))
+
     if module is None:
         module = types.ModuleType(name)
         module.__path__ = [str(package_path)] if package_path.is_dir() else []
@@ -19,6 +20,14 @@ def ensure_package(name: str) -> types.ModuleType:
         path = str(package_path)
         if path not in module.__path__:
             module.__path__.append(path)
+
+    parts = name.split(".")
+    if len(parts) > 1:
+        parent_name = ".".join(parts[:-1])
+        parent = sys.modules.get(parent_name)
+        if parent is not None:
+            setattr(parent, parts[-1], module)
+
     return module
 
 
