@@ -25,40 +25,70 @@ class LinkExtractionEngine(BaseEngine):
         if hasattr(self, "browser") and self.browser:
             await self.browser.close()
 
-    async def run(self, url: str) -> dict:
+    async def run(self, url: str) -> list[str]:
+        """
+        Collect all links into memory and return them as a list.
+        """
+
         self._ensure_open()
 
         strategy = self.settings.link_extraction_strategy
-        self.logger.info(f"Running link extraction on {url} with strategy: {strategy}")
 
-        if strategy == "shallow":
-            return await self._run_shallow(url)
-
-        if strategy == "deep":
-            return await self._run_deep(url)
-
-        raise ValueError(f"Unknown strategy: {strategy}")
-
-    async def _run_shallow(self, url: str) -> dict:
-        self._ensure_open()
-
-        return await extract_url_from_current_page(
-            url=url,
-            browser=self.browser,
-            include_link_patterns=self.settings.include_link_patterns,
-            link_classification=self.settings.link_classification,
-            max_links=self.settings.link_extraction_limit,
+        self.logger.info(
+            "Running link extraction on %s with strategy: %s",
+            url,
+            strategy,
         )
 
-    async def _run_deep(self, url: str) -> dict:
+        if strategy == "shallow":
+            return await extract_url_from_current_page(
+                url=url,
+                browser=self.browser,
+                include_link_patterns=self.settings.include_link_patterns,
+                link_classification=self.settings.link_classification,
+                max_links=self.settings.link_extraction_limit,
+            )
+
+        if strategy != "deep":
+            raise ValueError(f"Unknown strategy: {strategy}")
+
+        results = []
+        async for link in self.stream(url):
+            results.append(link)
+
+        return results
+
+    async def stream(self, url: str):
+        """
+        Stream links incrementally as they are discovered.
+        """
+
         self._ensure_open()
+
+        strategy = self.settings.link_extraction_strategy
+
+        assert strategy != "shallow", "Shallow link extraction does not support stream"
+
+        self.logger.info(
+            "Running link extraction stream on %s with strategy: %s",
+            url,
+            strategy,
+        )
+
+        if strategy != "deep":
+            raise ValueError(f"Unknown strategy: {strategy}")
 
         parsed = urlparse(url)
         base_prefix = f"{parsed.scheme}://{parsed.netloc}"
 
         scheduler = BFScheduler(url)
+
         spider = LinkSpider(base_prefix)
-        pool = BrowserPool(self.browser, self.settings.concurrency)
+
+        pool = BrowserPool(
+            self.browser,
+            self.settings.concurrency,
+        )
 
         await pool.init()
 
@@ -72,9 +102,12 @@ class LinkExtractionEngine(BaseEngine):
             enable_human_behaviors=self.settings.enable_human_behaviors,
             human_behavior_settings=self.settings.human_behavior_settings,
             concurrency=self.settings.concurrency,
+            streaming=True,
         )
 
         try:
-            return await runtime.run()
+            async for link in runtime.stream():
+                yield link
+
         finally:
             await pool.close()

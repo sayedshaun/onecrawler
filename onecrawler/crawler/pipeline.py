@@ -34,6 +34,7 @@ class PipelineRuntime:
         concurrency: int = 5,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        streaming: bool = False,
     ):
         self.scheduler = scheduler
         self.pool = pool
@@ -57,6 +58,8 @@ class PipelineRuntime:
         self.content = []
         self.results_set = set()
         self.lock = asyncio.Lock()
+        self.stream_queue = asyncio.Queue(maxsize=1000)
+        self.streaming = streaming
 
         # Track how many workers are actively processing a URL
         self._active_workers = 0
@@ -67,22 +70,25 @@ class PipelineRuntime:
 
     async def worker(self):
         while not self.stop_event.is_set():
-            url = await self.scheduler.next()
+            async with self._active_lock:
+                url = await self.scheduler.next()
 
-            if url is None:
-                async with self._active_lock:
+                if url is None:
                     if self._active_workers == 0:
                         self.stop_event.set()
                         return
 
+                else:
+                    self._active_workers += 1
+
+            if url is None:
                 await asyncio.sleep(0.2)
                 continue
 
             if url in self.scheduler.visited:
+                async with self._active_lock:
+                    self._active_workers -= 1
                 continue
-
-            async with self._active_lock:
-                self._active_workers += 1
 
             page = await self.pool.acquire()
 
@@ -93,7 +99,7 @@ class PipelineRuntime:
                     await page.goto(url, wait_until="domcontentloaded")
                 except Exception as e:
                     logger.warning("Failed to load %s: %s", url, e)
-                    return
+                    continue
 
                 if self.enable_human_behaviors:
                     await human_delay(
@@ -157,6 +163,8 @@ class PipelineRuntime:
                             if self._is_valid_content(content):
                                 self.results.append(link)
                                 self.content.append(content)
+                                if self.streaming:
+                                    await self.stream_queue.put(content)
                                 logger.info("Content is valid, added to results")
                             else:
                                 logger.info("Content is not valid for date range")
@@ -230,13 +238,33 @@ class PipelineRuntime:
         await asyncio.gather(*tasks, return_exceptions=True)
         return self.content
 
+    async def stream(self):
+        self.streaming = True
+        tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
 
-class PipelineEngine(BaseEngine):
+        try:
+            while True:
+                try:
+                    item = await asyncio.wait_for(
+                        self.stream_queue.get(),
+                        timeout=0.5,
+                    )
+                    yield item
+
+                except asyncio.TimeoutError:
+                    if all(task.done() for task in tasks) and self.stream_queue.empty():
+                        break
+
+        finally:
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+
+class Pipeline(BaseEngine):
     """
     A comprehensive web crawling pipeline engine that orchestrates browser automation,
     link extraction, and content scraping with advanced human behavior simulation.
 
-    The PipelineEngine provides a complete crawling solution that can navigate websites,
+    The Pipeline provides a complete crawling solution that can navigate websites,
     extract links following configurable patterns, and scrape content while respecting
     rate limits and mimicking human browsing patterns.
 
@@ -270,13 +298,13 @@ class PipelineEngine(BaseEngine):
     Example:
         ```python
         from onecrawler import CrawlerSettings
-        from onecrawler.crawler.pipeline import PipelineEngine
+        from onecrawler.crawler.pipeline import Pipeline
 
         # Configure settings with proxy
         settings = CrawlerSettings()
         settings.crawler_settings.proxy_pool = ["http://proxy.example.com:8080"]
 
-        engine = PipelineEngine(settings)
+        engine = Pipeline(settings)
         await engine.start()
         results = await engine.run("https://example.com")
         await engine.close()
@@ -298,7 +326,7 @@ class PipelineEngine(BaseEngine):
         # future-ready placeholders
         self.session = None
 
-        self.logger.info("PipelineEngine initialized")
+        self.logger.info("Pipeline initialized")
 
     async def start(self):
         self._closed = False
@@ -310,13 +338,17 @@ class PipelineEngine(BaseEngine):
         if self.browser:
             await self.browser.close()
 
-    async def run(self, url: str) -> dict:
-        self._ensure_open()
-        return await self._run_pipeline(url)
-
-    async def _run_pipeline(self, url: str) -> dict:
+    async def run(self, url: str) -> list[dict]:
         self._ensure_open()
 
+        runtime, pool = await self._create_runtime(url)
+
+        try:
+            return await runtime.run()
+        finally:
+            await pool.close()
+
+    async def _create_runtime(self, url: str, streaming: bool = False):
         parsed = urlparse(url)
         base_prefix = f"{parsed.scheme}://{parsed.netloc}"
 
@@ -339,9 +371,18 @@ class PipelineEngine(BaseEngine):
             concurrency=self.settings.concurrency,
             start_date=self.start_date,
             end_date=self.end_date,
+            streaming=streaming,
         )
 
+        return runtime, pool
+
+    async def stream(self, url: str):
+        self._ensure_open()
+
+        runtime, pool = await self._create_runtime(url, streaming=True)
+
         try:
-            return await runtime.run()
+            async for item in runtime.stream():
+                yield item
         finally:
             await pool.close()
