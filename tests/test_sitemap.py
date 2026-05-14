@@ -1,5 +1,6 @@
 import importlib.util
-import unittest
+
+import pytest
 
 from tests._support import (
     ensure_package,
@@ -12,7 +13,7 @@ from tests._support import (
 
 def load_sitemap_module():
     if importlib.util.find_spec("lxml") is None:
-        raise unittest.SkipTest("lxml is not installed")
+        pytest.skip("lxml is not installed")
 
     ensure_package("onecrawler")
     ensure_package("onecrawler.crawler.map")
@@ -25,9 +26,9 @@ def load_sitemap_module():
     )
 
 
-class SitemapParserTests(unittest.TestCase):
+class TestSitemapParser:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.sitemap_module = load_sitemap_module()
         # Import ProxySettings from settings module for tests
         cls.proxy_settings = load_module(
@@ -50,12 +51,12 @@ class SitemapParserTests(unittest.TestCase):
             "https://example.com/sitemap.xml",
         )
 
-        self.assertEqual(children, [])
-        self.assertEqual(len(records), 1)
-        self.assertEqual(records[0].url, "https://example.com/a")
-        self.assertEqual(records[0].lastmod, "2026-01-01")
-        self.assertEqual(records[0].changefreq, "daily")
-        self.assertEqual(records[0].priority, "0.8")
+        assert children == []
+        assert len(records) == 1
+        assert records[0].url == "https://example.com/a"
+        assert records[0].lastmod == "2026-01-01"
+        assert records[0].changefreq == "daily"
+        assert records[0].priority == "0.8"
 
     def test_parse_sitemap_index_returns_child_sitemaps(self):
         parser = self.sitemap_module.SitemapParser(client=None, concurrency=1)
@@ -68,8 +69,8 @@ class SitemapParserTests(unittest.TestCase):
             "https://example.com/sitemap.xml",
         )
 
-        self.assertEqual(records, [])
-        self.assertEqual(children, ["https://example.com/child.xml"])
+        assert records == []
+        assert children == ["https://example.com/child.xml"]
 
     def test_regex_extract_is_used_for_unknown_documents(self):
         parser = self.sitemap_module.SitemapParser(client=None, concurrency=1)
@@ -78,12 +79,11 @@ class SitemapParserTests(unittest.TestCase):
             "https://example.com/not-a-sitemap",
         )
 
-        self.assertEqual(children, [])
-        self.assertEqual(
-            [record.url for record in records], ["https://example.com/from-html"]
-        )
+        assert children == []
+        assert [record.url for record in records] == ["https://example.com/from-html"]
 
-    def test_robots_parser_extracts_sitemap_directives(self):
+    @pytest.mark.asyncio
+    async def test_robots_parser_extracts_sitemap_directives(self):
         class Client:
             async def get_text(self, url):
                 return """
@@ -94,12 +94,12 @@ class SitemapParserTests(unittest.TestCase):
 
         parser = self.sitemap_module.RobotsParser(Client())
 
-        result = self.run_async(parser.fetch_sitemaps("https://example.com"))
+        result = await parser.fetch_sitemaps("https://example.com")
 
-        self.assertEqual(
-            result,
-            ["https://example.com/sitemap.xml", "https://example.com/news.xml"],
-        )
+        assert result == [
+            "https://example.com/sitemap.xml",
+            "https://example.com/news.xml",
+        ]
 
     def test_html_crawler_extracts_same_origin_links(self):
         html = """
@@ -116,21 +116,22 @@ class SitemapParserTests(unittest.TestCase):
             "https://example.com",
         )
 
-        self.assertEqual(result, ["https://example.com/a", "https://example.com/b"])
+        assert result == ["https://example.com/a", "https://example.com/b"]
 
     def test_universal_sitemap_normalizes_base_url(self):
-        self.assertEqual(
-            self.sitemap_module.UniversalSiteMap._normalize_base("example.com/path"),
-            "https://example.com",
+        assert (
+            self.sitemap_module.UniversalSiteMap._normalize_base("example.com/path")
+            == "https://example.com"
         )
-        self.assertEqual(
+        assert (
             self.sitemap_module.UniversalSiteMap._normalize_base(
                 "http://example.com/path"
-            ),
-            "http://example.com",
+            )
+            == "http://example.com"
         )
 
-    def test_http_client_applies_rotating_proxy_to_requests(self):
+    @pytest.mark.asyncio
+    async def test_http_client_applies_rotating_proxy_to_requests(self):
         first = self.proxy_settings(server="http://proxy-1.example:8080")
         second = self.proxy_settings(
             server="http://proxy-2.example:8080",
@@ -161,30 +162,14 @@ class SitemapParserTests(unittest.TestCase):
         )
         client._session = Session()
 
-        self.run_async(client.get("https://example.com/a"))
-        self.run_async(client.get("https://example.com/b"))
+        await client.get("https://example.com/a")
+        await client.get("https://example.com/b")
 
-        self.assertEqual(
-            client._session.calls[0]["proxies"],
-            {
-                "http": "http://proxy-1.example:8080",
-                "https": "http://proxy-1.example:8080",
-            },
-        )
-        self.assertEqual(
-            client._session.calls[1]["proxies"],
-            {
-                "http": "http://user:pass@proxy-2.example:8080",
-                "https": "http://user:pass@proxy-2.example:8080",
-            },
-        )
-
-    @staticmethod
-    def run_async(awaitable):
-        import asyncio
-
-        return asyncio.run(awaitable)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert client._session.calls[0]["proxies"] == {
+            "http": "http://proxy-1.example:8080",
+            "https": "http://proxy-1.example:8080",
+        }
+        assert client._session.calls[1]["proxies"] == {
+            "http": "http://user:pass@proxy-2.example:8080",
+            "https": "http://user:pass@proxy-2.example:8080",
+        }

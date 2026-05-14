@@ -1,8 +1,9 @@
 import asyncio
 import json
 import tempfile
-import unittest
 from pathlib import Path
+
+import pytest
 
 from tests._support import ensure_package, load_module
 
@@ -32,23 +33,25 @@ class Engine(base_module.BaseEngine):
         return "ok"
 
 
-class UtilsAndBaseTests(unittest.IsolatedAsyncioTestCase):
+class TestUtilsAndBase:
+    pytestmark = pytest.mark.asyncio
+
     async def test_base_engine_context_manager_opens_and_closes(self):
         engine = Engine()
 
-        self.assertTrue(engine.is_closed)
+        assert engine.is_closed
         async with engine:
-            self.assertFalse(engine.is_closed)
-            self.assertTrue(engine.started)
-            self.assertEqual(await engine.run(), "ok")
+            assert not engine.is_closed
+            assert engine.started
+            assert await engine.run() == "ok"
 
-        self.assertTrue(engine.is_closed)
-        self.assertTrue(engine.closed)
+        assert engine.is_closed
+        assert engine.closed
 
     async def test_base_engine_rejects_run_when_closed(self):
         engine = Engine()
 
-        with self.assertRaisesRegex(RuntimeError, "is closed"):
+        with pytest.raises(RuntimeError, match="is closed"):
             await engine.run()
 
     async def test_calculate_execution_time_supports_sync_functions(self):
@@ -56,8 +59,8 @@ class UtilsAndBaseTests(unittest.IsolatedAsyncioTestCase):
             lambda x: x + 1, 2
         )
 
-        self.assertGreaterEqual(elapsed, 0)
-        self.assertEqual(result, 3)
+        assert elapsed >= 0
+        assert result == 3
 
     async def test_calculate_execution_time_supports_async_functions(self):
         async def work():
@@ -66,8 +69,8 @@ class UtilsAndBaseTests(unittest.IsolatedAsyncioTestCase):
 
         elapsed, result = await decorator_module.calculate_execution_time(work)
 
-        self.assertGreaterEqual(elapsed, 0)
-        self.assertEqual(result, "done")
+        assert elapsed >= 0
+        assert result == "done"
 
     async def test_save_json_writes_utf8_json(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -75,10 +78,6 @@ class UtilsAndBaseTests(unittest.IsolatedAsyncioTestCase):
 
             writter_module.save_json({"name": "Onecrawler"}, str(target))
 
-            self.assertEqual(
-                json.loads(target.read_text(encoding="utf-8")), {"name": "Onecrawler"}
-            )
-
-
-if __name__ == "__main__":
-    unittest.main()
+            assert json.loads(target.read_text(encoding="utf-8")) == {
+                "name": "Onecrawler"
+            }
