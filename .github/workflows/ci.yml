@@ -38,4 +38,4 @@ jobs:
         run: pre-commit run --all-files
 
       - name: Run tests
-        run: ./test.sh
+        run: pytest

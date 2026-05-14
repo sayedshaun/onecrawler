@@ -33,12 +33,12 @@ python -m pip install -e ".[dev,genai]"
 ./test.sh
 ```
 
-The test suite uses `unittest`. Some tests may skip optional integrations when a
+The test suite uses `pytest`. Some tests may skip optional integrations when a
 dependency is not installed.
 
 !!! note "Use the virtualenv Python if needed"
     If `python` is not on your shell path, run tests with `.venv/bin/python -m
-    unittest` or the project test script from an activated environment.
+    pytest` or the project test script from an activated environment.
 
 ## Formatting
 

@@ -59,7 +59,7 @@ off for predictable scheduled jobs if you only trust XML sitemap sources.
 
 !!! note "HTML fallback is discovery, not scraping"
     Sitemap HTML fallback is only for finding URLs when XML sources are missing. Use
-    `ScraperEngine` or `PipelineEngine` to extract page content after URLs are
+    `ScraperEngine` or `Pipeline` to extract page content after URLs are
     discovered.
 
 ## Browser Settings
@@ -267,14 +267,14 @@ strategy is faster, cheaper, and easier to reproduce.
     provide `GenerativeAISettings`. Other output formats are rejected during
     settings validation.
 
-## PipelineEngine Configuration
+## Pipeline Configuration
 
-`PipelineEngine` uses the same `CrawlerSettings` object but emphasizes specific fields for its orchestrated workflow:
+`Pipeline` uses the same `CrawlerSettings` object but emphasizes specific fields for its orchestrated workflow:
 
 ### Required for Production
 
 !!! warning "Proxy configuration is required for production"
-    `PipelineEngine` combines browser navigation and extraction across multiple
+    `Pipeline` combines browser navigation and extraction across multiple
     pages. Use a proxy or proxy pool for production jobs to reduce blocking and keep
     traffic routing explicit.
 
@@ -289,9 +289,9 @@ settings = CrawlerSettings(
 )
 ```
 
-### Key PipelineEngine Settings
+### Key Pipeline Settings
 
-| Field | Recommended for PipelineEngine | Purpose |
+| Field | Recommended for Pipeline | Purpose |
 | --- | --- | --- |
 | `link_extraction_limit` | `50-200` | Controls total pages crawled in pipeline |
 | `include_link_patterns` | Strongly recommended | Scope crawling to relevant sections |
@@ -301,11 +301,11 @@ settings = CrawlerSettings(
 
 ### Date Filtering Configuration
 
-PipelineEngine supports date-based content filtering via constructor parameters:
+Pipeline supports date-based content filtering via constructor parameters:
 
 ```python
 # Filter content by publication date
-async with PipelineEngine(settings, 
+async with Pipeline(settings, 
                          start_date="2024-01-01", 
                          end_date="2024-12-31") as engine:
     results = await engine.run("https://example.com/news")
@@ -339,7 +339,7 @@ settings = CrawlerSettings(
 )
 ```
 
-### PipelineEngine Performance Profiles
+### Pipeline Performance Profiles
 
 | Use Case | Recommended Settings |
 | --- | --- |

@@ -20,7 +20,7 @@ from onecrawler import (
     GenerativeAISettings,
     HumanBehaviorSettings,
     LinkExtractionEngine,
-    PipelineEngine,
+    Pipeline,
     ProxySettings,
     ScraperEngine,
     SiteMap,
@@ -233,13 +233,13 @@ reduces throughput.
     Human behavior simulation is helpful for lazy-loaded pages, but it should not be
     a default for every crawl.
 
-## PipelineEngine
+## Pipeline
 
 A comprehensive web crawling pipeline that orchestrates browser automation,
 link extraction, and content scraping in a single unified workflow.
 
 !!! warning "Proxy configuration is required for production"
-    `PipelineEngine` performs browser discovery and content extraction together. Use
+    `Pipeline` performs browser discovery and content extraction together. Use
     explicit proxy settings and conservative concurrency for production runs.
 
 ```python
@@ -250,13 +250,13 @@ settings = CrawlerSettings(
     proxies=[ProxySettings(server="http://proxy.example.com:8080")]
 )
 
-async with PipelineEngine(settings) as engine:
+async with Pipeline(settings) as engine:
     results = await engine.run("https://example.com")
 ```
 
 ```python
 # With date filtering
-async with PipelineEngine(settings, start_date="2024-01-01", end_date="2024-12-31") as engine:
+async with Pipeline(settings, start_date="2024-01-01", end_date="2024-12-31") as engine:
     results = await engine.run("https://example.com")
 ```
 
@@ -302,13 +302,13 @@ Without proper proxy configuration, your crawler may be blocked by target websit
 
 **Simple crawling:**
 ```python
-async with PipelineEngine(settings) as engine:
+async with Pipeline(settings) as engine:
     content = await engine.run("https://example.com")
 ```
 
 **With date filtering:**
 ```python
-async with PipelineEngine(settings, 
+async with Pipeline(settings, 
                          start_date="2024-01-01", 
                          end_date="2024-06-30") as engine:
     content = await engine.run("https://example.com/news")
@@ -316,7 +316,7 @@ async with PipelineEngine(settings,
 
 **Manual lifecycle:**
 ```python
-engine = PipelineEngine(settings)
+engine = Pipeline(settings)
 await engine.start()
 try:
     content = await engine.run("https://example.com")

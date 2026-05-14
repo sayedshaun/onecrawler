@@ -109,6 +109,7 @@ class BFSRuntime:
         include_pattern: Optional[list] = None,
         enable_human_behaviors: bool = False,
         concurrency: int = 5,
+        streaming: bool = False,
     ):
         self.scheduler = scheduler
         self.pool = pool
@@ -130,29 +131,33 @@ class BFSRuntime:
         # Track how many workers are actively processing a URL
         self._active_workers = 0
         self._active_lock = asyncio.Lock()
+        self.stream_queue = asyncio.Queue(maxsize=1000)
+        self.streaming = streaming
 
     async def worker(self):
         while not self.stop_event.is_set():
-            url = await self.scheduler.next()
+            async with self._active_lock:
+                url = await self.scheduler.next()
 
-            if url is None:
-                # Queue is empty — check if any other worker is still active.
-                # If not, all work is done and we can exit.
-                async with self._active_lock:
+                if url is None:
+                    # Queue is empty. If no worker has a reserved URL, crawling is done.
                     if self._active_workers == 0:
                         self.stop_event.set()
                         return
 
+                else:
+                    self._active_workers += 1
+
+            if url is None:
                 # Another worker is still processing and may enqueue more URLs.
                 # Wait a bit and retry instead of busy-spinning.
                 await asyncio.sleep(0.2)
                 continue
 
             if url in self.scheduler.visited:
+                async with self._active_lock:
+                    self._active_workers -= 1
                 continue
-
-            async with self._active_lock:
-                self._active_workers += 1
 
             page = await self.pool.acquire()
 
@@ -163,7 +168,7 @@ class BFSRuntime:
                     await page.goto(url, wait_until="domcontentloaded")
                 except Exception as e:
                     logger.warning("Failed to load %s: %s", url, e)
-                    return
+                    continue
 
                 if self.enable_human_behaviors:
                     await human_delay(
@@ -211,16 +216,20 @@ class BFSRuntime:
                             continue
 
                         self.results_set.add(link)
-                        self.results.append(link)
+
+                        if self.streaming:
+                            await self.stream_queue.put(link)
+                        else:
+                            self.results.append(link)
 
                         logger.info(
                             "Discovered %s/%s links; link=%s",
-                            len(self.results),
+                            len(self.results_set),
                             self.max_links,
                             link,
                         )
 
-                        if len(self.results) >= self.max_links:
+                        if len(self.results_set) >= self.max_links:
                             self.stop_event.set()
                             return
 
@@ -231,5 +240,26 @@ class BFSRuntime:
 
     async def run(self):
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
+
         await asyncio.gather(*tasks, return_exceptions=True)
         return self.results
+
+    async def stream(self):
+        self.streaming = True
+        tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
+
+        try:
+            while True:
+                try:
+                    item = await asyncio.wait_for(
+                        self.stream_queue.get(),
+                        timeout=0.5,
+                    )
+                    yield item
+
+                except asyncio.TimeoutError:
+                    if all(task.done() for task in tasks) and self.stream_queue.empty():
+                        break
+
+        finally:
+            await asyncio.gather(*tasks, return_exceptions=True)

@@ -30,6 +30,8 @@ genai = [
 dev = [
     "black",
     "isort",
+    "pytest",
+    "pytest-asyncio",
     "pre-commit",
     "mkdocs-material",
     "mkdocs-minify-plugin",

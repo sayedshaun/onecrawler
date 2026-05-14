@@ -1,5 +1,6 @@
 import asyncio
-import unittest
+
+import pytest
 
 from tests._support import load_link_modules
 
@@ -22,7 +23,9 @@ class FakePage:
         self.closed = True
 
 
-class DeepCrawlerTests(unittest.IsolatedAsyncioTestCase):
+class TestDeepCrawler:
+    pytestmark = pytest.mark.asyncio
+
     async def test_scheduler_prioritizes_priority_queue_and_deduplicates(self):
         scheduler = deep_module.BFScheduler("https://example.com")
 
@@ -30,19 +33,19 @@ class DeepCrawlerTests(unittest.IsolatedAsyncioTestCase):
         await scheduler.add("https://example.com/a")
         await scheduler.add("https://example.com/priority", priority=True)
 
-        self.assertEqual(await scheduler.next(), "https://example.com/priority")
-        self.assertEqual(await scheduler.next(), "https://example.com")
-        self.assertEqual(await scheduler.next(), "https://example.com/a")
+        assert await scheduler.next() == "https://example.com/priority"
+        assert await scheduler.next() == "https://example.com"
+        assert await scheduler.next() == "https://example.com/a"
         scheduler.mark_visited("https://example.com/a")
         await scheduler.add("https://example.com/a")
-        self.assertEqual(await scheduler.next(), None)
+        assert await scheduler.next() is None
 
     async def test_scheduler_respects_max_queue_size(self):
         scheduler = deep_module.BFScheduler("https://example.com", max_queue_size=1)
 
         await scheduler.add("https://example.com/ignored")
 
-        self.assertEqual(list(scheduler.queue), ["https://example.com"])
+        assert list(scheduler.queue) == ["https://example.com"]
 
     async def test_link_spider_returns_only_same_prefix_links(self):
         spider = deep_module.LinkSpider("https://example.com")
@@ -55,7 +58,7 @@ class DeepCrawlerTests(unittest.IsolatedAsyncioTestCase):
             ]
         )
 
-        self.assertEqual(await spider.parse(page), ["https://example.com/a"])
+        assert await spider.parse(page) == ["https://example.com/a"]
 
     async def test_browser_pool_closes_pages_without_closing_browser(self):
         class Browser:
@@ -81,9 +84,9 @@ class DeepCrawlerTests(unittest.IsolatedAsyncioTestCase):
         await pool.init()
         await pool.close()
 
-        self.assertFalse(browser.started)
-        self.assertFalse(browser.closed)
-        self.assertTrue(all(page.closed for page in browser.created))
+        assert not browser.started
+        assert not browser.closed
+        assert all(page.closed for page in browser.created)
 
     async def test_runtime_collects_links_until_limit(self):
         class Pool:
@@ -114,8 +117,4 @@ class DeepCrawlerTests(unittest.IsolatedAsyncioTestCase):
 
         result = await asyncio.wait_for(runtime.run(), timeout=1)
 
-        self.assertEqual(result, ["https://example.com/a"])
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert result == ["https://example.com/a"]
