@@ -154,20 +154,20 @@ for pages that require interpretation or normalization.
     A good pattern is heuristic extraction first, then GenAI only for records that
     need classification, summarization, field normalization, or schema-shaped output.
 
-## All-in-One Pipeline: PipelineEngine
+## All-in-One Pipeline: Pipeline
 
-Use `PipelineEngine` when you want a single, orchestrated workflow that combines
+Use `Pipeline` when you want a single, orchestrated workflow that combines
 link discovery, browser automation, and content extraction.
 
 !!! warning "Use proxies for production pipeline crawls"
-    `PipelineEngine` opens browser pages and extracts content as it discovers links.
+    `Pipeline` opens browser pages and extracts content as it discovers links.
     For production crawls, configure a single proxy or proxy pool and keep
     concurrency conservative.
 
 ```python
 import json
 import asyncio
-from onecrawler import PipelineEngine, CrawlerSettings, ProxySettings
+from onecrawler import Pipeline, CrawlerSettings, ProxySettings
 
 
 async def main():
@@ -183,7 +183,7 @@ async def main():
         proxy_rotation_method="round_robin",
     )
 
-    async with PipelineEngine(settings) as engine:
+    async with Pipeline(settings) as engine:
         results = await engine.run("https://example.com/news")
 
     with open("news_articles.json", "w", encoding="utf-8") as f:
@@ -192,7 +192,7 @@ async def main():
 
 **With date filtering:**
 ```python
-async with PipelineEngine(
+async with Pipeline(
     settings, 
     start_date="2024-01-01", 
     end_date="2024-12-31"
@@ -216,7 +216,7 @@ settings = CrawlerSettings(
     proxies=[...],  # Always required for production
 )
 
-async with PipelineEngine(settings) as engine:
+async with Pipeline(settings) as engine:
     results = await engine.run("https://spa-example.com")
 ```
 

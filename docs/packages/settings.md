@@ -45,7 +45,7 @@ settings = CrawlerSettings(
 
 !!! warning "Do not run broad crawls without limits"
     `link_extraction_limit` and `include_link_patterns` are your main safety rails.
-    Set them before using deep browser discovery or `PipelineEngine`.
+    Set them before using deep browser discovery or `Pipeline`.
 
 #### Sitemap Settings
 
