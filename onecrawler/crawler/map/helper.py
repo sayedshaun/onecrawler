@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Optional
 from urllib.parse import urlparse, urlunparse
 
@@ -29,7 +29,7 @@ class URLRecord:
     lastmod: Optional[str] = None
     changefreq: Optional[str] = None
     priority: Optional[str] = None
-    discovered_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    discovered_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
 
 
 def normalize_url(url: str) -> str:
