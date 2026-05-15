@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import logging
 from typing import AsyncGenerator, Optional, Tuple
+from urllib.parse import urlparse
 
 from ..browser import GoogleChrome
 from ..settings.simulation import HumanBehaviorSettings
