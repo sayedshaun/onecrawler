@@ -106,16 +106,15 @@ OneCrawler provides an optimized Docker image that includes all necessary browse
 
 ### Build the Image
 ```bash
-docker build -t onecrawler .
+docker pull sayedshaun/onecrawler:latest
 ```
 
 ### Run a Script with Docker
 ```bash
-docker run -it --rm \
-  -v $(pwd):/app \
-  -e OPENAI_API_KEY="your_key" \
-  onecrawler python your_script.py
+docker run -it --rm -v $(pwd):/app onecrawler python your_script.py
 ```
+> [!NOTE]
+> The script must be located at the root of the mounted volume.
 
 ---
 
