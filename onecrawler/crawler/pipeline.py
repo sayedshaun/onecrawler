@@ -284,14 +284,12 @@ class Pipeline(BaseEngine):
     Without proper proxy configuration, your crawler may be blocked by target websites.
 
     Args:
-        settings: Configuration object containing crawler, browser, and behavior settings
-        start_date (Optional[str]): Filter content by start date in YYYY-MM-DD format
-        end_date (Optional[str]): Filter content by end date in YYYY-MM-DD format
+        settings: Configuration object containing crawler, browser, and behavior settings.
+                  Use ``settings.start_date`` and ``settings.end_date`` (``datetime.date``
+                  objects) to filter content by publish date — shared with ``UniversalSiteMap``.
 
     Attributes:
         settings: The configuration settings for the crawler
-        start_date: Start date filter for content extraction
-        end_date: End date filter for content extraction
         browser: GoogleChrome browser instance for web automation
         strategy: HeuristicStrategy for content extraction
 
@@ -311,14 +309,10 @@ class Pipeline(BaseEngine):
         ```
     """
 
-    def __init__(
-        self, settings, start_date: Optional[str] = None, end_date: Optional[str] = None
-    ):
+    def __init__(self, settings):
         super().__init__()
 
         self.settings = settings
-        self.start_date = start_date
-        self.end_date = end_date
 
         self.strategy = None
         self.browser = None
@@ -358,6 +352,10 @@ class Pipeline(BaseEngine):
 
         await pool.init()
 
+        # Convert date objects from settings to "YYYY-MM-DD" strings for PipelineRuntime
+        def _date_str(d) -> Optional[str]:
+            return d.strftime("%Y-%m-%d") if d is not None else None
+
         runtime = PipelineRuntime(
             scheduler=scheduler,
             pool=pool,
@@ -369,8 +367,8 @@ class Pipeline(BaseEngine):
             enable_human_behaviors=self.settings.enable_human_behaviors,
             human_behavior_settings=self.settings.human_behavior_settings,
             concurrency=self.settings.concurrency,
-            start_date=self.start_date,
-            end_date=self.end_date,
+            start_date=_date_str(self.settings.start_date),
+            end_date=_date_str(self.settings.end_date),
             streaming=streaming,
         )
 
