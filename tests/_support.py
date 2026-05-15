@@ -50,6 +50,7 @@ def load_module(name: str, relative_path: str):
     module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
     spec.loader.exec_module(module)
+    ensure_package(name)
     return module
 
 

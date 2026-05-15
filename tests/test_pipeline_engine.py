@@ -97,23 +97,21 @@ class TestPipeline:
         engine = self.onecrawler_module.Pipeline(self.mock_settings)
 
         assert engine.settings == self.mock_settings
-        assert engine.start_date is None
-        assert engine.end_date is None
         assert engine.strategy is None
         assert engine.session is None
 
     @pytest.mark.asyncio
     async def test_pipeline_engine_initialization_with_date_filters(self):
-        """Test Pipeline initialization with date filters."""
-        start_date = "2024-01-01"
-        end_date = "2024-12-31"
+        """Test Pipeline initialization with date filters via settings."""
+        from datetime import date
 
-        engine = self.onecrawler_module.Pipeline(
-            self.mock_settings, start_date=start_date, end_date=end_date
-        )
+        self.mock_settings.start_date = date(2024, 1, 1)
+        self.mock_settings.end_date = date(2024, 12, 31)
 
-        assert engine.start_date == start_date
-        assert engine.end_date == end_date
+        engine = self.onecrawler_module.Pipeline(self.mock_settings)
+
+        assert engine.settings.start_date == date(2024, 1, 1)
+        assert engine.settings.end_date == date(2024, 12, 31)
 
     @pytest.mark.asyncio
     async def test_pipeline_engine_start_initializes_browser_and_strategy(self):
@@ -228,11 +226,7 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_runtime_date_filtering(self):
         """Test PipelineRuntime correctly filters content by date range."""
-        engine = self.onecrawler_module.Pipeline(
-            self.mock_settings, start_date="2024-01-01", end_date="2024-12-31"
-        )
-
-        # Create a PipelineRuntime instance for testing
+        # Dates live on settings; PipelineRuntime still takes strings internally
         runtime = self.pipeline_module.PipelineRuntime(
             scheduler=AsyncMock(),
             pool=AsyncMock(),
@@ -273,10 +267,6 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_runtime_invalid_date_format(self):
         """Test PipelineRuntime handles invalid date formats gracefully."""
-        engine = self.onecrawler_module.Pipeline(
-            self.mock_settings, start_date="2024-01-01", end_date="2024-12-31"
-        )
-
         runtime = self.pipeline_module.PipelineRuntime(
             scheduler=AsyncMock(),
             pool=AsyncMock(),
