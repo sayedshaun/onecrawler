@@ -100,6 +100,25 @@ python -m playwright install chromium
 
 ---
 
+## Docker Support
+
+OneCrawler provides an optimized Docker image that includes all necessary browser dependencies. This is the recommended way to run the framework in production or CI/CD environments.
+
+### Build the Image
+```bash
+docker build -t onecrawler .
+```
+
+### Run a Script with Docker
+```bash
+docker run -it --rm \
+  -v $(pwd):/app \
+  -e OPENAI_API_KEY="your_key" \
+  onecrawler python your_script.py
+```
+
+---
+
 ## Quick Start
 
 ```python
