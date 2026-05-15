@@ -11,6 +11,44 @@ from .simulation import HumanBehaviorSettings
 
 @dataclass
 class CrawlerSettings:
+    """Central configuration class for OneCrawler.
+
+    This class coordinates settings for sitemap crawling, link extraction,
+    content scraping, browser automation, and proxy management.
+
+    Attributes:
+        follow_sitemap_index (bool): Whether to follow sitemap index files.
+        sitemap_html_fallback (bool): Whether to fallback to HTML parsing if sitemap is missing.
+        max_crawl_depth (int): Maximum depth for sitemap/link discovery.
+        max_crawl_pages (int): Maximum number of pages to discover via sitemaps.
+        sitemap_user_agent (str): User agent specifically for sitemap fetching.
+        sitemap_respect_robots (bool): Whether to respect robots.txt.
+        sitemap_deduplicate (bool): Whether to deduplicate URLs during discovery.
+        start_date (Optional[date]): Filter content published on or after this date.
+        end_date (Optional[date]): Filter content published on or before this date.
+        strict_date_filter (bool): Whether to discard items where date cannot be determined.
+        verbose (bool): Whether to enable verbose output/logging.
+        link_extraction_strategy (Literal["shallow", "deep"]): Strategy for finding links on pages.
+        link_extraction_limit (int): Maximum number of valid links to extract per run.
+        include_link_patterns (Optional[List[str]]): Wildcard patterns for links to include.
+        exclude_link_patterns (Optional[List[str]]): Wildcard patterns for links to exclude.
+        scraping_strategy (Literal["heuristic", "genai"]): Strategy for content extraction.
+        scraping_output_format (str): The desired format for scraped data.
+        genai (Optional[GenerativeAISettings]): Configuration for AI-powered scraping.
+        concurrency (int): Number of concurrent workers/pages.
+        max_retries (int): Number of retries for failed requests/actions.
+        request_timeout (int): Timeout for requests in seconds.
+        retry_delay (int): Delay between retries in seconds.
+        proxy (Optional[ProxySettings]): Single proxy configuration.
+        proxies (Optional[List[ProxySettings]]): List of proxies for rotation.
+        proxy_rotation_method (Literal["round_robin", "random"]): Strategy for proxy rotation.
+        browser_settings (BrowserSettings): Configuration for the browser instance.
+        enable_logging (bool): Whether to enable standard logging.
+        logging_level (str): The logging level (e.g., "INFO").
+        enable_human_behaviors (bool): Whether to simulate human browsing patterns.
+        human_behavior_settings (HumanBehaviorSettings): Configuration for human simulation.
+    """
+
     follow_sitemap_index: bool = True
     sitemap_html_fallback: bool = True
     max_crawl_depth: int = 3
@@ -60,6 +98,7 @@ class CrawlerSettings:
     )
 
     def __post_init__(self):
+        """Validates settings after initialization."""
         if self.proxy and self.proxies:
             raise ValueError("Use either proxy or proxies, not both")
 
@@ -75,6 +114,11 @@ class CrawlerSettings:
                 raise ValueError("genai settings is required for genai strategy")
 
     def create_proxy_pool(self) -> ProxyPool:
+        """Creates a ProxyPool based on the provided proxy settings.
+
+        Returns:
+            ProxyPool: An initialized proxy pool.
+        """
         if self.proxies:
             proxies = self.proxies
         elif self.proxy:

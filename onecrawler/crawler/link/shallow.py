@@ -15,15 +15,29 @@ async def extract_url_from_current_page(
     link_classification: bool = False,
     max_links: Optional[int] = None,
 ) -> List[str]:
+    """Extracts internal links from a single page.
 
+    Navigates to the specified URL using a browser, extracts all anchor tags,
+    filters them based on domain and patterns, and optionally uses AI
+    classification.
+
+    Args:
+        url (str): The URL of the page to parse.
+        browser (GoogleChrome): The browser instance to use.
+        include_link_patterns (Optional[List[str]]): Glob patterns for path filtering.
+        link_classification (bool): Whether to use AI to filter 'content' links.
+        max_links (Optional[int]): Maximum number of links to extract.
+
+    Returns:
+        List[str]: A list of absolute internal URLs found on the page.
+    """
     logger.info(f"Starting shallow link extraction from {url}")
 
     links = set()
-
     page = await browser.new_page()
 
     classifier = (
-        LinkClassifierPipeline(enabled=link_classification)
+        LinkClassifierPipeline(confidence_threshold=0.8)
         if link_classification
         else None
     )

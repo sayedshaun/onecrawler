@@ -1,15 +1,45 @@
 import asyncio
 import json
+from typing import Any, Optional
 
 import trafilatura
 
 
 class HeuristicStrategy:
-    def __init__(self, settings: object, browser: object = None):
+    """Strategy for extracting content using structural heuristics.
+
+    Uses the `trafilatura` library to identify and extract the main content
+    from a web page. Can optionally use a browser to render the page before
+    extraction.
+
+    Attributes:
+        settings (CrawlerSettings): Configuration settings.
+        browser (Optional[GoogleChrome]): Browser instance for rendering.
+    """
+
+    def __init__(self, settings: Any, browser: Any = None):
+        """Initializes HeuristicStrategy.
+
+        Args:
+            settings (CrawlerSettings): The configuration object.
+            browser (Optional[GoogleChrome]): The browser instance to use.
+        """
         self.settings = settings
         self.browser = browser
 
-    async def extract(self, url: str):
+    async def extract(self, url: str) -> Optional[Any]:
+        """Extracts content from a URL using heuristics.
+
+        Args:
+            url (str): The URL to extract content from.
+
+        Returns:
+            Optional[Any]: The extracted content in the configured format,
+                or None if extraction fails.
+
+        Raises:
+            ValueError: If JSON output is requested but parsing fails.
+        """
         if self.browser:
             page = await self.browser.new_page()
             try:

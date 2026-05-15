@@ -1,8 +1,7 @@
 import asyncio
 import warnings
 from functools import lru_cache
-from typing import List
-from urllib.parse import unquote
+from typing import List, Optional
 
 try:
     import importlib.util
@@ -20,6 +19,13 @@ if CLASSIFIER_AVAILABLE:
     _clf_instance = None
 
     def get_classifier():
+        """Initializes and returns the transformer pipeline for classification.
+
+        Uses a singleton pattern to ensure the model is only loaded once.
+
+        Returns:
+            pipeline: The HuggingFace text-classification pipeline.
+        """
         global _clf_instance
         if _clf_instance is None:
             import torch
@@ -44,6 +50,14 @@ if CLASSIFIER_AVAILABLE:
 
 
 def cheap_filter(url: str) -> bool:
+    """Performs a quick, non-AI check to filter out obviously invalid URLs.
+
+    Args:
+        url (str): The URL to check.
+
+    Returns:
+        bool: True if the URL passes basic checks, False otherwise.
+    """
     if not url:
         return False
 
@@ -59,16 +73,36 @@ def cheap_filter(url: str) -> bool:
 
 @lru_cache(maxsize=10000)
 def _cached_single_prediction(url: str) -> str:
+    """Wrapper for single URL prediction with LRU caching.
+
+    Args:
+        url (str): The URL to classify.
+
+    Returns:
+        str: The predicted label ("content" or "section").
+    """
     clf = get_classifier()
     result = clf(url, truncation=True, max_length=128)[0]
     return result["label"]
 
 
 class LinkClassifierPipeline:
+    """A pipeline for classifying links using AI and heuristics.
+
+    Attributes:
+        threshold (float): Confidence threshold for 'content' classification.
+        available (bool): Whether the required AI libraries are installed.
+    """
+
     def __init__(
         self,
         confidence_threshold: float = 0.8,
     ):
+        """Initializes the classification pipeline.
+
+        Args:
+            confidence_threshold (float): Minimum confidence score for content links.
+        """
         self.threshold = confidence_threshold
 
         if not CLASSIFIER_AVAILABLE:
@@ -80,6 +114,14 @@ class LinkClassifierPipeline:
             self.available = True
 
     async def classify_batch(self, urls: List[str]) -> List[bool]:
+        """Classifies a batch of URLs concurrently.
+
+        Args:
+            urls (List[str]): List of URLs to classify.
+
+        Returns:
+            List[bool]: A list of booleans indicating if each URL is a content link.
+        """
         if not self.available:
             return [True] * len(urls)
 
@@ -116,6 +158,14 @@ class LinkClassifierPipeline:
         return results
 
     async def is_valid(self, url: str) -> bool:
+        """Checks if a single URL is a valid content link.
+
+        Args:
+            url (str): The URL to check.
+
+        Returns:
+            bool: True if it's likely a content link, False otherwise.
+        """
         if not self.available:
             return True
 

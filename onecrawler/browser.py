@@ -6,7 +6,24 @@ from .settings.browser import BrowserSettings
 
 
 class GoogleChrome:
+    """A wrapper for managing a Google Chrome (Chromium) instance via Playwright.
+
+    This class handles the lifecycle of a Playwright browser, including startup,
+    context creation with custom settings, and safe shutdown.
+
+    Attributes:
+        settings (BrowserSettings): Configuration for the browser and context.
+        playwright (Optional[Playwright]): The Playwright instance.
+        browser (Optional[Browser]): The Chromium browser instance.
+        context (Optional[BrowserContext]): The browser context.
+    """
+
     def __init__(self, settings: BrowserSettings):
+        """Initializes the GoogleChrome wrapper.
+
+        Args:
+            settings (BrowserSettings): The settings to use for the browser.
+        """
         self.settings = settings
         self.playwright = None
         self.browser = None
@@ -15,6 +32,15 @@ class GoogleChrome:
         self._closed = False
 
     async def start(self):
+        """Starts the browser and creates a new context.
+
+        If the browser is already started, this method does nothing. It initializes
+        the Playwright instance, launches Chromium, and sets up the browser context
+        based on the provided settings.
+
+        Returns:
+            None
+        """
         if self._started:
             return
 
@@ -55,6 +81,14 @@ class GoogleChrome:
         self._closed = False
 
     async def new_page(self):
+        """Creates and returns a new page within the current context.
+
+        Automatically starts the browser if it hasn't been started yet. Sets
+        default timeouts for actions and navigation as defined in settings.
+
+        Returns:
+            Page: A new Playwright Page instance.
+        """
         if not self._started:
             await self.start()
 
@@ -67,6 +101,13 @@ class GoogleChrome:
         return page
 
     async def close(self):
+        """Safely closes the browser context, browser, and Playwright instance.
+
+        Ensures all resources are released. If already closed, this method does nothing.
+
+        Returns:
+            None
+        """
         if self._closed:
             return
 
@@ -78,7 +119,7 @@ class GoogleChrome:
                 await self.context.close()
             self.context = None
 
-        # Close browser (YOU WERE MISSING THIS)
+        # Close browser
         if self.browser:
             with suppress(Exception):
                 await self.browser.close()

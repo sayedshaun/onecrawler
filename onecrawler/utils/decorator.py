@@ -6,15 +6,16 @@ from typing import Any, Callable, Tuple
 async def calculate_execution_time(
     func: Callable[..., Any], *args: Any, **kwargs: Any
 ) -> Tuple[float, Any]:
-    """Measure execution time for sync or async functions.
+    """Measures the execution time of a synchronous or asynchronous function.
 
     Args:
-        func: A regular or coroutine function.
-        *args: Positional arguments for func.
-        **kwargs: Keyword arguments for func.
+        func (Callable[..., Any]): The function or coroutine to measure.
+        *args (Any): Positional arguments to pass to the function.
+        **kwargs (Any): Keyword arguments to pass to the function.
 
     Returns:
-        A tuple of (elapsed_seconds, result).
+        Tuple[float, Any]: A tuple containing the elapsed time in seconds (float)
+            and the result of the function call (Any).
     """
     start = time.perf_counter()
     result = func(*args, **kwargs)

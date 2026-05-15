@@ -1,3 +1,4 @@
+from typing import AsyncGenerator, List
 from urllib.parse import urlparse
 
 from ...browser import GoogleChrome
@@ -7,7 +8,40 @@ from .shallow import extract_url_from_current_page
 
 
 class LinkExtractionEngine(BaseEngine):
+    """Engine for extracting links from websites using various strategies.
+
+    Supports both 'shallow' (single page) and 'deep' (BFS-based) extraction.
+
+    Attributes:
+        settings (CrawlerSettings): Configuration settings for extraction.
+
+    Example:
+        ```python
+        from onecrawler.settings import CrawlerSettings, LinkExtractionSettings
+
+        settings = CrawlerSettings(
+            link_extraction_settings=LinkExtractionSettings(
+                link_extraction_strategy="shallow",
+            )
+        )
+
+        async with LinkExtractionEngine(settings) as engine:
+            links = await engine.run("https://example.com")
+            print(links)
+
+        # Stream
+        async with LinkExtractionEngine(settings) as engine:
+            async for link in engine.stream("https://example.com"):
+                print(link)
+        ```
+    """
+
     def __init__(self, settings):
+        """Initializes the LinkExtractionEngine.
+
+        Args:
+            settings (CrawlerSettings): The configuration object.
+        """
         super().__init__()
 
         self.settings = settings
@@ -18,18 +52,28 @@ class LinkExtractionEngine(BaseEngine):
         self.logger.info("LinkExtractionEngine initialized")
 
     async def start(self):
+        """Starts the engine and initializes the browser."""
+        self._closed = False
         self.browser = GoogleChrome(self.settings.browser_settings)
         await self.browser.start()
 
     async def close(self):
+        """Closes the engine and releases browser resources."""
         if hasattr(self, "browser") and self.browser:
             await self.browser.close()
 
-    async def run(self, url: str) -> list[str]:
-        """
-        Collect all links into memory and return them as a list.
-        """
+    async def run(self, url: str) -> List[str]:
+        """Runs the link extraction for the given URL.
 
+        Args:
+            url (str): The starting URL.
+
+        Returns:
+            List[str]: A list of absolute URLs discovered.
+
+        Raises:
+            ValueError: If an unknown strategy is configured.
+        """
         self._ensure_open()
 
         strategy = self.settings.link_extraction_strategy
@@ -58,11 +102,19 @@ class LinkExtractionEngine(BaseEngine):
 
         return results
 
-    async def stream(self, url: str):
-        """
-        Stream links incrementally as they are discovered.
-        """
+    async def stream(self, url: str) -> AsyncGenerator[str, None]:
+        """Streams discovered links incrementally (deep strategy only).
 
+        Args:
+            url (str): The starting URL.
+
+        Yields:
+            str: Discovered absolute URL.
+
+        Raises:
+            AssertionError: If strategy is 'shallow'.
+            ValueError: If an unknown strategy is configured.
+        """
         self._ensure_open()
 
         strategy = self.settings.link_extraction_strategy
@@ -82,9 +134,7 @@ class LinkExtractionEngine(BaseEngine):
         base_prefix = f"{parsed.scheme}://{parsed.netloc}"
 
         scheduler = BFScheduler(url)
-
         spider = LinkSpider(base_prefix)
-
         pool = BrowserPool(
             self.browser,
             self.settings.concurrency,

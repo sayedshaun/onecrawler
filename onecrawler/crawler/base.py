@@ -1,15 +1,31 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional, Type
+from typing import Any, Optional, Type
 
 
 class BaseEngine(ABC):
+    """Abstract base class for all OneCrawler engines.
+
+    Provides a common interface for engine lifecycle management (start, run, close)
+    and supports asynchronous context manager usage.
+
+    Attributes:
+        _closed (bool): Indicates whether the engine is currently closed.
+        logger (logging.Logger): Logger instance for the engine.
+    """
+
     def __init__(self):
+        """Initializes the BaseEngine."""
         self._closed: bool = True
         self.logger = logging.getLogger(self.__class__.__name__)
 
     # ===== Context Manager =====
     async def __aenter__(self):
+        """Starts the engine when entering the context.
+
+        Returns:
+            BaseEngine: The engine instance.
+        """
         self._closed = False
         await self.start()
         self.logger.debug("Engine started")
@@ -19,8 +35,15 @@ class BaseEngine(ABC):
         self,
         exc_type: Optional[Type[BaseException]],
         exc: Optional[BaseException],
-        tb,
+        tb: Any,
     ):
+        """Closes the engine when exiting the context.
+
+        Args:
+            exc_type: The exception type if an exception occurred.
+            exc: The exception instance if an exception occurred.
+            tb: The traceback if an exception occurred.
+        """
         try:
             await self.close()
         finally:
@@ -29,21 +52,28 @@ class BaseEngine(ABC):
 
     # ===== Lifecycle Hooks =====
     async def start(self):
-        """Override to initialize resources."""
+        """Initializes engine resources.
+
+        Override this method in subclasses to perform any necessary setup
+        before the engine starts running.
+        """
         pass
 
     async def close(self):
-        """Override to cleanup resources."""
-        pass
+        """Cleans up engine resources.
 
-    # ===== REQUIRED API =====
-    @abstractmethod
-    async def run(self, *args, **kwargs):
-        """Main execution method for the engine."""
-        raise NotImplementedError
+        Override this method in subclasses to perform any necessary cleanup
+        after the engine finishes running.
+        """
+        pass
 
     # ===== Safety =====
     def _ensure_open(self):
+        """Ensures that the engine is currently open.
+
+        Raises:
+            RuntimeError: If the engine is closed.
+        """
         if self._closed:
             raise RuntimeError(
                 f"{self.__class__.__name__} is closed. Use 'async with'."
@@ -51,4 +81,9 @@ class BaseEngine(ABC):
 
     @property
     def is_closed(self) -> bool:
+        """Indicates whether the engine is closed.
+
+        Returns:
+            bool: True if closed, False otherwise.
+        """
         return self._closed

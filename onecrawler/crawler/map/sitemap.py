@@ -5,7 +5,7 @@ import re
 import time
 import warnings
 from datetime import date
-from typing import Optional, Set, Tuple
+from typing import AsyncGenerator, List, Optional, Set, Tuple
 from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
 
@@ -26,23 +26,59 @@ from .helper import (
 
 
 class SitemapStats:
+    """Tracks statistics for sitemap processing.
+
+    Attributes:
+        start_time (float): The timestamp when processing started.
+        urls (int): Number of URLs discovered.
+        sitemaps (int): Number of sitemaps parsed.
+        errors (int): Number of errors encountered.
+    """
+
     def __init__(self):
+        """Initializes SitemapStats."""
         self.start_time = time.time()
         self.urls = 0
         self.sitemaps = 0
         self.errors = 0
 
-    def elapsed(self):
+    def elapsed(self) -> float:
+        """Calculates the elapsed time since initialization.
+
+        Returns:
+            float: Elapsed time in seconds.
+        """
         return time.time() - self.start_time
 
-    def rate(self):
+    def rate(self) -> float:
+        """Calculates the rate of URL discovery.
+
+        Returns:
+            float: URLs discovered per second.
+        """
         e = self.elapsed()
         return self.urls / e if e > 0 else 0
 
 
 class SiteMap:
-    def __init__(self, settings: CrawlerSettings):
+    """Base sitemap parser for individual site crawling.
 
+    Attributes:
+        semaphore (asyncio.Semaphore): Concurrency control.
+        visited_sitemaps (Set[str]): Track visited sitemap URLs.
+        urls (Set[str]): Track discovered URLs.
+        stats (SitemapStats): Execution statistics.
+        timeout (int): Request timeout in seconds.
+        filter_pattern (Optional[List[str]]): URL inclusion patterns.
+        base_prefix (str): Domain prefix for origin checks.
+    """
+
+    def __init__(self, settings: CrawlerSettings):
+        """Initializes SiteMap.
+
+        Args:
+            settings (CrawlerSettings): The configuration object.
+        """
         self.semaphore = asyncio.Semaphore(settings.concurrency)
         self.visited_sitemaps: Set[str] = set()
         self.urls: Set[str] = set()
@@ -58,11 +94,13 @@ class SiteMap:
         return False
 
     def _sitemap_url(self, url: str) -> str:
+        """Constructs a default sitemap URL if needed."""
         return (
             url.rstrip("/") + "/sitemap.xml" if not url.endswith("sitemap.xml") else url
         )
 
-    async def _fetch(self, session, url):
+    async def _fetch(self, session: aiohttp.ClientSession, url: str) -> Optional[bytes]:
+        """Fetches a URL using aiohttp."""
         try:
             async with self.semaphore:
                 async with session.get(url, timeout=self.timeout) as r:
@@ -72,7 +110,8 @@ class SiteMap:
             self.stats.errors += 1
         return None
 
-    async def _parse(self, session, sitemap_url):
+    async def _parse(self, session: aiohttp.ClientSession, sitemap_url: str):
+        """Recursively parses sitemaps and sitemap indexes."""
         if sitemap_url in self.visited_sitemaps:
             return
 
@@ -117,7 +156,15 @@ class SiteMap:
                     self.urls.add(url)
                     self.stats.urls += 1
 
-    async def fetch(self, url: str) -> Tuple[Set[str], SitemapStats]:
+    async def fetch(self, url: str) -> Tuple[List[str], SitemapStats]:
+        """Fetches and parses sitemaps for a given site URL.
+
+        Args:
+            url (str): The site URL to probe for sitemaps.
+
+        Returns:
+            Tuple[List[str], SitemapStats]: A tuple of discovered URLs and stats.
+        """
         self.sitemap_url = self._sitemap_url(url)
         parsed = urlparse(url)
         self.base_prefix = f"{parsed.scheme}://{parsed.netloc}"
@@ -126,12 +173,31 @@ class SiteMap:
             await self._parse(session, self.sitemap_url)
         return list(self.urls), self.stats
 
-    async def run(self, url: str):
-        urls, stats = await self.fetch(url)
+    async def run(self, url: str) -> List[str]:
+        """Entry point for running sitemap discovery.
+
+        Args:
+            url (str): The site URL.
+
+        Returns:
+            List[str]: A list of discovered URLs.
+        """
+        urls, _ = await self.fetch(url)
         return urls
 
 
 class HTTPClient:
+    """A resilient HTTP client with proxy rotation and impersonation.
+
+    Attributes:
+        concurrency (int): Max concurrent requests.
+        timeout (int): Request timeout.
+        user_agent (str): Request user agent.
+        max_retries (int): Max retry attempts.
+        retry_delay (int): Delay between retries.
+        proxy_pool (ProxyPool): Pool for rotating proxies.
+    """
+
     def __init__(
         self,
         concurrency: int,
@@ -141,6 +207,7 @@ class HTTPClient:
         retry_delay: int,
         proxy_pool: Optional[ProxyPool] = None,
     ):
+        """Initializes HTTPClient."""
         self.concurrency = concurrency
         self.timeout = timeout
         self.user_agent = user_agent
@@ -162,7 +229,14 @@ class HTTPClient:
             await self._session.close()
 
     async def get(self, url: str) -> Optional[bytes]:
-        """Fetch raw bytes with retry logic. Returns None on failure."""
+        """Fetches raw bytes from a URL with retry and proxy logic.
+
+        Args:
+            url (str): The URL to fetch.
+
+        Returns:
+            Optional[bytes]: The response content, or None on failure.
+        """
         for attempt in range(1, self.max_retries + 1):
             try:
                 proxy = self.proxy_pool.next()
@@ -209,6 +283,14 @@ class HTTPClient:
         return None
 
     async def get_text(self, url: str) -> Optional[str]:
+        """Fetches a URL and decodes the response as text.
+
+        Args:
+            url (str): The URL to fetch.
+
+        Returns:
+            Optional[str]: The decoded text, or None on failure.
+        """
         data = await self.get(url)
         if data is None:
             return None
@@ -221,11 +303,25 @@ class HTTPClient:
 
 
 class RobotsParser:
+    """Parses robots.txt and extracts sitemap directives.
+
+    Attributes:
+        client (HTTPClient): The HTTP client to use for fetching.
+    """
+
     def __init__(self, client: HTTPClient):
+        """Initializes RobotsParser."""
         self.client = client
 
-    async def fetch_sitemaps(self, base_url: str) -> list[str]:
-        """Extract Sitemap: directives from robots.txt."""
+    async def fetch_sitemaps(self, base_url: str) -> List[str]:
+        """Extracts Sitemap: directives from robots.txt.
+
+        Args:
+            base_url (str): The base site URL.
+
+        Returns:
+            List[str]: A list of sitemap URLs found in robots.txt.
+        """
         robots_url = urljoin(base_url, "/robots.txt")
         text = await self.client.get_text(robots_url)
         if not text:
@@ -241,7 +337,15 @@ class RobotsParser:
         return sitemaps
 
     async def is_allowed(self, url: str, base_url: str) -> bool:
-        """Basic robots.txt compliance check."""
+        """Checks if a URL is allowed by robots.txt.
+
+        Args:
+            url (str): The URL to check.
+            base_url (str): The base site URL.
+
+        Returns:
+            bool: True if allowed, False otherwise.
+        """
         robots_url = urljoin(base_url, "/robots.txt")
         text = await self.client.get_text(robots_url)
         if not text:
@@ -253,15 +357,30 @@ class RobotsParser:
 
 
 class SitemapParser:
+    """A recursive XML sitemap parser.
+
+    Attributes:
+        client (HTTPClient): The HTTP client to use for fetching.
+    """
+
     def __init__(self, client: HTTPClient, concurrency: int):
+        """Initializes SitemapParser."""
         self.client = client
         self._visited_sitemaps: set[str] = set()
         self._semaphore = asyncio.Semaphore(concurrency)
 
     async def parse_all(
-        self, sitemap_urls: list[str]
-    ) -> tuple[list[URLRecord], list[str]]:
-        """Iteratively parse all sitemaps, following nested .xml/.xml.gz links."""
+        self, sitemap_urls: List[str]
+    ) -> Tuple[List[URLRecord], List[str]]:
+        """Iteratively parses sitemaps, following nested index links.
+
+        Args:
+            sitemap_urls (List[str]): Initial sitemap URLs to parse.
+
+        Returns:
+            Tuple[List[URLRecord], List[str]]: A tuple containing all discovered
+                URL records and the list of sitemaps traversed.
+        """
         all_records: list[URLRecord] = []
         all_sitemaps: list[str] = []
 
@@ -303,23 +422,23 @@ class SitemapParser:
 
     @staticmethod
     def _is_xml_sitemap_url(url: str) -> bool:
-        """Return True if the URL looks like an XML sitemap (to be traversed, not scraped)."""
+        """Checks if a URL refers to an XML sitemap."""
         path = urlparse(url).path.lower()
         return path.endswith(".xml") or path.endswith(".xml.gz")
 
-    async def _parse_one(self, url: str) -> tuple[list[URLRecord], list[str]]:
-        """Parse a single sitemap URL. Returns (records, child_sitemap_urls)."""
+    async def _parse_one(self, url: str) -> Tuple[List[URLRecord], List[str]]:
+        """Parses a single sitemap URL."""
         if url in self._visited_sitemaps:
             return [], []
         self._visited_sitemaps.add(url)
 
-        logging.info(f"[sitemap] Fetching: {url}")  # ← add this line
+        logging.info(f"[sitemap] Fetching: {url}")
 
         async with self._semaphore:
             data = await self.client.get(url)
 
         if not data:
-            logging.warning(f"[sitemap] No data returned for: {url}")  # ← and this
+            logging.warning(f"[sitemap] No data returned for: {url}")
             return [], []
 
         records, children = self._parse_xml(data, source=url)
@@ -328,8 +447,8 @@ class SitemapParser:
         )
         return records, children
 
-    def _parse_xml(self, data: bytes, source: str) -> tuple[list[URLRecord], list[str]]:
-        """Parse XML bytes → (URLRecord list, child sitemap URLs) using lxml."""
+    def _parse_xml(self, data: bytes, source: str) -> Tuple[List[URLRecord], List[str]]:
+        """Parses XML data into URL records and child sitemap links."""
         records: list[URLRecord] = []
         child_sitemaps: list[str] = []
 
@@ -381,8 +500,8 @@ class SitemapParser:
         return records, child_sitemaps
 
     @staticmethod
-    def _find_text(element, tag: str) -> Optional[str]:
-        """Return the text of the first child whose local name matches *tag*."""
+    def _find_text(element: etree._Element, tag: str) -> Optional[str]:
+        """Finds the text content of a child tag within an element."""
         for child in element:
             local = (
                 child.tag.split("}")[-1].lower()
@@ -394,8 +513,8 @@ class SitemapParser:
         return None
 
     @staticmethod
-    def _regex_extract(data: bytes, source: str) -> list[URLRecord]:
-        """Last-resort URL extraction using regex."""
+    def _regex_extract(data: bytes, source: str) -> List[URLRecord]:
+        """Fallback URL extraction using regular expressions."""
         text = data.decode("utf-8", errors="replace")
         urls = re.findall(r'<loc>\s*(https?://[^\s<>"]+)\s*</loc>', text)
         urls += re.findall(r'href=["\']?(https?://[^\s"\'<>]+)', text)
@@ -403,6 +522,14 @@ class SitemapParser:
 
 
 class HTMLCrawler:
+    """A basic recursive crawler for site mapping via HTML links.
+
+    Attributes:
+        client (HTTPClient): The HTTP client for fetching.
+        max_crawl_pages (int): Limit for number of pages to crawl.
+        max_crawl_depth (int): Limit for crawl recursion depth.
+    """
+
     def __init__(
         self,
         client: HTTPClient,
@@ -410,13 +537,22 @@ class HTMLCrawler:
         max_crawl_pages: int,
         max_crawl_depth: int,
     ):
+        """Initializes HTMLCrawler."""
         self.client = client
         self.max_crawl_pages = max_crawl_pages
         self.max_crawl_depth = max_crawl_depth
         self._visited: set[str] = set()
         self._semaphore = asyncio.Semaphore(concurrency)
 
-    async def crawl(self, base_url: str) -> list[URLRecord]:
+    async def crawl(self, base_url: str) -> List[URLRecord]:
+        """Crawls a site starting from base_url to find internal links.
+
+        Args:
+            base_url (str): The starting URL.
+
+        Returns:
+            List[URLRecord]: A list of discovered internal URLs.
+        """
         records: list[URLRecord] = []
         queue = asyncio.Queue()
         await queue.put((base_url, 0))
@@ -442,8 +578,8 @@ class HTMLCrawler:
         return records
 
     @staticmethod
-    def _extract_links(html: str, page_url: str, base_url: str) -> list[str]:
-        """Extract all same-origin href links from HTML."""
+    def _extract_links(html: str, page_url: str, base_url: str) -> List[str]:
+        """Extracts all same-origin href links from HTML."""
         links = []
         for match in re.finditer(r'href=["\']([^"\'#\s]+)', html, re.I):
             href = match.group(1).strip()
@@ -456,20 +592,22 @@ class HTMLCrawler:
 
 
 class UniversalSiteMap:
+    """The high-level orchestrator for site discovery.
+
+    Combines robots.txt parsing, common path probing, XML sitemap traversal,
+    and HTML crawling to find all relevant URLs on a site.
+
+    Attributes:
+        settings (CrawlerSettings): Configuration settings.
+    """
+
     def __init__(self, settings: CrawlerSettings):
+        """Initializes UniversalSiteMap."""
         self.settings = settings
 
     @staticmethod
     def _parse_lastmod(lastmod: Optional[str]) -> Optional[date]:
-        """Parse a sitemap lastmod string into a date.
-
-        Handles common sitemap formats:
-          - YYYY-MM-DD          (most common)
-          - YYYY-MM-DDTHH:MM:SS (no timezone)
-          - YYYY-MM-DDTHH:MM:SS+HH:MM (with timezone offset)
-          - YYYY-MM             (month precision)
-          - YYYY                (year precision)
-        """
+        """Parses a sitemap lastmod string into a date object."""
         if not lastmod:
             return None
         s = lastmod.strip()
@@ -489,8 +627,15 @@ class UniversalSiteMap:
                 continue
         return None
 
-    async def run(self, url: str) -> list[str]:
+    async def run(self, url: str) -> List[str]:
+        """Runs the universal sitemap discovery process.
 
+        Args:
+            url (str): The starting URL.
+
+        Returns:
+            List[str]: A list of discovered absolute internal URLs.
+        """
         base_url = self._normalize_base(url)
 
         strategies_used: list[str] = []
@@ -558,9 +703,6 @@ class UniversalSiteMap:
             for rec in all_records:
                 lm = self._parse_lastmod(rec.lastmod)
                 if lm is None:
-                    # No lastmod in sitemap:
-                    # strict=True  → exclude (you asked for a date range, no date = skip)
-                    # strict=False → include (permissive, old behaviour)
                     if not strict_date_filter:
                         filtered.append(rec)
                     continue
@@ -599,17 +741,17 @@ class UniversalSiteMap:
         if len(all_records) > self.settings.link_extraction_limit:
             all_records = all_records[: self.settings.link_extraction_limit]
 
-        # Return plain list of URL strings
         return [rec.url for rec in all_records]
 
     @staticmethod
     async def _probe_url(client: HTTPClient, url: str) -> bool:
-        """Return True if URL responds with HTTP 200 and non-empty body."""
+        """Probes a URL to see if it exists and is not empty."""
         data = await client.get(url)
         return data is not None and len(data) > 0
 
     @staticmethod
     def _normalize_base(url: str) -> str:
+        """Ensures the base URL has a scheme and trailing slash removed."""
         if not url.startswith(("http://", "https://")):
             url = "https://" + url
         p = urlparse(url)

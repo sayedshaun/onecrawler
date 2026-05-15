@@ -1,8 +1,7 @@
 import asyncio
 import datetime
 import logging
-from typing import Optional
-from urllib.parse import urlparse
+from typing import AsyncGenerator, Optional, Tuple
 
 from ..browser import GoogleChrome
 from ..settings.simulation import HumanBehaviorSettings
@@ -20,11 +19,35 @@ logger = logging.getLogger(__name__)
 
 
 class PipelineRuntime:
+    """The execution runtime for a single pipeline run.
+
+    Handles the concurrent processing of URLs discovered during the crawl,
+    managing workers, browser pages, and data extraction.
+
+    Attributes:
+        scheduler (BFScheduler): Manages the queue of URLs to visit.
+        pool (BrowserPool): Pool of browser pages for concurrent processing.
+        spider (LinkSpider): Responsible for finding new links on pages.
+        strategy (HeuristicStrategy): Strategy used for content extraction.
+        base_prefix (str): The domain prefix to restrict crawling to.
+        max_links (int): Maximum number of valid links to extract.
+        include_pattern (Optional[list]): List of patterns to include in crawl.
+        enable_human_behaviors (bool): Whether to simulate human browsing.
+        human_behavior_settings (HumanBehaviorSettings): Configuration for simulation.
+        concurrency (int): Number of concurrent worker tasks.
+        stop_event (asyncio.Event): Event to signal workers to stop.
+        results (list): List of extracted URLs.
+        content (list): List of extracted content dictionaries.
+        streaming (bool): Whether results should be streamed via a queue.
+        start_date (Optional[str]): Start date for filtering content (YYYY-MM-DD).
+        end_date (Optional[str]): End date for filtering content (YYYY-MM-DD).
+    """
+
     def __init__(
         self,
-        scheduler,
-        pool,
-        spider,
+        scheduler: BFScheduler,
+        pool: BrowserPool,
+        spider: LinkSpider,
         base_prefix: str,
         max_links: int,
         strategy: Optional[HeuristicStrategy] = None,
@@ -36,6 +59,26 @@ class PipelineRuntime:
         end_date: Optional[str] = None,
         streaming: bool = False,
     ):
+        """Initializes the PipelineRuntime.
+
+        Args:
+            scheduler: The URL scheduler.
+            pool: The browser page pool.
+            spider: The link discovery spider.
+            base_prefix: Domain prefix for the crawl.
+            max_links: Limit for the number of results.
+            strategy: Extraction strategy. Defaults to None.
+            human_behavior_settings: Settings for human simulation.
+            include_pattern: Wildcard patterns for link inclusion.
+            enable_human_behaviors: Enable delay/scroll/mouse simulation.
+            concurrency: Number of concurrent workers.
+            start_date: Filtering start date.
+            end_date: Filtering end date.
+            streaming: Enable streaming mode.
+
+        Raises:
+            ValueError: If strategy is not provided.
+        """
         self.scheduler = scheduler
         self.pool = pool
         self.spider = spider
@@ -69,6 +112,12 @@ class PipelineRuntime:
         self.end_date = end_date
 
     async def worker(self):
+        """A worker task that processes URLs from the scheduler.
+
+        Each worker acquires a page from the pool, navigates to a URL,
+        simulates human behavior (if enabled), discovers new links,
+        and extracts content using the provided strategy.
+        """
         while not self.stop_event.is_set():
             async with self._active_lock:
                 url = await self.scheduler.next()
@@ -189,6 +238,14 @@ class PipelineRuntime:
                     self._active_workers -= 1
 
     def _is_valid_content(self, content: dict) -> bool:
+        """Checks if the extracted content satisfies the date range filters.
+
+        Args:
+            content (dict): The extracted content dictionary.
+
+        Returns:
+            bool: True if valid or no range specified, False otherwise.
+        """
         if not self.start_date and not self.end_date:
             return True
 
@@ -233,12 +290,22 @@ class PipelineRuntime:
         logger.info("Date %s is valid for range", date)
         return True
 
-    async def run(self):
+    async def run(self) -> list:
+        """Starts the workers and waits for completion.
+
+        Returns:
+            list: All extracted content dictionaries.
+        """
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
         await asyncio.gather(*tasks, return_exceptions=True)
         return self.content
 
-    async def stream(self):
+    async def stream(self) -> AsyncGenerator[dict, None]:
+        """Starts the workers and yields content as it is extracted.
+
+        Yields:
+            dict: Extracted content dictionary.
+        """
         self.streaming = True
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
 
@@ -269,16 +336,17 @@ class Pipeline(BaseEngine):
     rate limits and mimicking human browsing patterns.
 
     **Proxy Usage:**
-    IMPORTANT: Proxy configuration is REQUIRED for production use to avoid IP blocking
+    IMPORTANT: Proxy configuration is RECOMMENDED for production use to avoid IP blocking
     and rate limiting. Configure proxy settings in your crawler settings:
 
     ```python
-    # Example proxy configuration
-    settings.crawler_settings.proxy_pool = [
-        "http://proxy1.example.com:8080",
-        "http://proxy2.example.com:8080",
-        # Add more proxies for rotation
-    ]
+    from onecrawler.settings import ProxySettings
+
+    proxy = ProxySettings(
+        server="http://proxy1.example.com:8080",
+        username="username",
+        password="password",
+    )
     ```
 
     Without proper proxy configuration, your crawler may be blocked by target websites.
@@ -295,13 +363,24 @@ class Pipeline(BaseEngine):
 
     Example:
         ```python
-        from onecrawler import CrawlerSettings
-        from onecrawler.crawler.pipeline import Pipeline
+        from onecrawler import CrawlerSettings, Pipeline
 
         # Configure settings with proxy
-        settings = CrawlerSettings()
-        settings.crawler_settings.proxy_pool = ["http://proxy.example.com:8080"]
-
+        settings = CrawlerSettings(
+            proxies=[
+                ProxySettings(
+                    server="http://proxy1.example.com:8080",
+                    username="username",
+                    password="password",
+                ),
+                ProxySettings(
+                    server="http://proxy2.example.com:8080",
+                    username="username",
+                    password="password",
+                )
+            ],
+            proxy_rotation_mode="round_robin",
+        )
         engine = Pipeline(settings)
         await engine.start()
         results = await engine.run("https://example.com")
@@ -310,6 +389,11 @@ class Pipeline(BaseEngine):
     """
 
     def __init__(self, settings):
+        """Initializes the Pipeline.
+
+        Args:
+            settings (CrawlerSettings): The configuration object for the pipeline.
+        """
         super().__init__()
 
         self.settings = settings
@@ -323,16 +407,26 @@ class Pipeline(BaseEngine):
         self.logger.info("Pipeline initialized")
 
     async def start(self):
+        """Starts the pipeline by initializing the browser and extraction strategy."""
         self._closed = False
         self.browser = GoogleChrome(self.settings.browser_settings)
         await self.browser.start()
         self.strategy = HeuristicStrategy(settings=self.settings, browser=self.browser)
 
     async def close(self):
+        """Closes the pipeline and releases browser resources."""
         if self.browser:
             await self.browser.close()
 
     async def run(self, url: str) -> list[dict]:
+        """Runs the crawling pipeline starting from the provided URL.
+
+        Args:
+            url (str): The starting URL for the crawl.
+
+        Returns:
+            list[dict]: A list of extracted content dictionaries.
+        """
         self._ensure_open()
 
         runtime, pool = await self._create_runtime(url)
@@ -342,7 +436,18 @@ class Pipeline(BaseEngine):
         finally:
             await pool.close()
 
-    async def _create_runtime(self, url: str, streaming: bool = False):
+    async def _create_runtime(
+        self, url: str, streaming: bool = False
+    ) -> Tuple[PipelineRuntime, BrowserPool]:
+        """Creates the runtime environment and browser pool for a crawl.
+
+        Args:
+            url (str): The starting URL.
+            streaming (bool): Whether to enable streaming mode.
+
+        Returns:
+            Tuple[PipelineRuntime, BrowserPool]: The runtime and the pool.
+        """
         parsed = urlparse(url)
         base_prefix = f"{parsed.scheme}://{parsed.netloc}"
 
@@ -374,7 +479,15 @@ class Pipeline(BaseEngine):
 
         return runtime, pool
 
-    async def stream(self, url: str):
+    async def stream(self, url: str) -> AsyncGenerator[dict, None]:
+        """Runs the crawling pipeline and yields results as they are found.
+
+        Args:
+            url (str): The starting URL.
+
+        Yields:
+            dict: Extracted content dictionary.
+        """
         self._ensure_open()
 
         runtime, pool = await self._create_runtime(url, streaming=True)
