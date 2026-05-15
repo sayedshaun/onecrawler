@@ -4,7 +4,7 @@
 
 # Onecrawler
 
-**An async Python crawling library for discovering URLs, extracting links, and scraping structured content.**
+**An async Python crawling framework for discovering URLs, extracting links, and scraping structured content.**
 
 [![CI](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml/badge.svg)](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)

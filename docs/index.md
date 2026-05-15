@@ -10,10 +10,10 @@ title: OneCrawler Documentation
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/sayedshaun/onecrawler/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 
-OneCrawler is an async Python crawling library for discovering URLs, extracting
+OneCrawler is an async Python crawling framework for discovering URLs, extracting
 links, and scraping structured content.
 
-The library is designed around a practical crawler workflow:
+The framework is designed around a practical crawler workflow:
 
 1. Discover candidate URLs from sitemaps or browser-based link traversal.
 2. Filter and limit those URLs to the section you actually care about.

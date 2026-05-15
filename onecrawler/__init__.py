@@ -1,5 +1,5 @@
 """
-OneCrawler: A unified, AI-powered web crawling and scraping library.
+OneCrawler: A unified, AI-powered web crawling and scraping framework.
 
 This package provides a high-level API for:
 - Mapping websites using sitemaps and robots.txt (UniversalSiteMap).
