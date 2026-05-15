@@ -4,32 +4,43 @@ from functools import lru_cache
 from typing import List
 from urllib.parse import unquote
 
-CLASSIFIER_AVAILABLE = True
 try:
-    import torch
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
+    import importlib.util
+
+    CLASSIFIER_AVAILABLE = (
+        importlib.util.find_spec("transformers") is not None
+        and importlib.util.find_spec("torch") is not None
+    )
 except ImportError:
     CLASSIFIER_AVAILABLE = False
 
 
 if CLASSIFIER_AVAILABLE:
     repo_id = "SayedShaun/distilbert-link-type-classifier"
+    _clf_instance = None
 
-    torch.set_grad_enabled(False)
+    def get_classifier():
+        global _clf_instance
+        if _clf_instance is None:
+            import torch
+            from transformers import (
+                AutoModelForSequenceClassification,
+                AutoTokenizer,
+                pipeline,
+            )
 
-    model = AutoModelForSequenceClassification.from_pretrained(repo_id)
-    tokenizer = AutoTokenizer.from_pretrained(repo_id)
+            torch.set_grad_enabled(False)
+            model = AutoModelForSequenceClassification.from_pretrained(repo_id)
+            tokenizer = AutoTokenizer.from_pretrained(repo_id)
 
-    def get_classifier(device: str = "cpu"):
-        device_id = 0 if device == "cuda" else -1
-        return pipeline(
-            "text-classification",
-            model=model,
-            tokenizer=tokenizer,
-            device=device_id,
-        )
-
-    clf = get_classifier("cuda" if torch.cuda.is_available() else "cpu")
+            device_id = 0 if torch.cuda.is_available() else -1
+            _clf_instance = pipeline(
+                "text-classification",
+                model=model,
+                tokenizer=tokenizer,
+                device=device_id,
+            )
+        return _clf_instance
 
 
 def cheap_filter(url: str) -> bool:
@@ -48,6 +59,7 @@ def cheap_filter(url: str) -> bool:
 
 @lru_cache(maxsize=10000)
 def _cached_single_prediction(url: str) -> str:
+    clf = get_classifier()
     result = clf(url, truncation=True, max_length=128)[0]
     return result["label"]
 
@@ -85,6 +97,7 @@ class LinkClassifierPipeline:
             return results
 
         try:
+            clf = get_classifier()
             predictions = await asyncio.to_thread(
                 lambda: clf(filtered_urls, truncation=True, max_length=128)
             )
