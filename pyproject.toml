@@ -13,28 +13,28 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "aiohttp",
-    "curl_cffi",
-    "tqdm",
-    "pydantic",
-    "playwright",
-    "trafilatura",
-    "lxml",
+    "aiohttp>=3.13.5",
+    "curl_cffi>=0.15.0",
+    "tqdm>=4.67.3",
+    "pydantic>=2.13.3",
+    "playwright>=1.58.0",
+    "trafilatura>=2.0.0",
+    "lxml>=5.4.0",
 ]
 
 [project.optional-dependencies]
 genai = [
-    "langchain",
-    "langgraph",
+    "langchain>=1.2.17",
+    "langgraph>=1.1.10",
 ]
 dev = [
-    "black",
-    "isort",
-    "pytest",
-    "pytest-asyncio",
-    "pre-commit",
-    "mkdocs-material",
-    "mkdocs-minify-plugin",
+    "black>=26.3.1",
+    "isort>=8.0.1",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "pre-commit>=4.6.0",
+    "mkdocs-material>=9.7.6",
+    "mkdocs-minify-plugin>=0.8.0",
 ]
 
 [tool.setuptools.packages.find]
