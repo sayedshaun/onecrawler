@@ -4,6 +4,7 @@ import logging
 import re
 import time
 import warnings
+from datetime import date
 from typing import Optional, Set, Tuple
 from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
@@ -458,6 +459,36 @@ class UniversalSiteMap:
     def __init__(self, settings: CrawlerSettings):
         self.settings = settings
 
+    @staticmethod
+    def _parse_lastmod(lastmod: Optional[str]) -> Optional[date]:
+        """Parse a sitemap lastmod string into a date.
+
+        Handles common sitemap formats:
+          - YYYY-MM-DD          (most common)
+          - YYYY-MM-DDTHH:MM:SS (no timezone)
+          - YYYY-MM-DDTHH:MM:SS+HH:MM (with timezone offset)
+          - YYYY-MM             (month precision)
+          - YYYY                (year precision)
+        """
+        if not lastmod:
+            return None
+        s = lastmod.strip()
+        # Slice candidates from longest to shortest to avoid partial matches
+        slice_fmts = [
+            (19, "%Y-%m-%dT%H:%M:%S"),
+            (10, "%Y-%m-%d"),
+            (7, "%Y-%m"),
+            (4, "%Y"),
+        ]
+        from datetime import datetime as _dt
+
+        for length, fmt in slice_fmts:
+            try:
+                return _dt.strptime(s[:length], fmt).date()
+            except ValueError:
+                continue
+        return None
+
     async def run(self, url: str) -> list[str]:
 
         base_url = self._normalize_base(url)
@@ -517,6 +548,28 @@ class UniversalSiteMap:
 
         if self.settings.verbose:
             logging.info(f"Strategies used: {strategies_used}")
+
+        # Filter by lastmod date range
+        start_date = self.settings.start_date
+        end_date = self.settings.end_date
+        strict_date_filter = self.settings.strict_date_filter
+        if start_date is not None or end_date is not None:
+            filtered: list[URLRecord] = []
+            for rec in all_records:
+                lm = self._parse_lastmod(rec.lastmod)
+                if lm is None:
+                    # No lastmod in sitemap:
+                    # strict=True  → exclude (you asked for a date range, no date = skip)
+                    # strict=False → include (permissive, old behaviour)
+                    if not strict_date_filter:
+                        filtered.append(rec)
+                    continue
+                if start_date is not None and lm < start_date:
+                    continue
+                if end_date is not None and lm > end_date:
+                    continue
+                filtered.append(rec)
+            all_records = filtered
 
         # Filter out XML URLs
         all_records = [r for r in all_records if not is_xml_url(r.url)]
