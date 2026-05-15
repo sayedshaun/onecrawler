@@ -3,85 +3,31 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
-  workflow_dispatch:  # Allow manual triggering for testing
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
-    permissions:
-      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Full history for version extraction
-        
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-        
-    - name: Install build dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install build twine
-        
-    - name: Extract version from tag
-      id: get_version
-      run: |
-        # Extract version from git tag (remove 'v' prefix if present)
-        VERSION="${GITHUB_REF#refs/tags/}"
-        VERSION="${VERSION#v}"
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Publishing version: $VERSION"
-        
-    - name: Build package
-      run: |
-        python -m build
-        
-    - name: Check package
-      run: |
-        twine check dist/*
-        
-    - name: Publish to PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      run: |
-        twine upload --skip-existing dist/*
-        
-    - name: Create PyPI badge comment
-      if: success()
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const { owner, repo } = context.repo;
-          const version = '${{ steps.get_version.outputs.version }}';
-          
-          // Create comment with PyPI badge and link
-          const comment = `🐍 **Published to PyPI!**
-          
-          **Version:** ${version}
-          
-          ![PyPI Version](https://img.shields.io/pypi/v/onecrawler.svg)
-          ![PyPI Downloads](https://img.shields.io/pypi/dm/onecrawler.svg)
-          
-          **Installation:**
-          \`\`\`bash
-          pip install onecrawler==${version}
-          \`\`\`
-          
-          **PyPI Link:** https://pypi.org/project/onecrawler/${version}/
-          
-          ---
-          
-          This release is now available on PyPI! 🚀`;
-          
-          github.rest.issues.createComment({
-            owner: owner,
-            repo: repo,
-            issue_number: context.payload.release.id,
-            body: comment
-          });
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          twine upload dist/*

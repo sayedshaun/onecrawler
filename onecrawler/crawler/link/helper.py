@@ -2,6 +2,7 @@ import asyncio
 import logging
 import random
 from fnmatch import fnmatch
+from typing import List
 from urllib.parse import urlparse
 
 from playwright.async_api import Page
@@ -10,10 +11,25 @@ logger = logging.getLogger(__name__)
 
 
 async def human_delay(min_s: float = 0.3, max_s: float = 1.2) -> None:
+    """Simulates a human-like delay between actions.
+
+    Args:
+        min_s (float): Minimum delay in seconds.
+        max_s (float): Maximum delay in seconds.
+    """
     await asyncio.sleep(random.uniform(min_s, max_s))
 
 
-async def human_scroll(page, max_scrolls: int = 10) -> None:
+async def human_scroll(page: Page, max_scrolls: int = 10) -> None:
+    """Simulates human-like scrolling behavior on a page.
+
+    Scrolls to the bottom of the page repeatedly until either the maximum
+    number of scrolls is reached or the page height stops increasing.
+
+    Args:
+        page (Page): The Playwright Page instance.
+        max_scrolls (int): The maximum number of scroll actions to perform.
+    """
     try:
         last_height = await page.evaluate("document.body.scrollHeight")
 
@@ -84,7 +100,7 @@ async def human_mouse_move(
 
 
 def wildcard_link_match(
-    link: str, base_prefix: str, include_pattern: list[str]
+    link: str, base_prefix: str, include_pattern: List[str]
 ) -> bool:
     """Return True if *link* belongs to the site and matches the section filter.
 
