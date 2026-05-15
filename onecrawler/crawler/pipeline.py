@@ -352,16 +352,6 @@ class Pipeline(BaseEngine):
 
     Without proper proxy configuration, your crawler may be blocked by target websites.
 
-    Args:
-        settings: Configuration object containing crawler, browser, and behavior settings.
-                  Use ``settings.start_date`` and ``settings.end_date`` (``datetime.date``
-                  objects) to filter content by publish date — shared with ``UniversalSiteMap``.
-
-    Attributes:
-        settings: The configuration settings for the crawler
-        browser: GoogleChrome browser instance for web automation
-        strategy: HeuristicStrategy for content extraction
-
     Example:
         ```python
         from onecrawler import CrawlerSettings, Pipeline
@@ -382,10 +372,14 @@ class Pipeline(BaseEngine):
             ],
             proxy_rotation_mode="round_robin",
         )
-        engine = Pipeline(settings)
-        await engine.start()
-        results = await engine.run("https://example.com")
-        await engine.close()
+        async with Pipeline(settings) as engine:
+            results = await engine.run("https://example.com")
+            print(results)
+
+        # Stream
+        async with engine.stream("https://example.com") as stream:
+            async for item in stream:
+                print(item)
         ```
     """
 
