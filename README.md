@@ -4,7 +4,7 @@
 
 # Onecrawler
 
-**An async Python crawling library for discovering URLs, extracting links, and scraping structured content.**
+**An async Python crawling framework for discovering URLs, extracting links, and scraping structured content.**
 
 [![CI](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml/badge.svg)](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
@@ -97,6 +97,24 @@ cd onecrawler
 python -m pip install -e ".[dev]"
 python -m playwright install chromium
 ```
+
+---
+
+## Docker Support
+
+OneCrawler provides an optimized Docker image that includes all necessary browser dependencies. This is the recommended way to run the framework in production or CI/CD environments.
+
+### Build the Image
+```bash
+docker pull sayedshaun/onecrawler:latest
+```
+
+### Run a Script with Docker
+```bash
+docker run -it --rm -v $(pwd):/app onecrawler python your_script.py
+```
+> [!NOTE]
+> The script must be located at the root of the mounted volume.
 
 ---
 
