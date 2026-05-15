@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import date
 from typing import List, Literal, Optional
 
 from ..proxy.pool import ProxyPool
@@ -20,6 +21,9 @@ class CrawlerSettings:
     )
     sitemap_respect_robots: bool = True
     sitemap_deduplicate: bool = True
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    strict_date_filter: bool = False
     verbose: bool = True
 
     link_extraction_strategy: Literal["shallow", "deep"] = "deep"
