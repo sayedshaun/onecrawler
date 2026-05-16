@@ -71,9 +71,7 @@ class CrawlerSettings:
     exclude_link_patterns: Optional[List[str]] = None
 
     scraping_strategy: Literal["heuristic", "genai"] = "heuristic"
-    scraping_output_format: Literal[
-        "markdown", "json", "csv", "html", "python", "txt", "xml", "xmltei"
-    ] = "json"
+    scraping_output_format: Literal["markdown", "json", "xml", "xmltei"] = "json"
 
     genai: Optional[GenerativeAISettings] = None
 
