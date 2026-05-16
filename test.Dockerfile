@@ -38,7 +38,7 @@ RUN apt-get install -y \
 # 5. Create a container-specific test script
 # This script is similar to version_test.sh but specifically targets system-installed pythons
 RUN echo '#!/bin/bash\n\
-VERSIONS=("3.10" "3.11" "3.12" "3.13")\n\
+VERSIONS=("3.10" "3.11" "3.12" "3.13" "3.14")\n\
 ALL_PASSED=true\n\
 \n\
 for VER in "${VERSIONS[@]}"; do\n\

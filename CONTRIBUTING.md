@@ -33,7 +33,7 @@ pytest
 
 ### Multi-version Testing
 
-We test OneCrawler across Python 3.10, 3.11, 3.12, and 3.13. The best way to do this is using Docker, as it ensures a consistent environment.
+We test OneCrawler across Python 3.10, 3.11, 3.12, 3.13, and 3.14. The best way to do this is using Docker, as it ensures a consistent environment.
 
 ### Using Docker (Recommended)
 You can run all versions at once using our test container:
