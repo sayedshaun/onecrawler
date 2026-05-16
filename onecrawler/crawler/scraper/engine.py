@@ -30,11 +30,6 @@ class ScraperEngine(BaseEngine):
     """
 
     def __init__(self, settings: CrawlerSettings):
-        """Initializes the ScraperEngine.
-
-        Args:
-            settings (CrawlerSettings): The configuration object.
-        """
         super().__init__()
 
         self.settings = settings

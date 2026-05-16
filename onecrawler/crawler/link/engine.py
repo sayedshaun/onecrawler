@@ -37,11 +37,6 @@ class LinkExtractionEngine(BaseEngine):
     """
 
     def __init__(self, settings):
-        """Initializes the LinkExtractionEngine.
-
-        Args:
-            settings (CrawlerSettings): The configuration object.
-        """
         super().__init__()
 
         self.settings = settings

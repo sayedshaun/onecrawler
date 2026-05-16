@@ -26,22 +26,19 @@ class PipelineRuntime:
     managing workers, browser pages, and data extraction.
 
     Attributes:
-        scheduler (BFScheduler): Manages the queue of URLs to visit.
-        pool (BrowserPool): Pool of browser pages for concurrent processing.
-        spider (LinkSpider): Responsible for finding new links on pages.
-        strategy (HeuristicStrategy): Strategy used for content extraction.
-        base_prefix (str): The domain prefix to restrict crawling to.
-        max_links (int): Maximum number of valid links to extract.
-        include_pattern (Optional[list]): List of patterns to include in crawl.
-        enable_human_behaviors (bool): Whether to simulate human browsing.
-        human_behavior_settings (HumanBehaviorSettings): Configuration for simulation.
-        concurrency (int): Number of concurrent worker tasks.
-        stop_event (asyncio.Event): Event to signal workers to stop.
-        results (list): List of extracted URLs.
-        content (list): List of extracted content dictionaries.
-        streaming (bool): Whether results should be streamed via a queue.
+        scheduler (BFScheduler): The URL scheduler.
+        pool (BrowserPool): The browser page pool.
+        spider (LinkSpider): The link discovery spider.
+        base_prefix (str): Domain prefix for the crawl.
+        max_links (int): Limit for the number of results.
+        strategy (Optional[HeuristicStrategy]): Extraction strategy. Defaults to None.
+        human_behavior_settings (HumanBehaviorSettings): Settings for human simulation.
+        include_pattern (Optional[list]): Wildcard patterns for link inclusion.
+        enable_human_behaviors (bool): Enable delay/scroll/mouse simulation.
+        concurrency (int): Number of concurrent workers.
         start_date (Optional[str]): Start date for filtering content (YYYY-MM-DD).
         end_date (Optional[str]): End date for filtering content (YYYY-MM-DD).
+        streaming (bool): Enable streaming mode.
     """
 
     def __init__(
@@ -60,26 +57,6 @@ class PipelineRuntime:
         end_date: Optional[str] = None,
         streaming: bool = False,
     ):
-        """Initializes the PipelineRuntime.
-
-        Args:
-            scheduler: The URL scheduler.
-            pool: The browser page pool.
-            spider: The link discovery spider.
-            base_prefix: Domain prefix for the crawl.
-            max_links: Limit for the number of results.
-            strategy: Extraction strategy. Defaults to None.
-            human_behavior_settings: Settings for human simulation.
-            include_pattern: Wildcard patterns for link inclusion.
-            enable_human_behaviors: Enable delay/scroll/mouse simulation.
-            concurrency: Number of concurrent workers.
-            start_date: Filtering start date.
-            end_date: Filtering end date.
-            streaming: Enable streaming mode.
-
-        Raises:
-            ValueError: If strategy is not provided.
-        """
         self.scheduler = scheduler
         self.pool = pool
         self.spider = spider
@@ -336,21 +313,8 @@ class Pipeline(BaseEngine):
     extract links following configurable patterns, and scrape content while respecting
     rate limits and mimicking human browsing patterns.
 
-    **Proxy Usage:**
-    IMPORTANT: Proxy configuration is RECOMMENDED for production use to avoid IP blocking
-    and rate limiting. Configure proxy settings in your crawler settings:
-
-    ```python
-    from onecrawler.settings import ProxySettings
-
-    proxy = ProxySettings(
-        server="http://proxy1.example.com:8080",
-        username="username",
-        password="password",
-    )
-    ```
-
-    Without proper proxy configuration, your crawler may be blocked by target websites.
+    Attributes:
+        settings (CrawlerSettings): The configuration object for the pipeline.
 
     Example:
         ```python
@@ -384,11 +348,6 @@ class Pipeline(BaseEngine):
     """
 
     def __init__(self, settings):
-        """Initializes the Pipeline.
-
-        Args:
-            settings (CrawlerSettings): The configuration object for the pipeline.
-        """
         super().__init__()
 
         self.settings = settings
