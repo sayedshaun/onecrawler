@@ -118,9 +118,7 @@ nav:
   - Reference:
     - API Reference: api-reference.md
     - Troubleshooting: troubleshooting.md
-  - Development:
-    - Contributing: contributing.md
-    - Development: development.md
+  - Development: CONTRIBUTING.md
 
 # Customization
 extra:
