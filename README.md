@@ -106,7 +106,14 @@ OneCrawler provides an optimized Docker image that includes all necessary browse
 
 ### Build the Image
 ```bash
-docker pull sayedshaun/onecrawler:latest
+Pull the image and give it a short local name:
+```bash
+docker pull ghcr.io/sayedshaun/onecrawler:latest
+```
+> [!TIP]
+You can rename it for convenience
+```bash
+docker tag ghcr.io/sayedshaun/onecrawler:latest onecrawler
 ```
 
 ### Run a Script with Docker
