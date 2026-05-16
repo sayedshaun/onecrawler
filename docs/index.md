@@ -8,7 +8,7 @@ title: OneCrawler Documentation
 [![CI](https://img.shields.io/badge/CI-passing-brightgreen.svg)](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-85%25-orange.svg)](https://codecov.io/gh/sayedshaun/onecrawler)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/sayedshaun/onecrawler/blob/main/LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.10--3.14-blue.svg)](https://www.python.org/downloads/)
 
 OneCrawler is an async Python crawling framework for discovering URLs, extracting
 links, and scraping structured content.
@@ -106,7 +106,6 @@ Then pass the final URL list to `ScraperEngine`.
 - [Settings Configuration](packages/settings.md): `CrawlerSettings` and configuration classes
 - [API reference](api-reference.md): public classes exported from `onecrawler`
 - [Troubleshooting](troubleshooting.md): common failures and fixes
-- [Development](development.md): local contributor workflow
 
 ## Production Principles
 
