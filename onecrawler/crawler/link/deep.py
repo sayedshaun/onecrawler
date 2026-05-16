@@ -192,6 +192,7 @@ class BFSRuntime:
         base_prefix (str): The domain prefix for the crawl.
         max_links (int): Maximum number of links to discover.
         include_pattern (Optional[list]): List of patterns for link inclusion.
+        exclude_pattern (Optional[list]): List of patterns for link exclusion.
         enable_human_behaviors (bool): Whether to simulate human browsing.
         human_behavior_settings (HumanBehaviorSettings): Configuration for simulation.
         concurrency (int): Number of concurrent worker tasks.
@@ -207,24 +208,11 @@ class BFSRuntime:
         max_links: int,
         human_behavior_settings: HumanBehaviorSettings,
         include_pattern: Optional[list] = None,
+        exclude_pattern: Optional[list] = None,
         enable_human_behaviors: bool = False,
         concurrency: int = 5,
         streaming: bool = False,
     ):
-        """Initializes the BFSRuntime.
-
-        Args:
-            scheduler: The URL scheduler.
-            pool: The browser page pool.
-            spider: The link discovery spider.
-            base_prefix: Domain prefix for the crawl.
-            max_links: Limit for the number of results.
-            human_behavior_settings: Settings for human simulation.
-            include_pattern: Wildcard patterns for link inclusion.
-            enable_human_behaviors: Enable delay/scroll/mouse simulation.
-            concurrency: Number of concurrent workers.
-            streaming: Enable streaming mode.
-        """
         self.scheduler = scheduler
         self.pool = pool
         self.spider = spider
@@ -232,6 +220,7 @@ class BFSRuntime:
         self.base_prefix = base_prefix
         self.max_links = max_links
         self.include_pattern = include_pattern
+        self.exclude_pattern = exclude_pattern
         self.enable_human_behaviors = enable_human_behaviors
         self.human_behavior_settings = human_behavior_settings
         self.concurrency = concurrency
@@ -324,6 +313,14 @@ class BFSRuntime:
                             link,
                             self.base_prefix,
                             self.include_pattern,
+                        ):
+                            continue
+
+                    if self.exclude_pattern:
+                        if wildcard_link_match(
+                            link,
+                            self.base_prefix,
+                            self.exclude_pattern,
                         ):
                             continue
 
