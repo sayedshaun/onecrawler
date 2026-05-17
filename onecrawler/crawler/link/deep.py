@@ -1,7 +1,9 @@
 import asyncio
 import logging
 from collections import deque
-from typing import AsyncGenerator, List, Optional, Set, Tuple
+from typing import AsyncGenerator, List, Optional, Set
+
+from playwright.async_api import Page
 
 from ...settings.simulation import HumanBehaviorSettings
 from .helper import human_delay, human_mouse_move, human_scroll, wildcard_link_match
@@ -30,14 +32,14 @@ class BFScheduler:
             base_url (str): The starting URL for the crawl.
             max_queue_size (int): Maximum number of URLs to keep in the queue.
         """
-        self.queue = deque([base_url])
-        self.priority = deque()
+        self.queue: deque[str] = deque([base_url])
+        self.priority: deque[str] = deque()
 
-        self.visited = set()
-        self.in_queue = {base_url}
+        self.visited: Set[str] = set()
+        self.in_queue: Set[str] = {base_url}
 
-        self.max_queue_size = max_queue_size
-        self.lock = asyncio.Lock()
+        self.max_queue_size: int = max_queue_size
+        self.lock: asyncio.Lock = asyncio.Lock()
 
     async def has_next(self) -> bool:
         """Checks if there are any URLs left to process.
@@ -129,7 +131,7 @@ class BrowserPool:
         """
         return await self.pages.get()
 
-    async def release(self, page):
+    async def release(self, page: Page) -> None:
         """Releases a page back into the pool.
 
         Args:
@@ -207,8 +209,8 @@ class BFSRuntime:
         base_prefix: str,
         max_links: int,
         human_behavior_settings: HumanBehaviorSettings,
-        include_pattern: Optional[list] = None,
-        exclude_pattern: Optional[list] = None,
+        include_pattern: Optional[List[str]] = None,
+        exclude_pattern: Optional[List[str]] = None,
         enable_human_behaviors: bool = False,
         concurrency: int = 5,
         streaming: bool = False,
@@ -225,17 +227,17 @@ class BFSRuntime:
         self.human_behavior_settings = human_behavior_settings
         self.concurrency = concurrency
 
-        self.stop_event = asyncio.Event()
+        self.stop_event: asyncio.Event = asyncio.Event()
 
-        self.results = []
-        self.results_set = set()
-        self.lock = asyncio.Lock()
+        self.results: List[str] = []
+        self.results_set: Set[str] = set()
+        self.lock: asyncio.Lock = asyncio.Lock()
 
         # Track how many workers are actively processing a URL
-        self._active_workers = 0
-        self._active_lock = asyncio.Lock()
-        self.stream_queue = asyncio.Queue(maxsize=1000)
-        self.streaming = streaming
+        self._active_workers: int = 0
+        self._active_lock: asyncio.Lock = asyncio.Lock()
+        self.stream_queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1000)
+        self.streaming: bool = streaming
 
     async def worker(self):
         """A worker task that processes URLs and discovers new links.
