@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 import logging
-from typing import AsyncGenerator, Optional, Tuple
+from typing import AsyncGenerator, List, Optional, Tuple
 from urllib.parse import urlparse
 
 from ..browser import GoogleChrome
@@ -50,7 +50,8 @@ class PipelineRuntime:
         max_links: int,
         strategy: Optional[HeuristicStrategy] = None,
         human_behavior_settings: HumanBehaviorSettings = HumanBehaviorSettings,
-        include_pattern: Optional[list] = None,
+        include_pattern: Optional[List[str]] = None,
+        exclude_pattern: Optional[List[str]] = None,
         enable_human_behaviors: bool = False,
         concurrency: int = 5,
         start_date: Optional[str] = None,
@@ -69,6 +70,7 @@ class PipelineRuntime:
         self.base_prefix = base_prefix
         self.max_links = max_links
         self.include_pattern = include_pattern
+        self.exclude_pattern = exclude_pattern
         self.enable_human_behaviors = enable_human_behaviors
         self.human_behavior_settings = human_behavior_settings
         self.concurrency = concurrency
@@ -164,6 +166,14 @@ class PipelineRuntime:
                             link,
                             self.base_prefix,
                             self.include_pattern,
+                        ):
+                            continue
+
+                    if self.exclude_pattern:
+                        if wildcard_link_match(
+                            link,
+                            self.base_prefix,
+                            self.exclude_pattern,
                         ):
                             continue
 
