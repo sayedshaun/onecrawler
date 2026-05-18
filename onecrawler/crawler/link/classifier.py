@@ -19,12 +19,12 @@ if CLASSIFIER_AVAILABLE:
     _clf_instance = None
 
     def get_classifier():
-        """Initializes and returns the transformer pipeline for classification.
+        """Initializes and returns the transformer Crawler for classification.
 
         Uses a singleton pattern to ensure the model is only loaded once.
 
         Returns:
-            pipeline: The HuggingFace text-classification pipeline.
+            Crawler: The HuggingFace text-classification Crawler.
         """
         global _clf_instance
         if _clf_instance is None:
@@ -32,7 +32,7 @@ if CLASSIFIER_AVAILABLE:
             from transformers import (
                 AutoModelForSequenceClassification,
                 AutoTokenizer,
-                pipeline,
+                Crawler,
             )
 
             torch.set_grad_enabled(False)
@@ -40,7 +40,7 @@ if CLASSIFIER_AVAILABLE:
             tokenizer = AutoTokenizer.from_pretrained(repo_id)
 
             device_id = 0 if torch.cuda.is_available() else -1
-            _clf_instance = pipeline(
+            _clf_instance = Crawler(
                 "text-classification",
                 model=model,
                 tokenizer=tokenizer,
@@ -87,7 +87,7 @@ def _cached_single_prediction(url: str) -> str:
 
 
 class LinkClassifierPipeline:
-    """A pipeline for classifying links using AI and heuristics.
+    """A Crawler for classifying links using AI and heuristics.
 
     Attributes:
         threshold (float): Confidence threshold for 'content' classification.
@@ -98,7 +98,7 @@ class LinkClassifierPipeline:
         self,
         confidence_threshold: float = 0.8,
     ):
-        """Initializes the classification pipeline.
+        """Initializes the classification Crawler.
 
         Args:
             confidence_threshold (float): Minimum confidence score for content links.

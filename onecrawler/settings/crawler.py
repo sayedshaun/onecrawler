@@ -10,7 +10,7 @@ from .simulation import HumanBehaviorSettings
 
 
 @dataclass
-class CrawlerSettings:
+class Settings:
     """Central configuration class for OneCrawler.
 
     This class coordinates settings for sitemap crawling, link extraction,

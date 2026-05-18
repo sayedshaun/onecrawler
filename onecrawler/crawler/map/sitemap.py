@@ -14,7 +14,7 @@ from curl_cffi.requests import AsyncSession
 from lxml import etree
 
 from ...proxy.pool import ProxyPool
-from ...settings.crawler import CrawlerSettings
+from ...settings.crawler import Settings
 from ..link.helper import wildcard_link_match
 from .helper import (
     COMMON_SITEMAP_PATHS,
@@ -73,11 +73,11 @@ class SiteMap:
         base_prefix (str): Domain prefix for origin checks.
     """
 
-    def __init__(self, settings: CrawlerSettings):
+    def __init__(self, settings: Settings):
         """Initializes SiteMap.
 
         Args:
-            settings (CrawlerSettings): The configuration object.
+            settings (Settings): The configuration object.
         """
         self.semaphore = asyncio.Semaphore(settings.concurrency)
         self.visited_sitemaps: Set[str] = set()
@@ -598,10 +598,10 @@ class UniversalSiteMap:
     and HTML crawling to find all relevant URLs on a site.
 
     Attributes:
-        settings (CrawlerSettings): Configuration settings.
+        settings (Settings): Configuration settings.
     """
 
-    def __init__(self, settings: CrawlerSettings):
+    def __init__(self, settings: Settings):
         """Initializes UniversalSiteMap."""
         self.settings = settings
 
