@@ -192,7 +192,11 @@ async def main():
 
 **With date filtering:**
 ```python
-async with Crawler(
+from onecrawler import RangeCrawler
+from onecrawler import Settings
+
+settings = Settings()
+async with RangeCrawler(
     settings, 
     start_date="2024-01-01", 
     end_date="2024-12-31"
