@@ -11,35 +11,48 @@ from tests._support import (
 
 
 def load_pipeline_modules():
-    """Load required modules for Pipeline testing"""
+    """Load required modules for Crawler testing"""
     try:
         # Try to import from main package first
         import onecrawler
 
-        if hasattr(onecrawler, "Pipeline"):
+        if hasattr(onecrawler, "Crawler"):
             return onecrawler
     except ImportError as e:
         pass
 
     # If main package fails due to missing dependencies or has been stubbed by
-    # another test module, load the pipeline module directly.
+    # another test module, load the Crawler module directly.
     ensure_package("onecrawler")
     ensure_package("onecrawler.settings")
     ensure_package("onecrawler.crawler")
+    ensure_package("onecrawler.crawler.link")
     ensure_package("onecrawler.crawler.scraper")
     ensure_package("onecrawler.crawler.scraper.heuristic")
     load_settings_modules()
     install_trafilatura_stub()
 
     mock_module = MagicMock()
-    pipeline_module = load_module(
-        "onecrawler.crawler.pipeline", "onecrawler/crawler/pipeline.py"
+
+    general_module = load_module(
+        "onecrawler.crawler.general", "onecrawler/crawler/general.py"
+    )
+    range_module = load_module(
+        "onecrawler.crawler.range", "onecrawler/crawler/range.py"
+    )
+    schedule_module = load_module(
+        "onecrawler.crawler.schedule", "onecrawler/crawler/schedule.py"
     )
 
-    if hasattr(pipeline_module, "Pipeline"):
-        mock_module.Pipeline = pipeline_module.Pipeline
-    if hasattr(pipeline_module, "PipelineRuntime"):
-        mock_module.PipelineRuntime = pipeline_module.PipelineRuntime
+    for attr in ("Crawler", "CrawlerRuntime", "Pipeline", "PipelineRuntime"):
+        if hasattr(general_module, attr):
+            setattr(mock_module, attr, getattr(general_module, attr))
+
+    if hasattr(range_module, "RangeCrawler"):
+        mock_module.RangeCrawler = range_module.RangeCrawler
+
+    if hasattr(schedule_module, "ScheduleCrawler"):
+        mock_module.ScheduleCrawler = schedule_module.ScheduleCrawler
 
     return mock_module
 
@@ -50,7 +63,7 @@ class TestPipeline:
         install_trafilatura_stub()
         cls.onecrawler_module = load_pipeline_modules()
         cls.pipeline_module = load_module(
-            "onecrawler.crawler.pipeline", "onecrawler/crawler/pipeline.py"
+            "onecrawler.crawler.general", "onecrawler/crawler/general.py"
         )
 
         # Load settings modules
@@ -64,15 +77,15 @@ class TestPipeline:
             "onecrawler.settings.simulation", "onecrawler/settings/simulation.py"
         )
 
-        # Skip if Pipeline is not available
-        if not hasattr(cls.onecrawler_module, "Pipeline"):
-            pytest.skip("Pipeline not available due to missing dependencies")
+        # Skip if Crawler is not available
+        if not hasattr(cls.onecrawler_module, "Crawler"):
+            pytest.skip("Crawler not available due to missing dependencies")
 
     def setup_method(self):
         """Set up test fixtures before each test method."""
         # Create mock settings
         self.mock_browser_settings = MagicMock()
-        self.mock_crawler_settings = self.settings_module.CrawlerSettings(
+        self.mock_crawler_settings = self.settings_module.Settings(
             concurrency=2,
             link_extraction_limit=5,
             include_link_patterns=["/news/*"],
@@ -93,8 +106,8 @@ class TestPipeline:
 
     @pytest.mark.asyncio
     async def test_pipeline_engine_initialization(self):
-        """Test Pipeline can be initialized with basic settings."""
-        engine = self.onecrawler_module.Pipeline(self.mock_settings)
+        """Test Crawler can be initialized with basic settings."""
+        engine = self.onecrawler_module.RangeCrawler(self.mock_settings)
 
         assert engine.settings == self.mock_settings
         assert engine.strategy is None
@@ -102,13 +115,13 @@ class TestPipeline:
 
     @pytest.mark.asyncio
     async def test_pipeline_engine_initialization_with_date_filters(self):
-        """Test Pipeline initialization with date filters via settings."""
+        """Test Crawler initialization with date filters via settings."""
         from datetime import date
 
         self.mock_settings.start_date = date(2024, 1, 1)
         self.mock_settings.end_date = date(2024, 12, 31)
 
-        engine = self.onecrawler_module.Pipeline(self.mock_settings)
+        engine = self.onecrawler_module.RangeCrawler(self.mock_settings)
 
         assert engine.settings.start_date == date(2024, 1, 1)
         assert engine.settings.end_date == date(2024, 12, 31)
@@ -116,14 +129,13 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_engine_start_initializes_browser_and_strategy(self):
         """Test that start() method properly initializes browser and strategy."""
-        engine = self.onecrawler_module.Pipeline(self.mock_settings)
+        engine = self.onecrawler_module.RangeCrawler(self.mock_settings)
 
-        # Mock GoogleChrome and HeuristicStrategy
+        # Mock GoogleChrome and HeuristicStrategy where RangeCrawler imports them
         with (
-            patch("onecrawler.crawler.pipeline.GoogleChrome") as mock_chrome,
-            patch("onecrawler.crawler.pipeline.HeuristicStrategy") as mock_strategy,
+            patch("onecrawler.crawler.range.GoogleChrome") as mock_chrome,
+            patch("onecrawler.crawler.range.HeuristicStrategy") as mock_strategy,
         ):
-
             mock_chrome_instance = AsyncMock()
             mock_chrome.return_value = mock_chrome_instance
             mock_strategy_instance = MagicMock()
@@ -147,7 +159,7 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_engine_close_cleans_up_resources(self):
         """Test that close() method properly cleans up browser resources."""
-        engine = self.onecrawler_module.Pipeline(self.mock_settings)
+        engine = self.onecrawler_module.RangeCrawler(self.mock_settings)
 
         # Mock browser
         mock_browser = AsyncMock()
@@ -160,7 +172,7 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_engine_close_with_no_browser(self):
         """Test that close() handles case when browser is not initialized."""
-        engine = self.onecrawler_module.Pipeline(self.mock_settings)
+        engine = self.onecrawler_module.RangeCrawler(self.mock_settings)
 
         # Should not raise exception
         await engine.close()
@@ -168,25 +180,24 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_engine_run_requires_engine_to_be_open(self):
         """Test that run() method raises error when engine is not started."""
-        engine = self.onecrawler_module.Pipeline(self.mock_settings)
+        engine = self.onecrawler_module.RangeCrawler(self.mock_settings)
 
         with pytest.raises(RuntimeError):
             await engine.run("https://example.com")
 
     @pytest.mark.asyncio
     async def test_pipeline_engine_run_with_valid_url(self):
-        """Test that run() method executes pipeline with valid URL."""
-        engine = self.onecrawler_module.Pipeline(self.mock_settings)
+        """Test that run() method executes Crawler with valid URL."""
+        engine = self.onecrawler_module.Crawler(self.mock_settings)
 
         # Mock all dependencies
         with (
-            patch("onecrawler.crawler.pipeline.GoogleChrome") as mock_chrome,
-            patch("onecrawler.crawler.pipeline.HeuristicStrategy") as mock_strategy,
-            patch("onecrawler.crawler.pipeline.BFScheduler") as mock_scheduler,
-            patch("onecrawler.crawler.pipeline.LinkSpider") as mock_spider,
-            patch("onecrawler.crawler.pipeline.BrowserPool") as mock_pool,
+            patch("onecrawler.crawler.general.GoogleChrome") as mock_chrome,
+            patch("onecrawler.crawler.general.HeuristicStrategy") as mock_strategy,
+            patch("onecrawler.crawler.general.BFScheduler") as mock_scheduler,
+            patch("onecrawler.crawler.general.LinkSpider") as mock_spider,
+            patch("onecrawler.crawler.general.BrowserPool") as mock_pool,
         ):
-
             # Setup mocks
             mock_chrome_instance = AsyncMock()
             mock_chrome.return_value = mock_chrome_instance
@@ -209,7 +220,7 @@ class TestPipeline:
             ]
 
             with patch(
-                "onecrawler.crawler.pipeline.PipelineRuntime", return_value=mock_runtime
+                "onecrawler.crawler.general.CrawlerRuntime", return_value=mock_runtime
             ) as mock_runtime_cls:
                 await engine.start()
                 result = await engine.run("https://example.com")
@@ -225,9 +236,27 @@ class TestPipeline:
 
     @pytest.mark.asyncio
     async def test_pipeline_runtime_date_filtering(self):
-        """Test PipelineRuntime correctly filters content by date range."""
-        # Dates live on settings; PipelineRuntime still takes strings internally
-        runtime = self.pipeline_module.PipelineRuntime(
+        """Test CrawlerRuntime correctly filters content by date range via content_filter."""
+        import datetime
+
+        start_obj = datetime.datetime.strptime("2024-01-01", "%Y-%m-%d")
+        end_obj = datetime.datetime.strptime("2024-12-31", "%Y-%m-%d")
+
+        def date_filter(content):
+            date_str = content.get("filedate") or content.get("date")
+            if not date_str:
+                return False
+            try:
+                date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+            except (ValueError, TypeError):
+                return False
+            if date_obj < start_obj:
+                return False
+            if date_obj > end_obj:
+                return False
+            return True
+
+        runtime = self.pipeline_module.CrawlerRuntime(
             scheduler=AsyncMock(),
             pool=AsyncMock(),
             spider=MagicMock(),
@@ -238,36 +267,50 @@ class TestPipeline:
             enable_human_behaviors=False,
             human_behavior_settings=self.simulation_settings_module.HumanBehaviorSettings(),
             concurrency=1,
-            start_date="2024-01-01",
-            end_date="2024-12-31",
+            content_filter=date_filter,
         )
 
         # Test valid date within range
         valid_content = {"filedate": "2024-06-15", "url": "https://example.com/test"}
-        assert runtime._is_valid_content(valid_content)
+        assert runtime.content_filter(valid_content)
 
         # Test date before range
         invalid_content_early = {
             "filedate": "2023-12-31",
             "url": "https://example.com/test",
         }
-        assert not runtime._is_valid_content(invalid_content_early)
+        assert not runtime.content_filter(invalid_content_early)
 
         # Test date after range
         invalid_content_late = {
             "filedate": "2025-01-01",
             "url": "https://example.com/test",
         }
-        assert not runtime._is_valid_content(invalid_content_late)
+        assert not runtime.content_filter(invalid_content_late)
 
         # Test content without date
         no_date_content = {"url": "https://example.com/test"}
-        assert not runtime._is_valid_content(no_date_content)
+        assert not runtime.content_filter(no_date_content)
 
     @pytest.mark.asyncio
     async def test_pipeline_runtime_invalid_date_format(self):
-        """Test PipelineRuntime handles invalid date formats gracefully."""
-        runtime = self.pipeline_module.PipelineRuntime(
+        """Test CrawlerRuntime content_filter handles invalid date formats gracefully."""
+        import datetime
+
+        start_obj = datetime.datetime.strptime("2024-01-01", "%Y-%m-%d")
+        end_obj = datetime.datetime.strptime("2024-12-31", "%Y-%m-%d")
+
+        def date_filter(content):
+            date_str = content.get("filedate") or content.get("date")
+            if not date_str:
+                return False
+            try:
+                datetime.datetime.strptime(date_str, "%Y-%m-%d")
+            except (ValueError, TypeError):
+                return False
+            return True
+
+        runtime = self.pipeline_module.CrawlerRuntime(
             scheduler=AsyncMock(),
             pool=AsyncMock(),
             spider=MagicMock(),
@@ -278,8 +321,7 @@ class TestPipeline:
             enable_human_behaviors=False,
             human_behavior_settings=self.simulation_settings_module.HumanBehaviorSettings(),
             concurrency=1,
-            start_date="2024-01-01",
-            end_date="2024-12-31",
+            content_filter=date_filter,
         )
 
         # Test invalid date format
@@ -287,12 +329,12 @@ class TestPipeline:
             "filedate": "invalid-date",
             "url": "https://example.com/test",
         }
-        assert not runtime._is_valid_content(invalid_format_content)
+        assert not runtime.content_filter(invalid_format_content)
 
     @pytest.mark.asyncio
     async def test_pipeline_runtime_no_date_filtering(self):
-        """Test PipelineRuntime accepts all content when no date filters are set."""
-        runtime = self.pipeline_module.PipelineRuntime(
+        """Test CrawlerRuntime accepts all content when content_filter is None."""
+        runtime = self.pipeline_module.CrawlerRuntime(
             scheduler=AsyncMock(),
             pool=AsyncMock(),
             spider=MagicMock(),
@@ -303,23 +345,26 @@ class TestPipeline:
             enable_human_behaviors=False,
             human_behavior_settings=self.simulation_settings_module.HumanBehaviorSettings(),
             concurrency=1,
-            start_date=None,
-            end_date=None,
+            content_filter=None,
         )
 
-        # Should accept content without date when no filtering is applied
-        content_no_date = {"url": "https://example.com/test"}
-        assert runtime._is_valid_content(content_no_date)
+        # When content_filter is None, no filtering is applied
+        assert runtime.content_filter is None
 
-        # Should accept content with date when no filtering is applied
+        # Both items pass when there is no filter
+        content_no_date = {"url": "https://example.com/test"}
+        assert runtime.content_filter is None or runtime.content_filter(content_no_date)
+
         content_with_date = {
             "filedate": "2024-06-15",
             "url": "https://example.com/test",
         }
-        assert runtime._is_valid_content(content_with_date)
+        assert runtime.content_filter is None or runtime.content_filter(
+            content_with_date
+        )
 
     def test_pipeline_engine_docstring_exists(self):
-        """Test that Pipeline has proper documentation."""
-        assert self.onecrawler_module.Pipeline.__doc__ is not None
-        assert "proxy" in self.onecrawler_module.Pipeline.__doc__.lower()
-        assert "crawler" in self.onecrawler_module.Pipeline.__doc__.lower()
+        """Test that Crawler has proper documentation."""
+        assert self.onecrawler_module.Crawler.__doc__ is not None
+        assert "proxy" in self.onecrawler_module.Crawler.__doc__.lower()
+        assert "crawler" in self.onecrawler_module.Crawler.__doc__.lower()

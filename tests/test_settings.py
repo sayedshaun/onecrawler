@@ -7,8 +7,8 @@ browser_module, genai_module, crawler_module = load_settings_modules()
 
 class TestCrawlerSettings:
     def test_defaults_create_independent_browser_settings(self):
-        first = crawler_module.CrawlerSettings()
-        second = crawler_module.CrawlerSettings()
+        first = crawler_module.Settings()
+        second = crawler_module.Settings()
 
         first.browser_settings.launch.args.append("--first-only")
 
@@ -17,7 +17,7 @@ class TestCrawlerSettings:
 
     def test_genai_strategy_requires_genai_settings(self):
         with pytest.raises(ValueError, match="genai settings is required"):
-            crawler_module.CrawlerSettings(scraping_strategy="genai")
+            crawler_module.Settings(scraping_strategy="genai")
 
     def test_genai_strategy_requires_json_output(self):
         settings = genai_module.GenerativeAISettings(
@@ -27,7 +27,7 @@ class TestCrawlerSettings:
         )
 
         with pytest.raises(ValueError, match="only supports JSON"):
-            crawler_module.CrawlerSettings(
+            crawler_module.Settings(
                 scraping_strategy="genai",
                 scraping_output_format="markdown",
                 genai=settings,
@@ -40,7 +40,7 @@ class TestCrawlerSettings:
             api_key="test-key",
         )
 
-        settings = crawler_module.CrawlerSettings(
+        settings = crawler_module.Settings(
             scraping_strategy="genai", genai=genai_settings
         )
 
@@ -50,7 +50,7 @@ class TestCrawlerSettings:
     def test_single_proxy_is_attached_to_browser_settings(self):
         proxy = browser_module.ProxySettings(server="http://proxy.example:8080")
 
-        settings = crawler_module.CrawlerSettings(proxy=proxy)
+        settings = crawler_module.Settings(proxy=proxy)
 
         assert settings.browser_settings.proxy == proxy
 
@@ -58,7 +58,7 @@ class TestCrawlerSettings:
         first = browser_module.ProxySettings(server="http://proxy-1.example:8080")
         second = browser_module.ProxySettings(server="http://proxy-2.example:8080")
 
-        settings = crawler_module.CrawlerSettings(proxies=[first, second])
+        settings = crawler_module.Settings(proxies=[first, second])
         pool = settings.create_proxy_pool()
 
         assert pool.next() == first
@@ -69,4 +69,4 @@ class TestCrawlerSettings:
         proxy = browser_module.ProxySettings(server="http://proxy.example:8080")
 
         with pytest.raises(ValueError, match="either proxy or proxies"):
-            crawler_module.CrawlerSettings(proxy=proxy, proxies=[proxy])
+            crawler_module.Settings(proxy=proxy, proxies=[proxy])
