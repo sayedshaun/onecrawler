@@ -8,7 +8,16 @@ This package provides a high-level API for:
 - Building automated crawling pipelines (Crawler).
 """
 
-from .crawler import Crawler, LinkExtractor, RangeCrawler, ScheduleCrawler, Scraper
+from .crawler import (
+    Crawler,
+    LinkExtractionEngine,
+    LinkExtractor,
+    Pipeline,
+    RangeCrawler,
+    ScheduleCrawler,
+    Scraper,
+    ScraperEngine,
+)
 from .crawler.link.classifier import LinkClassifierPipeline
 from .crawler.map.sitemap import SiteMap, SitemapStats, UniversalSiteMap
 from .settings import *
