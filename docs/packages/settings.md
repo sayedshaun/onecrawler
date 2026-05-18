@@ -8,19 +8,19 @@ The `onecrawler.settings` package provides comprehensive configuration classes f
 
 !!! tip "Treat settings as the crawl contract"
     Put scope, limits, concurrency, retries, proxy behavior, and output format in
-    `CrawlerSettings`. Explicit settings make crawls easier to review, reproduce,
+    `Settings`. Explicit settings make crawls easier to review, reproduce,
     and schedule.
 
 ## Classes
 
-### CrawlerSettings
+### Settings
 
 Central configuration class that controls all crawler behavior.
 
 ```python
-from onecrawler import CrawlerSettings
+from onecrawler import Settings
 
-settings = CrawlerSettings(
+settings = Settings(
     link_extraction_limit=500,
     include_link_patterns=["/articles/*"],
     concurrency=10,
@@ -45,19 +45,19 @@ settings = CrawlerSettings(
 
 !!! warning "Do not run broad crawls without limits"
     `link_extraction_limit` and `include_link_patterns` are your main safety rails.
-    Set them before using deep browser discovery or `Pipeline`.
+    Set them before using deep browser discovery or `Crawler`.
 
 #### Sitemap Settings
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `follow_sitemap_index` | `bool` | `True` | Traverse sitemap indexes |
-| `sitemap_html_fallback` | `bool` | `True` | Crawl pages when no sitemaps found |
-| `max_crawl_depth` | `int` | `3` | Depth limit for HTML fallback |
-| `max_crawl_pages` | `int` | `500` | Page limit for HTML fallback |
-| `sitemap_user_agent` | `str` | Custom | User agent for sitemap requests |
-| `sitemap_respect_robots` | `bool` | `True` | Follow robots.txt rules |
-| `sitemap_deduplicate` | `bool` | `True` | Remove duplicate URLs |
+| `sitemap.follow_index` | `bool` | `True` | Traverse sitemap indexes |
+| `sitemap.html_fallback` | `bool` | `True` | Crawl pages when no sitemaps found |
+| `sitemap.max_depth` | `int` | `3` | Depth limit for HTML fallback |
+| `sitemap.max_pages` | `int` | `500` | Page limit for HTML fallback |
+| `sitemap.user_agent` | `str` | Custom | User agent for sitemap requests |
+| `sitemap.respect_robots` | `bool` | `True` | Follow robots.txt rules |
+| `sitemap.deduplicate` | `bool` | `True` | Remove duplicate URLs |
 
 #### Browser Settings
 
@@ -74,8 +74,8 @@ settings = CrawlerSettings(
 | `proxy_rotation_method` | `str` | `"round_robin"` | Proxy rotation strategy |
 
 !!! note "Use top-level proxy settings"
-    Prefer `proxy` or `proxies` on `CrawlerSettings` so sitemap, browser, and
-    pipeline workflows share the same network configuration.
+    Prefer `proxy` or `proxies` on `Settings` so sitemap, browser, and
+    Crawler workflows share the same network configuration.
 
 #### GenAI Settings
 
@@ -200,9 +200,9 @@ human_settings = HumanBehaviorSettings(
 ### Basic Configuration
 
 ```python
-from onecrawler import CrawlerSettings
+from onecrawler import Settings
 
-settings = CrawlerSettings(
+settings = Settings(
     link_extraction_limit=100,
     include_link_patterns=["/news/*"],
     concurrency=5,
@@ -214,14 +214,14 @@ settings = CrawlerSettings(
 
 ```python
 from pydantic import BaseModel
-from onecrawler import CrawlerSettings, GenerativeAISettings
+from onecrawler import Settings, GenerativeAISettings
 
 class Article(BaseModel):
     title: str
     author: str
     content: str
 
-settings = CrawlerSettings(
+settings = Settings(
     scraping_strategy="genai",
     genai=GenerativeAISettings(
         provider="openai",
@@ -235,9 +235,9 @@ settings = CrawlerSettings(
 ### Proxy Configuration
 
 ```python
-from onecrawler import CrawlerSettings, ProxySettings
+from onecrawler import Settings, ProxySettings
 
-settings = CrawlerSettings(
+settings = Settings(
     proxies=[
         ProxySettings(server="http://proxy1.example:8080"),
         ProxySettings(server="http://proxy2.example:8080")
@@ -249,9 +249,9 @@ settings = CrawlerSettings(
 ### Browser Configuration
 
 ```python
-from onecrawler import CrawlerSettings, BrowserSettings, ContextSettings
+from onecrawler import Settings, BrowserSettings, ContextSettings
 
-settings = CrawlerSettings(
+settings = Settings(
     browser_settings=BrowserSettings(
         context=ContextSettings(
             viewport={"width": 1920, "height": 1080},
@@ -264,12 +264,12 @@ settings = CrawlerSettings(
 
 ## Configuration Validation
 
-`CrawlerSettings` includes automatic validation:
+`Settings` includes automatic validation:
 
 ```python
 # This will raise an error
 try:
-    settings = CrawlerSettings(
+    settings = Settings(
         scraping_strategy="genai",
         scraping_output_format="markdown"  # GenAI only supports JSON
     )
@@ -285,7 +285,7 @@ except ValueError as e:
 4. **Output formats**: GenAI extraction limited to JSON format
 
 !!! tip "Let validation fail early"
-    Build `CrawlerSettings` near application startup. Invalid proxy combinations or
+    Build `Settings` near application startup. Invalid proxy combinations or
     GenAI output formats will fail before a long crawl begins.
 
 ## Environment Variables
@@ -300,9 +300,9 @@ export OPENAI_API_KEY=your-api-key
 
 ```python
 import os
-from onecrawler import CrawlerSettings, GenerativeAISettings
+from onecrawler import Settings, GenerativeAISettings
 
-settings = CrawlerSettings(
+settings = Settings(
     concurrency=int(os.getenv("CRAWLER_CONCURRENCY", 10)),
     request_timeout=int(os.getenv("CRAWLER_REQUEST_TIMEOUT", 10)),
     genai=GenerativeAISettings(
@@ -319,7 +319,7 @@ Settings can be loaded from configuration files:
 
 ```python
 import yaml
-from onecrawler import CrawlerSettings
+from onecrawler import Settings
 
 # config.yaml
 # link_extraction_limit: 500
@@ -329,7 +329,7 @@ from onecrawler import CrawlerSettings
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
-settings = CrawlerSettings(**config)
+settings = Settings(**config)
 ```
 
 ## Best Practices

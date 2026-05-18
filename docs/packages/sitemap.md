@@ -9,7 +9,7 @@ collection.
 
 !!! tip "Prefer sitemap discovery first"
     Sitemaps are usually faster, cheaper, and more stable than browser crawling.
-    Start here before reaching for `LinkExtractionEngine`.
+    Start here before reaching for `LinkExtractor`.
 
 ## Classes
 
@@ -18,7 +18,7 @@ collection.
 High-level sitemap resolver that automatically discovers sitemaps through multiple methods.
 
 ```python
-from onecrawler import CrawlerSettings, UniversalSiteMap
+from onecrawler import Settings, UniversalSiteMap
 
 sitemap = UniversalSiteMap(settings)
 urls = await sitemap.run("https://example.com")
@@ -41,7 +41,7 @@ urls = await sitemap.run("https://example.com")
 Lower-level sitemap parser for direct sitemap URL processing.
 
 ```python
-from onecrawler import CrawlerSettings, SiteMap
+from onecrawler import Settings, SiteMap
 
 sitemap = SiteMap(settings)
 urls = await sitemap.run("https://example.com/sitemap.xml")
@@ -77,10 +77,10 @@ print(f"Discovered {stats.url_count} URLs")
 
 ```python
 import asyncio
-from onecrawler import CrawlerSettings, UniversalSiteMap
+from onecrawler import Settings, UniversalSiteMap
 
 async def discover_urls():
-    settings = CrawlerSettings(
+    settings = Settings(
         link_extraction_limit=1000,
         include_link_patterns=["/articles/*"]
     )
@@ -97,33 +97,35 @@ if __name__ == "__main__":
 ### Advanced Configuration
 
 ```python
-from onecrawler import CrawlerSettings, UniversalSiteMap
+from onecrawler import Settings, UniversalSiteMap, SitemapSettings
 
-settings = CrawlerSettings(
-    follow_sitemap_index=True,
-    sitemap_html_fallback=True,
-    max_crawl_depth=3,
-    max_crawl_pages=500,
-    sitemap_user_agent="MyCrawler/1.0",
-    sitemap_respect_robots=True,
-    sitemap_deduplicate=True
+settings = Settings(
+    sitemap=SitemapSettings(
+        follow_index=True,
+        html_fallback=True,
+        max_depth=3,
+        max_pages=500,
+        user_agent="MyCrawler/1.0",
+        respect_robots=True,
+        deduplicate=True
+    )
 )
 
 sitemap = UniversalSiteMap(settings)
 ```
 
 !!! warning "HTML fallback can broaden scope"
-    `sitemap_html_fallback=True` is useful during exploration, but it can crawl
+    `sitemap.html_fallback=True` is useful during exploration, but it can crawl
     same-origin pages when XML sitemaps are missing. Pair it with
     `link_extraction_limit` and `include_link_patterns`.
 
 ### Direct Sitemap Parsing
 
 ```python
-from onecrawler import CrawlerSettings, SiteMap
+from onecrawler import Settings, SiteMap
 
 async def parse_specific_sitemap():
-    settings = CrawlerSettings()
+    settings = Settings()
     sitemap = SiteMap(settings)
     
     urls = await sitemap.run("https://example.com/sitemap.xml")
@@ -132,17 +134,17 @@ async def parse_specific_sitemap():
 
 ## Configuration
 
-Sitemap behavior is controlled through `CrawlerSettings`:
+Sitemap behavior is controlled through `Settings`:
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `follow_sitemap_index` | Traverse sitemap indexes | `True` |
-| `sitemap_html_fallback` | Crawl pages when no sitemaps | `True` |
-| `max_crawl_depth` | Depth limit for HTML fallback | `3` |
-| `max_crawl_pages` | Page limit for HTML fallback | `500` |
-| `sitemap_user_agent` | User agent for sitemap requests | Custom |
-| `sitemap_respect_robots` | Follow robots.txt rules | `True` |
-| `sitemap_deduplicate` | Remove duplicate URLs | `True` |
+| `sitemap.follow_index` | Traverse sitemap indexes | `True` |
+| `sitemap.html_fallback` | Crawl pages when no sitemaps | `True` |
+| `sitemap.max_depth` | Depth limit for HTML fallback | `3` |
+| `sitemap.max_pages` | Page limit for HTML fallback | `500` |
+| `sitemap.user_agent` | User agent for sitemap requests | Custom |
+| `sitemap.respect_robots` | Follow robots.txt rules | `True` |
+| `sitemap.deduplicate` | Remove duplicate URLs | `True` |
 
 ## Discovery Process
 
@@ -159,7 +161,7 @@ UniversalSiteMap follows this discovery order:
 
 !!! tip "Disable fallback for strict sitemap jobs"
     If a scheduled job should only trust XML sitemap sources, set
-    `sitemap_html_fallback=False` after you confirm the sitemap URLs you need.
+    `sitemap.html_fallback=False` after you confirm the sitemap URLs you need.
 
 ## Sitemap Formats Supported
 

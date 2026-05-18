@@ -15,7 +15,7 @@ pip install onecrawler
 ## Browser Support
 
 OneCrawler uses Playwright for browser-backed link extraction and browser-backed
-scraping. Install browser binaries if you plan to use `LinkExtractionEngine` or any
+scraping. Install browser binaries if you plan to use `LinkExtractor` or any
 workflow that needs rendered pages.
 
 ```bash

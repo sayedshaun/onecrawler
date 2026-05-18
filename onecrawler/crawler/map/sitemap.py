@@ -14,7 +14,7 @@ from curl_cffi.requests import AsyncSession
 from lxml import etree
 
 from ...proxy.pool import ProxyPool
-from ...settings.crawler import CrawlerSettings
+from ...settings.crawler import Settings
 from ..link.helper import wildcard_link_match
 from .helper import (
     COMMON_SITEMAP_PATHS,
@@ -73,11 +73,11 @@ class SiteMap:
         base_prefix (str): Domain prefix for origin checks.
     """
 
-    def __init__(self, settings: CrawlerSettings):
+    def __init__(self, settings: Settings):
         """Initializes SiteMap.
 
         Args:
-            settings (CrawlerSettings): The configuration object.
+            settings (Settings): The configuration object.
         """
         self.semaphore = asyncio.Semaphore(settings.concurrency)
         self.visited_sitemaps: Set[str] = set()
@@ -598,10 +598,10 @@ class UniversalSiteMap:
     and HTML crawling to find all relevant URLs on a site.
 
     Attributes:
-        settings (CrawlerSettings): Configuration settings.
+        settings (Settings): Configuration settings.
     """
 
-    def __init__(self, settings: CrawlerSettings):
+    def __init__(self, settings: Settings):
         """Initializes UniversalSiteMap."""
         self.settings = settings
 
@@ -644,7 +644,7 @@ class UniversalSiteMap:
         async with HTTPClient(
             self.settings.concurrency,
             self.settings.request_timeout,
-            self.settings.sitemap_user_agent,
+            self.settings.sitemap.user_agent,
             self.settings.max_retries,
             self.settings.retry_delay,
             self.settings.create_proxy_pool(),
@@ -680,13 +680,13 @@ class UniversalSiteMap:
                 all_records.extend(records)
 
             # STRATEGY 4: HTML crawl fallback
-            if not all_records and self.settings.sitemap_html_fallback:
+            if not all_records and self.settings.sitemap.html_fallback:
                 strategies_used.append("html_crawl")
                 crawler = HTMLCrawler(
                     client,
                     self.settings.concurrency,
-                    self.settings.max_crawl_pages,
-                    self.settings.max_crawl_depth,
+                    self.settings.sitemap.max_pages,
+                    self.settings.sitemap.max_depth,
                 )
                 crawl_records = await crawler.crawl(base_url)
                 all_records.extend(crawl_records)
@@ -727,7 +727,7 @@ class UniversalSiteMap:
             ]
 
         # Deduplication
-        if self.settings.sitemap_deduplicate:
+        if self.settings.sitemap.deduplicate:
             seen: set[str] = set()
             deduped: list[URLRecord] = []
             for rec in all_records:

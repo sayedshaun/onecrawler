@@ -14,20 +14,20 @@ both heuristic and AI-powered approaches.
 
 ## Classes
 
-### ScraperEngine
+### Scraper
 
 Main scraping engine that supports both heuristic and GenAI content extraction strategies.
 
 ```python
-from onecrawler import CrawlerSettings, ScraperEngine
+from onecrawler import Settings, Scraper
 
-async with ScraperEngine(settings) as scraper:
+async with Scraper(settings) as scraper:
     data = await scraper.run("https://example.com/article")
 ```
 
 #### Parameters
 
-- `settings` (`CrawlerSettings`): Configuration for scraping behavior
+- `settings` (`Settings`): Configuration for scraping behavior
 
 #### Methods
 
@@ -40,7 +40,7 @@ async with ScraperEngine(settings) as scraper:
 - **GenAI**: AI-powered extraction with structured output
 
 !!! note "Single URL vs list behavior"
-    `ScraperEngine.run()` returns one item for a single URL and a list for multiple
+    `Scraper.run()` returns one item for a single URL and a list for multiple
     URLs. Failed extractions are omitted from list results.
 
 ### HeuristicStrategy
@@ -85,17 +85,17 @@ content = await strategy.extract(url)
 
 ```python
 import asyncio
-from onecrawler import CrawlerSettings, ScraperEngine
+from onecrawler import Settings, Scraper
 
 async def scrape_heuristic():
-    settings = CrawlerSettings(
+    settings = Settings(
         scraping_strategy="heuristic",
         scraping_output_format="json",
         concurrency=10,
         request_timeout=15
     )
     
-    async with ScraperEngine(settings) as scraper:
+    async with Scraper(settings) as scraper:
         data = await scraper.run("https://example.com/article")
     
     return data
@@ -109,7 +109,7 @@ if __name__ == "__main__":
 ```python
 import asyncio
 from pydantic import BaseModel
-from onecrawler import CrawlerSettings, GenerativeAISettings, ScraperEngine
+from onecrawler import Settings, GenerativeAISettings, Scraper
 
 class Article(BaseModel):
     title: str
@@ -118,7 +118,7 @@ class Article(BaseModel):
     published_date: str
 
 async def scrape_with_ai():
-    settings = CrawlerSettings(
+    settings = Settings(
         scraping_strategy="genai",
         scraping_output_format="json",
         genai=GenerativeAISettings(
@@ -131,7 +131,7 @@ async def scrape_with_ai():
         request_timeout=30
     )
     
-    async with ScraperEngine(settings) as scraper:
+    async with Scraper(settings) as scraper:
         data = await scraper.run("https://example.com/article")
     
     return data
@@ -154,13 +154,13 @@ async def scrape_multiple():
         "https://example.com/article3"
     ]
     
-    settings = CrawlerSettings(
+    settings = Settings(
         scraping_strategy="heuristic",
         concurrency=5,
         max_retries=3
     )
     
-    async with ScraperEngine(settings) as scraper:
+    async with Scraper(settings) as scraper:
         results = await scraper.run(urls)
     
     return results
@@ -172,7 +172,7 @@ async def scrape_multiple():
 
 ## Configuration
 
-Scraping behavior is controlled through `CrawlerSettings`:
+Scraping behavior is controlled through `Settings`:
 
 | Setting | Description | Default |
 |---------|-------------|---------|
@@ -262,12 +262,12 @@ The scraper handles various error conditions:
 
 ```python
 import json
-from onecrawler import CrawlerSettings, ScraperEngine
+from onecrawler import Settings, Scraper
 
 async def scrape_and_save():
-    settings = CrawlerSettings(scraping_strategy="heuristic")
+    settings = Settings(scraping_strategy="heuristic")
     
-    async with ScraperEngine(settings) as scraper:
+    async with Scraper(settings) as scraper:
         data = await scraper.run("https://example.com/article")
     
     with open("output.json", "w") as f:
@@ -278,12 +278,12 @@ async def scrape_and_save():
 
 ```python
 import asyncio
-from onecrawler import CrawlerSettings, ScraperEngine
+from onecrawler import Settings, Scraper
 
 async def scrape_to_database():
-    settings = CrawlerSettings(scraping_strategy="heuristic")
+    settings = Settings(scraping_strategy="heuristic")
     
-    async with ScraperEngine(settings) as scraper:
+    async with Scraper(settings) as scraper:
         urls = ["https://example.com/page1", "https://example.com/page2"]
         results = await scraper.run(urls)
     
@@ -307,7 +307,7 @@ async def scrape_to_database():
 Enable detailed logging for troubleshooting:
 
 ```python
-settings = CrawlerSettings(
+settings = Settings(
     enable_logging=True,
     logging_level="DEBUG"
 )

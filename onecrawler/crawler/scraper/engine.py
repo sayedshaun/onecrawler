@@ -1,40 +1,36 @@
 import asyncio
+import warnings
 from typing import Any, List, Optional, Union
 
 from ...browser import GoogleChrome
-from ...settings.crawler import CrawlerSettings
+from ...settings.crawler import Settings
 from ..base import BaseEngine
 from .genai.executor import GenAIStrategy
 from .heuristic.script import HeuristicStrategy
 
 
-class ScraperEngine(BaseEngine):
+class Scraper(BaseEngine):
     """Engine for scraping and extracting data from URLs. Supports both Heuristic and GenAI strategies.
 
     Attributes:
-        settings (CrawlerSettings): Configuration settings for the engine.
+        settings (Settings): Configuration settings for the engine.
 
     Example:
         ```python
-        from onecrawler import CrawlerSettings, ScraperEngine
+        from onecrawler import Settings, Scraper
 
-        async with ScraperEngine(settings) as engine:
+        async with Scraper(settings) as engine:
             result = await engine.run("https://example.com")
             print(result)
 
         # Stream
-        async with ScraperEngine(settings) as engine:
+        async with Scraper(settings) as engine:
             async for result in engine.stream("https://example.com"):
                 print(result)
         ```
     """
 
-    def __init__(self, settings: CrawlerSettings):
-        """Initializes the ScraperEngine.
-
-        Args:
-            settings (CrawlerSettings): The configuration object.
-        """
+    def __init__(self, settings: Settings):
         super().__init__()
 
         self.settings = settings
@@ -45,7 +41,7 @@ class ScraperEngine(BaseEngine):
         self.retries = settings.max_retries
         self.timeout = settings.request_timeout
 
-        self.logger.info("ScraperEngine initialized")
+        self.logger.info("Scraper initialized")
 
     async def start(self):
         """Starts the engine and initializes browser and strategy."""
@@ -127,3 +123,15 @@ class ScraperEngine(BaseEngine):
         self.logger.info(f"Scraping completed: {len(cleaned)}/{len(links)} success")
 
         return cleaned if isinstance(link, list) else (cleaned[0] if cleaned else None)
+
+
+class ScraperEngine(Scraper):
+    """Deprecated. Use ``Scraper`` instead."""
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "ScraperEngine is deprecated. Use Scraper instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)

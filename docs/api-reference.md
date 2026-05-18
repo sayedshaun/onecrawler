@@ -16,20 +16,20 @@ explain when and why to use them; this page is for quick lookup.
 from onecrawler import (
     BrowserSettings,
     ContextSettings,
-    CrawlerSettings,
+    Settings,
     GenerativeAISettings,
     HumanBehaviorSettings,
-    LinkExtractionEngine,
-    Pipeline,
+    LinkExtractor,
+    Crawler,
     ProxySettings,
-    ScraperEngine,
+    Scraper,
     SiteMap,
     SitemapStats,
     UniversalSiteMap,
 )
 ```
 
-## CrawlerSettings
+## Settings
 
 Central settings for sitemap discovery, link extraction, and scraping.
 
@@ -52,7 +52,7 @@ Important fields:
 | `genai` | GenAI provider, model, key, and optional schema |
 
 ```python
-settings = CrawlerSettings(
+settings = Settings(
     link_extraction_limit=200,
     include_link_patterns=["/news/*"],
     concurrency=8,
@@ -92,12 +92,12 @@ urls = await sitemap.run("https://example.com/sitemap.xml")
 Statistics object used by sitemap parsing. It tracks discovered URL count, parsed
 sitemap count, error count, elapsed time, and URL rate.
 
-## LinkExtractionEngine
+## LinkExtractor
 
 Async browser engine for extracting links from a starting URL.
 
 ```python
-async with LinkExtractionEngine(settings) as engine:
+async with LinkExtractor(settings) as engine:
     links = await engine.run("https://example.com/docs")
 ```
 
@@ -108,15 +108,15 @@ context manager.
     Use `link_extraction_limit` and `include_link_patterns` with browser crawling,
     especially when `link_extraction_strategy="deep"`.
 
-## ScraperEngine
+## Scraper
 
 Async scraping engine for one URL or a list of URLs.
 
 ```python
-async with ScraperEngine(settings) as scraper:
+async with Scraper(settings) as scraper:
     item = await scraper.run("https://example.com/story")
 
-async with ScraperEngine(settings) as scraper:
+async with Scraper(settings) as scraper:
     items = await scraper.run([
         "https://example.com/story-1",
         "https://example.com/story-2",
@@ -184,7 +184,7 @@ Top-level browser settings. It contains launch, context, runtime, and proxy
 settings.
 
 ```python
-settings = CrawlerSettings(
+settings = Settings(
     browser_settings=BrowserSettings(
         context=ContextSettings(viewport={"width": 1366, "height": 768})
     )
@@ -199,7 +199,7 @@ storage state, HTTPS behavior, and Playwright runtime timeouts.
 Proxy settings for browser and sitemap workflows.
 
 ```python
-settings = CrawlerSettings(
+settings = Settings(
     proxies=[
         ProxySettings(server="http://proxy-1.example:8080"),
         ProxySettings(
@@ -220,7 +220,7 @@ pool. Supported rotation strategies are `round_robin` and `random`.
 Delay, scroll, and mouse movement settings for optional browser behavior simulation.
 
 ```python
-settings = CrawlerSettings(
+settings = Settings(
     enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(max_scrolls=20),
 )
@@ -233,30 +233,30 @@ reduces throughput.
     Human behavior simulation is helpful for lazy-loaded pages, but it should not be
     a default for every crawl.
 
-## Pipeline
+## Crawler
 
-A comprehensive web crawling pipeline that orchestrates browser automation,
+A comprehensive web crawling Crawler that orchestrates browser automation,
 link extraction, and content scraping in a single unified workflow.
 
 !!! warning "Proxy configuration is required for production"
-    `Pipeline` performs browser discovery and content extraction together. Use
+    `Crawler` performs browser discovery and content extraction together. Use
     explicit proxy settings and conservative concurrency for production runs.
 
 ```python
 # Basic usage
-settings = CrawlerSettings(
+settings = Settings(
     link_extraction_limit=100,
     concurrency=5,
     proxies=[ProxySettings(server="http://proxy.example.com:8080")]
 )
 
-async with Pipeline(settings) as engine:
+async with Crawler(settings) as engine:
     results = await engine.run("https://example.com")
 ```
 
 ```python
 # With date filtering
-async with Pipeline(settings, start_date="2024-01-01", end_date="2024-12-31") as engine:
+async with Crawler(settings, start_date="2024-01-01", end_date="2024-12-31") as engine:
     results = await engine.run("https://example.com")
 ```
 
@@ -274,7 +274,7 @@ Returns a list of content dictionaries with extracted data from discovered pages
 
 | Parameter | Type | Required | Default | Purpose |
 | --- | --- | --- | --- | --- |
-| `settings` | `CrawlerSettings` | Yes | - | Configuration for all crawling components |
+| `settings` | `Settings` | Yes | - | Configuration for all crawling components |
 | `start_date` | `str` | No | `None` | Filter content from this date (YYYY-MM-DD) |
 | `end_date` | `str` | No | `None` | Filter content until this date (YYYY-MM-DD) |
 
@@ -283,7 +283,7 @@ Returns a list of content dictionaries with extracted data from discovered pages
 **Required for production use:**
 
 ```python
-settings = CrawlerSettings(
+settings = Settings(
     proxies=[
         ProxySettings(server="http://proxy1.example.com:8080"),
         ProxySettings(server="http://proxy2.example.com:8080"),
@@ -302,13 +302,13 @@ Without proper proxy configuration, your crawler may be blocked by target websit
 
 **Simple crawling:**
 ```python
-async with Pipeline(settings) as engine:
+async with Crawler(settings) as engine:
     content = await engine.run("https://example.com")
 ```
 
 **With date filtering:**
 ```python
-async with Pipeline(settings, 
+async with Crawler(settings, 
                          start_date="2024-01-01", 
                          end_date="2024-06-30") as engine:
     content = await engine.run("https://example.com/news")
@@ -316,7 +316,7 @@ async with Pipeline(settings,
 
 **Manual lifecycle:**
 ```python
-engine = Pipeline(settings)
+engine = Crawler(settings)
 await engine.start()
 try:
     content = await engine.run("https://example.com")
@@ -326,6 +326,6 @@ finally:
 
 ## LinkClassifierPipeline
 
-Publicly exported link classifier pipeline used by shallow extraction when
+Publicly exported link classifier Crawler used by shallow extraction when
 `link_classification=True`. Most users should start with `include_link_patterns`
 because path filters are explicit, easy to debug, and deterministic.

@@ -13,7 +13,7 @@ class HeuristicStrategy:
     extraction.
 
     Attributes:
-        settings (CrawlerSettings): Configuration settings.
+        settings (Settings): Configuration settings.
         browser (Optional[GoogleChrome]): Browser instance for rendering.
     """
 
@@ -21,7 +21,7 @@ class HeuristicStrategy:
         """Initializes HeuristicStrategy.
 
         Args:
-            settings (CrawlerSettings): The configuration object.
+            settings (Settings): The configuration object.
             browser (Optional[GoogleChrome]): The browser instance to use.
         """
         self.settings = settings

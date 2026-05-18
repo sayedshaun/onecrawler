@@ -14,20 +14,20 @@ pages using browser automation.
 
 ## Classes
 
-### LinkExtractionEngine
+### LinkExtractor
 
 The main engine for extracting links from web pages using Playwright browser automation.
 
 ```python
-from onecrawler import CrawlerSettings, LinkExtractionEngine
+from onecrawler import Settings, LinkExtractor
 
-async with LinkExtractionEngine(settings) as engine:
+async with LinkExtractor(settings) as engine:
     links = await engine.run("https://example.com")
 ```
 
 #### Parameters
 
-- `settings` (`CrawlerSettings`): Configuration for link extraction behavior
+- `settings` (`Settings`): Configuration for link extraction behavior
 
 #### Methods
 
@@ -46,7 +46,7 @@ async with LinkExtractionEngine(settings) as engine:
 
 ### LinkClassifierPipeline
 
-Pipeline for classifying and filtering extracted links based on various criteria.
+Crawler for classifying and filtering extracted links based on various criteria.
 
 ```python
 from onecrawler.crawler.link.classifier import LinkClassifierPipeline
@@ -68,16 +68,16 @@ filtered_links = classifier.classify(links)
 
 ```python
 import asyncio
-from onecrawler import CrawlerSettings, LinkExtractionEngine
+from onecrawler import Settings, LinkExtractor
 
 async def extract_shallow():
-    settings = CrawlerSettings(
+    settings = Settings(
         link_extraction_strategy="shallow",
         link_extraction_limit=50,
         include_link_patterns=["/articles/*"]
     )
     
-    async with LinkExtractionEngine(settings) as engine:
+    async with LinkExtractor(settings) as engine:
         links = await engine.run("https://example.com/latest")
     
     return links
@@ -90,17 +90,17 @@ if __name__ == "__main__":
 
 ```python
 import asyncio
-from onecrawler import CrawlerSettings, LinkExtractionEngine
+from onecrawler import Settings, LinkExtractor
 
 async def extract_deep():
-    settings = CrawlerSettings(
+    settings = Settings(
         link_extraction_strategy="deep",
         link_extraction_limit=300,
         include_link_patterns=["/docs/*"],
         concurrency=5
     )
     
-    async with LinkExtractionEngine(settings) as engine:
+    async with LinkExtractor(settings) as engine:
         links = await engine.run("https://example.com/docs")
     
     return links
@@ -117,9 +117,9 @@ if __name__ == "__main__":
 ### With Human Behavior Simulation
 
 ```python
-from onecrawler import CrawlerSettings, LinkExtractionEngine, HumanBehaviorSettings
+from onecrawler import Settings, LinkExtractor, HumanBehaviorSettings
 
-settings = CrawlerSettings(
+settings = Settings(
     link_extraction_strategy="deep",
     enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(
@@ -136,7 +136,7 @@ settings = CrawlerSettings(
 
 ## Configuration
 
-The link extraction behavior is controlled through `CrawlerSettings`:
+The link extraction behavior is controlled through `Settings`:
 
 | Setting | Description | Default |
 |---------|-------------|---------|

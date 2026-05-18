@@ -1,7 +1,9 @@
 import asyncio
 import logging
 from collections import deque
-from typing import AsyncGenerator, List, Optional, Set, Tuple
+from typing import AsyncGenerator, List, Optional, Set
+
+from playwright.async_api import Page
 
 from ...settings.simulation import HumanBehaviorSettings
 from .helper import human_delay, human_mouse_move, human_scroll, wildcard_link_match
@@ -30,14 +32,14 @@ class BFScheduler:
             base_url (str): The starting URL for the crawl.
             max_queue_size (int): Maximum number of URLs to keep in the queue.
         """
-        self.queue = deque([base_url])
-        self.priority = deque()
+        self.queue: deque[str] = deque([base_url])
+        self.priority: deque[str] = deque()
 
-        self.visited = set()
-        self.in_queue = {base_url}
+        self.visited: Set[str] = set()
+        self.in_queue: Set[str] = {base_url}
 
-        self.max_queue_size = max_queue_size
-        self.lock = asyncio.Lock()
+        self.max_queue_size: int = max_queue_size
+        self.lock: asyncio.Lock = asyncio.Lock()
 
     async def has_next(self) -> bool:
         """Checks if there are any URLs left to process.
@@ -129,7 +131,7 @@ class BrowserPool:
         """
         return await self.pages.get()
 
-    async def release(self, page):
+    async def release(self, page: Page) -> None:
         """Releases a page back into the pool.
 
         Args:
@@ -192,6 +194,7 @@ class BFSRuntime:
         base_prefix (str): The domain prefix for the crawl.
         max_links (int): Maximum number of links to discover.
         include_pattern (Optional[list]): List of patterns for link inclusion.
+        exclude_pattern (Optional[list]): List of patterns for link exclusion.
         enable_human_behaviors (bool): Whether to simulate human browsing.
         human_behavior_settings (HumanBehaviorSettings): Configuration for simulation.
         concurrency (int): Number of concurrent worker tasks.
@@ -206,25 +209,12 @@ class BFSRuntime:
         base_prefix: str,
         max_links: int,
         human_behavior_settings: HumanBehaviorSettings,
-        include_pattern: Optional[list] = None,
+        include_pattern: Optional[List[str]] = None,
+        exclude_pattern: Optional[List[str]] = None,
         enable_human_behaviors: bool = False,
         concurrency: int = 5,
         streaming: bool = False,
     ):
-        """Initializes the BFSRuntime.
-
-        Args:
-            scheduler: The URL scheduler.
-            pool: The browser page pool.
-            spider: The link discovery spider.
-            base_prefix: Domain prefix for the crawl.
-            max_links: Limit for the number of results.
-            human_behavior_settings: Settings for human simulation.
-            include_pattern: Wildcard patterns for link inclusion.
-            enable_human_behaviors: Enable delay/scroll/mouse simulation.
-            concurrency: Number of concurrent workers.
-            streaming: Enable streaming mode.
-        """
         self.scheduler = scheduler
         self.pool = pool
         self.spider = spider
@@ -232,21 +222,22 @@ class BFSRuntime:
         self.base_prefix = base_prefix
         self.max_links = max_links
         self.include_pattern = include_pattern
+        self.exclude_pattern = exclude_pattern
         self.enable_human_behaviors = enable_human_behaviors
         self.human_behavior_settings = human_behavior_settings
         self.concurrency = concurrency
 
-        self.stop_event = asyncio.Event()
+        self.stop_event: asyncio.Event = asyncio.Event()
 
-        self.results = []
-        self.results_set = set()
-        self.lock = asyncio.Lock()
+        self.results: List[str] = []
+        self.results_set: Set[str] = set()
+        self.lock: asyncio.Lock = asyncio.Lock()
 
         # Track how many workers are actively processing a URL
-        self._active_workers = 0
-        self._active_lock = asyncio.Lock()
-        self.stream_queue = asyncio.Queue(maxsize=1000)
-        self.streaming = streaming
+        self._active_workers: int = 0
+        self._active_lock: asyncio.Lock = asyncio.Lock()
+        self.stream_queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1000)
+        self.streaming: bool = streaming
 
     async def worker(self):
         """A worker task that processes URLs and discovers new links.
@@ -324,6 +315,14 @@ class BFSRuntime:
                             link,
                             self.base_prefix,
                             self.include_pattern,
+                        ):
+                            continue
+
+                    if self.exclude_pattern:
+                        if wildcard_link_match(
+                            link,
+                            self.base_prefix,
+                            self.exclude_pattern,
                         ):
                             continue
 
