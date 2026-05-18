@@ -9,7 +9,7 @@ collection.
 
 !!! tip "Prefer sitemap discovery first"
     Sitemaps are usually faster, cheaper, and more stable than browser crawling.
-    Start here before reaching for `LinkExtractionEngine`.
+    Start here before reaching for `LinkExtractor`.
 
 ## Classes
 
@@ -18,7 +18,7 @@ collection.
 High-level sitemap resolver that automatically discovers sitemaps through multiple methods.
 
 ```python
-from onecrawler import CrawlerSettings, UniversalSiteMap
+from onecrawler import Settings, UniversalSiteMap
 
 sitemap = UniversalSiteMap(settings)
 urls = await sitemap.run("https://example.com")
@@ -41,7 +41,7 @@ urls = await sitemap.run("https://example.com")
 Lower-level sitemap parser for direct sitemap URL processing.
 
 ```python
-from onecrawler import CrawlerSettings, SiteMap
+from onecrawler import Settings, SiteMap
 
 sitemap = SiteMap(settings)
 urls = await sitemap.run("https://example.com/sitemap.xml")
@@ -77,10 +77,10 @@ print(f"Discovered {stats.url_count} URLs")
 
 ```python
 import asyncio
-from onecrawler import CrawlerSettings, UniversalSiteMap
+from onecrawler import Settings, UniversalSiteMap
 
 async def discover_urls():
-    settings = CrawlerSettings(
+    settings = Settings(
         link_extraction_limit=1000,
         include_link_patterns=["/articles/*"]
     )
@@ -97,9 +97,9 @@ if __name__ == "__main__":
 ### Advanced Configuration
 
 ```python
-from onecrawler import CrawlerSettings, UniversalSiteMap
+from onecrawler import Settings, UniversalSiteMap
 
-settings = CrawlerSettings(
+settings = Settings(
     follow_sitemap_index=True,
     sitemap_html_fallback=True,
     max_crawl_depth=3,
@@ -120,10 +120,10 @@ sitemap = UniversalSiteMap(settings)
 ### Direct Sitemap Parsing
 
 ```python
-from onecrawler import CrawlerSettings, SiteMap
+from onecrawler import Settings, SiteMap
 
 async def parse_specific_sitemap():
-    settings = CrawlerSettings()
+    settings = Settings()
     sitemap = SiteMap(settings)
     
     urls = await sitemap.run("https://example.com/sitemap.xml")
@@ -132,7 +132,7 @@ async def parse_specific_sitemap():
 
 ## Configuration
 
-Sitemap behavior is controlled through `CrawlerSettings`:
+Sitemap behavior is controlled through `Settings`:
 
 | Setting | Description | Default |
 |---------|-------------|---------|

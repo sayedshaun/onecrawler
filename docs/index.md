@@ -58,11 +58,11 @@ browser pages just to discover links.
 ```python
 import asyncio
 
-from onecrawler import CrawlerSettings, UniversalSiteMap
+from onecrawler import Settings, UniversalSiteMap
 
 
 async def main():
-    settings = CrawlerSettings(
+    settings = Settings(
         link_extraction_limit=500,
         include_link_patterns=["/news/*"],
         concurrency=10,
@@ -77,12 +77,12 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-If the site has no useful sitemap, use `LinkExtractionEngine`:
+If the site has no useful sitemap, use `LinkExtractor`:
 
 - `shallow` for links present on one page
 - `deep` for recursive same-site traversal
 
-Then pass the final URL list to `ScraperEngine`.
+Then pass the final URL list to `Scraper`.
 
 ## Choosing The Right Tool
 
@@ -100,10 +100,10 @@ Then pass the final URL list to `ScraperEngine`.
 - [Installation](installation.md): package setup, browser requirements, optional extras
 - [Quick start](quick-start.md): first complete discovery and scraping workflows
 - [Configuration](configuration.md): crawler settings and configuration
-- [Link Extraction](packages/link-extraction.md): `LinkExtractionEngine` and link discovery
+- [Link Extraction](packages/link-extraction.md): `LinkExtractor` and link discovery
 - [Sitemap Discovery](packages/sitemap.md): `UniversalSiteMap` and URL collection
-- [Scraping Engine](packages/scraping.md): `ScraperEngine` and content extraction
-- [Settings Configuration](packages/settings.md): `CrawlerSettings` and configuration classes
+- [Scraping Engine](packages/scraping.md): `Scraper` and content extraction
+- [Settings Configuration](packages/settings.md): `Settings` and configuration classes
 - [API reference](api-reference.md): public classes exported from `onecrawler`
 - [Troubleshooting](troubleshooting.md): common failures and fixes
 

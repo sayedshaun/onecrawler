@@ -4,15 +4,15 @@ title: Settings
 
 # Settings
 
-`CrawlerSettings` is the shared configuration object used by sitemap discovery,
+`Settings` is the shared configuration object used by sitemap discovery,
 link extraction, and scraping. In production, treat it as the contract for a crawl:
 it defines scope, speed, retry behavior, browser behavior, and output shape.
 
 ```python
-from onecrawler import CrawlerSettings
+from onecrawler import Settings
 
 
-settings = CrawlerSettings(
+settings = Settings(
     link_extraction_limit=500,
     include_link_patterns=["/docs/*"],
     concurrency=8,
@@ -39,7 +39,7 @@ settings = CrawlerSettings(
 | `max_retries` | `2` | Retry attempts for transient failures |
 | `request_timeout` | `10` | Per-request timeout in seconds |
 | `retry_delay` | `1` | Base delay between retries |
-| `enable_logging` | `False` | Whether your app should settingsure logging |
+| `enable_logging` | `False` | Whether your app should configure logging |
 | `logging_level` | `"INFO"` | Desired log level |
 
 ## Sitemap Settings
@@ -59,7 +59,7 @@ off for predictable scheduled jobs if you only trust XML sitemap sources.
 
 !!! note "HTML fallback is discovery, not scraping"
     Sitemap HTML fallback is only for finding URLs when XML sources are missing. Use
-    `ScraperEngine` or `Pipeline` to extract page content after URLs are
+    `Scraper` or `Crawler` to extract page content after URLs are
     discovered.
 
 ## Browser Settings
@@ -69,10 +69,10 @@ Use it when the target site needs JavaScript rendering, a custom user agent, pro
 routing, a stored session, or a different viewport.
 
 ```python
-from onecrawler import BrowserSettings, ContextSettings, CrawlerSettings
+from onecrawler import BrowserSettings, ContextSettings, Settings
 
 
-settings = CrawlerSettings(
+settings = Settings(
     browser_settings=BrowserSettings(
         context=ContextSettings(
             viewport={"width": 1440, "height": 900},
@@ -86,10 +86,10 @@ settings = CrawlerSettings(
 For authenticated crawling, use Playwright storage state:
 
 ```python
-from onecrawler import BrowserSettings, ContextSettings, CrawlerSettings
+from onecrawler import BrowserSettings, ContextSettings, Settings
 
 
-settings = CrawlerSettings(
+settings = Settings(
     browser_settings=BrowserSettings(
         context=ContextSettings(storage_state="auth-state.json")
     )
@@ -107,10 +107,10 @@ settings are the recommended API because they can be shared across sitemap disco
 and browser-backed workflows.
 
 ```python
-from onecrawler import CrawlerSettings, ProxySettings
+from onecrawler import Settings, ProxySettings
 
 
-settings = CrawlerSettings(
+settings = Settings(
     proxy=ProxySettings(
         server="http://proxy.example:8080",
         username="user",
@@ -122,7 +122,7 @@ settings = CrawlerSettings(
 Multiple proxies can rotate with `round_robin` or `random`:
 
 ```python
-settings = CrawlerSettings(
+settings = Settings(
     proxies=[
         ProxySettings(server="http://proxy-1.example:8080"),
         ProxySettings(server="http://proxy-2.example:8080"),
@@ -136,7 +136,7 @@ proxy pool when sitemap discovery or future request-heavy workflows should sprea
 traffic across multiple endpoints.
 
 !!! warning "Proxy settings are mutually exclusive"
-    Configure either `proxy` or `proxies`, not both. `CrawlerSettings` raises a
+    Configure either `proxy` or `proxies`, not both. `Settings` raises a
     validation error when both are provided.
 
 ## Human Behavior Settings
@@ -145,10 +145,10 @@ traffic across multiple endpoints.
 during deep browser link extraction.
 
 ```python
-from onecrawler import CrawlerSettings, HumanBehaviorSettings
+from onecrawler import Settings, HumanBehaviorSettings
 
 
-settings = CrawlerSettings(
+settings = Settings(
     enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(
         min_delay=0.5,
@@ -186,14 +186,14 @@ pip install "onecrawler[genai]"
 
 ```python
 from pydantic import BaseModel
-from onecrawler import CrawlerSettings, GenerativeAISettings
+from onecrawler import Settings, GenerativeAISettings
 
 class Product(BaseModel):
     name: str
     price: str | None = None
     availability: str | None = None
 
-settings = CrawlerSettings(
+settings = Settings(
     scraping_strategy="genai",  # Required for GenAI extraction
     scraping_output_format="json",  # GenAI only supports JSON
     genai=GenerativeAISettings(
@@ -267,20 +267,20 @@ strategy is faster, cheaper, and easier to reproduce.
     provide `GenerativeAISettings`. Other output formats are rejected during
     settings validation.
 
-## Pipeline Configuration
+## Crawler Configuration
 
-`Pipeline` uses the same `CrawlerSettings` object but emphasizes specific fields for its orchestrated workflow:
+`Crawler` uses the same `Settings` object but emphasizes specific fields for its orchestrated workflow:
 
 ### Required for Production
 
 !!! warning "Proxy configuration is required for production"
-    `Pipeline` combines browser navigation and extraction across multiple
+    `Crawler` combines browser navigation and extraction across multiple
     pages. Use a proxy or proxy pool for production jobs to reduce blocking and keep
     traffic routing explicit.
 
 **Proxy Configuration:**
 ```python
-settings = CrawlerSettings(
+settings = Settings(
     proxies=[
         ProxySettings(server="http://proxy1.example.com:8080"),
         ProxySettings(server="http://proxy2.example.com:8080"),
@@ -289,11 +289,11 @@ settings = CrawlerSettings(
 )
 ```
 
-### Key Pipeline Settings
+### Key Crawler Settings
 
-| Field | Recommended for Pipeline | Purpose |
+| Field | Recommended for Crawler | Purpose |
 | --- | --- | --- |
-| `link_extraction_limit` | `50-200` | Controls total pages crawled in pipeline |
+| `link_extraction_limit` | `50-200` | Controls total pages crawled in Crawler |
 | `include_link_patterns` | Strongly recommended | Scope crawling to relevant sections |
 | `concurrency` | `3-8` | Browser workers for link discovery |
 | `enable_human_behaviors` | `False` (default) or `True` | Simulate human browsing patterns |
@@ -301,11 +301,11 @@ settings = CrawlerSettings(
 
 ### Date Filtering Configuration
 
-Pipeline supports date-based content filtering via constructor parameters:
+Crawler supports date-based content filtering via constructor parameters:
 
 ```python
 # Filter content by publication date
-async with Pipeline(settings, 
+async with Crawler(settings, 
                          start_date="2024-01-01", 
                          end_date="2024-12-31") as engine:
     results = await engine.run("https://example.com/news")
@@ -321,7 +321,7 @@ async with Pipeline(settings,
 When `enable_human_behaviors=True`, configure realistic browsing:
 
 ```python
-settings = CrawlerSettings(
+settings = Settings(
     enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(
         min_delay=1.0,        # Minimum delay between actions (seconds)
@@ -339,7 +339,7 @@ settings = CrawlerSettings(
 )
 ```
 
-### Pipeline Performance Profiles
+### Crawler Performance Profiles
 
 | Use Case | Recommended Settings |
 | --- | --- |
@@ -376,7 +376,7 @@ watch error rates.
 `include_link_patterns` are matched against URL paths. Prefer patterns like
 `"/news/*"` or `"/docs/*"` instead of full URLs.
 
-`CrawlerSettings` validates GenAI output format at initialization. If you choose
+`Settings` validates GenAI output format at initialization. If you choose
 `scraping_strategy="genai"`, keep `scraping_output_format="json"`.
 
 !!! tip "Tune one variable at a time"

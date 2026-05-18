@@ -31,10 +31,10 @@ Onecrawler helps you build maintainable crawling and extraction workflows withou
 4. Use GenAI extraction when you need structured output in a Pydantic schema.
 
 ```python
-async with LinkExtractionEngine(settings) as link_engine:
+async with LinkExtractor(settings) as link_engine:
     links = await link_engine.run("https://example.com")
 
-async with ScraperEngine(settings) as scraper_engine:
+async with Scraper(settings) as scraper_engine:
     records = await scraper_engine.run(links)
 ```
 
@@ -50,7 +50,7 @@ async with ScraperEngine(settings) as scraper_engine:
 | **Async performance** | Tunable concurrency, retries, timeouts, and crawl limits |
 | **Content extraction** | Heuristic extraction with `trafilatura` for fast article-like content |
 | **GenAI extraction** | Optional model-assisted extraction for strongly typed Pydantic outputs |
-| **Output formats** | `markdown`, `json`, `csv`, `html`, `python`, `txt`, `xml`, `xmltei` |
+| **Output formats** | `markdown`, `json`, `txt`, `xml`, `xmltei` |
 | **Proxy support** | Single proxy or rotating proxy pools for browser and sitemap workflows |
 | **Browser controls** | Viewport, user agent, locale, timezone, storage state, and runtime settings |
 
@@ -61,9 +61,9 @@ async with ScraperEngine(settings) as scraper_engine:
 | Need | Use | Why |
 | --- | --- | --- |
 | Fast URL discovery from a public site | `UniversalSiteMap` | Simplest, fastest, and least expensive way to collect URLs |
-| Links from one listing page | Shallow `LinkExtractionEngine` | Reads direct same-site links from the page |
-| Recursive discovery through navigation | Deep `LinkExtractionEngine` | Follows internal links until your configured limit |
-| Bulk article or page text extraction | Heuristic `ScraperEngine` | Deterministic and avoids model cost |
+| Links from one listing page | Shallow `LinkExtractor` | Reads direct same-site links from the page |
+| Recursive discovery through navigation | Deep `LinkExtractor` | Follows internal links until your configured limit |
+| Bulk article or page text extraction | Heuristic `Scraper` | Deterministic and avoids model cost |
 | Typed fields or semantic normalization | GenAI extraction | Produces schema-shaped output for downstream systems |
 
 ---
@@ -106,8 +106,6 @@ OneCrawler provides an optimized Docker image that includes all necessary browse
 
 ### Build the Image
 ```bash
-Pull the image and give it a short local name:
-```bash
 docker pull ghcr.io/sayedshaun/onecrawler:latest
 ```
 > [!TIP]
@@ -129,11 +127,11 @@ docker run -it --rm -v $(pwd):/app onecrawler python your_script.py
 
 ```python
 import json
-from onecrawler import CrawlerSettings, LinkExtractionEngine, ScraperEngine
+from onecrawler import Settings, LinkExtractor, Scraper
 
 
 async def main():
-    settings = CrawlerSettings(
+    settings = Settings(
         link_extraction_strategy="deep",
         link_extraction_limit=10,
         concurrency=7,
@@ -142,10 +140,10 @@ async def main():
         enable_human_behaviors=True,
     )
 
-    async with LinkExtractionEngine(settings) as link_engine:
+    async with LinkExtractor(settings) as link_engine:
         links = await link_engine.run("https://www.example.com/")
 
-    async with ScraperEngine(settings) as scraper_engine:
+    async with Scraper(settings) as scraper_engine:
         results = await scraper_engine.run(links)
 
     with open("output.json", "w", encoding="utf-8") as f:
@@ -169,18 +167,18 @@ Use browser extraction when sitemaps are incomplete, unavailable, or unable to e
 
 ```python
 import asyncio
-from onecrawler import CrawlerSettings, LinkExtractionEngine
+from onecrawler import Settings, LinkExtractor
 
 
 async def main():
-    settings = CrawlerSettings(
+    settings = Settings(
         link_extraction_strategy="deep",
         link_extraction_limit=250,
         include_link_patterns=["/news/*"],
         concurrency=5,
     )
 
-    async with LinkExtractionEngine(settings) as engine:
+    async with LinkExtractor(settings) as engine:
         links = await engine.run("https://example.com/news")
 
     print(f"Collected {len(links)} links")
@@ -210,7 +208,7 @@ pip install "onecrawler[genai]"
 import asyncio
 from typing import Optional
 from pydantic import BaseModel
-from onecrawler import CrawlerSettings, GenerativeAISettings, ScraperEngine
+from onecrawler import Settings, GenerativeAISettings, Scraper
 
 
 class ArticleSummary(BaseModel):
@@ -222,7 +220,7 @@ class ArticleSummary(BaseModel):
 
 
 async def main():
-    settings = CrawlerSettings(
+    settings = Settings(
         scraping_strategy="genai",
         scraping_output_format="json",
         genai=GenerativeAISettings(
@@ -235,7 +233,7 @@ async def main():
         request_timeout=30,
     )
 
-    async with ScraperEngine(settings) as scraper:
+    async with Scraper(settings) as scraper:
         result = await scraper.run("https://example.com/articles/story")
 
     print(result.model_dump() if hasattr(result, "model_dump") else result)
@@ -266,7 +264,7 @@ if __name__ == "__main__":
 ### Ollama Example
 
 ```python
-settings = CrawlerSettings(
+settings = Settings(
     scraping_strategy="genai",
     genai=GenerativeAISettings(
         provider="ollama",
@@ -284,13 +282,13 @@ settings = CrawlerSettings(
 
 ## Proxy Support
 
-Attach one proxy or a rotating proxy pool directly to `CrawlerSettings`.
+Attach one proxy or a rotating proxy pool directly to `Settings`.
 
 ```python
-from onecrawler import CrawlerSettings, ProxySettings
+from onecrawler import Settings, ProxySettings
 
 
-settings = CrawlerSettings(
+settings = Settings(
     proxies=[
         ProxySettings(server="http://proxy-1.example:8080"),
         ProxySettings(
@@ -316,7 +314,7 @@ Use `proxy=ProxySettings(...)` for a single proxy, or `proxies=[...]` with `prox
 > Split URL discovery and scraping into separate pipeline steps. Collecting all URLs first gives you a checkpoint to resume from if scraping fails partway through — without re-running discovery.
 
 > [!TIP]
-> Start with `UniversalSiteMap` before reaching for browser extraction. Sitemap-based discovery is faster, cheaper, and more complete on well-maintained sites. Fall back to `LinkExtractionEngine` only when sitemaps are missing or stale.
+> Start with `UniversalSiteMap` before reaching for browser extraction. Sitemap-based discovery is faster, cheaper, and more complete on well-maintained sites. Fall back to `LinkExtractor` only when sitemaps are missing or stale.
 
 > [!TIP]
 > Use heuristic scraping (`scraping_strategy="heuristic"`) for bulk content extraction. Reserve GenAI extraction for cases where you genuinely need structured, schema-shaped output — it adds latency and cost at scale.

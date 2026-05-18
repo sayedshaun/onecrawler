@@ -53,10 +53,10 @@ works, switch to deep extraction with the same filters.
 For lazy-loaded pages, enable human behavior simulation:
 
 ```python
-from onecrawler import CrawlerSettings, HumanBehaviorSettings
+from onecrawler import Settings, HumanBehaviorSettings
 
 
-settings = CrawlerSettings(
+settings = Settings(
     enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(max_scrolls=30),
 )
@@ -117,7 +117,7 @@ If `scraping_strategy="genai"`, you must provide `genai` settings and keep
 `scraping_output_format="json"`.
 
 ```python
-settings = CrawlerSettings(
+settings = Settings(
     scraping_strategy="genai",
     scraping_output_format="json",
     genai=GenerativeAISettings(
