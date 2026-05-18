@@ -1,3 +1,4 @@
+import warnings
 from typing import AsyncGenerator, List
 from urllib.parse import urlparse
 
@@ -7,30 +8,30 @@ from .deep import BFScheduler, BFSRuntime, BrowserPool, LinkSpider
 from .shallow import extract_url_from_current_page
 
 
-class LinkExtractionEngine(BaseEngine):
+class LinkExtractor(BaseEngine):
     """Engine for extracting links from websites using various strategies.
 
     Supports both 'shallow' (single page) and 'deep' (BFS-based) extraction.
 
     Attributes:
-        settings (CrawlerSettings): Configuration settings for extraction.
+        settings (Settings): Configuration settings for extraction.
 
     Example:
         ```python
-        from onecrawler.settings import CrawlerSettings, LinkExtractionSettings
+        from onecrawler.settings import Settings, LinkExtractionSettings
 
-        settings = CrawlerSettings(
+        settings = Settings(
             link_extraction_settings=LinkExtractionSettings(
                 link_extraction_strategy="shallow",
             )
         )
 
-        async with LinkExtractionEngine(settings) as engine:
+        async with LinkExtractor(settings) as engine:
             links = await engine.run("https://example.com")
             print(links)
 
         # Stream
-        async with LinkExtractionEngine(settings) as engine:
+        async with LinkExtractor(settings) as engine:
             async for link in engine.stream("https://example.com"):
                 print(link)
         ```
@@ -44,7 +45,7 @@ class LinkExtractionEngine(BaseEngine):
         # future-ready placeholders
         self.session = None
 
-        self.logger.info("LinkExtractionEngine initialized")
+        self.logger.info("LinkExtractor initialized")
 
     async def start(self):
         """Starts the engine and initializes the browser."""
@@ -157,3 +158,15 @@ class LinkExtractionEngine(BaseEngine):
 
         finally:
             await pool.close()
+
+
+class LinkExtractionEngine(LinkExtractor):
+    """Deprecated. Use ``LinkExtractor`` instead."""
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "LinkExtractionEngine is deprecated. Use LinkExtractor instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
