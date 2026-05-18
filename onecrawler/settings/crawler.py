@@ -7,6 +7,7 @@ from .browser import BrowserSettings
 from .genai import GenerativeAISettings
 from .proxy import ProxySettings
 from .simulation import HumanBehaviorSettings
+from .sitemap import SitemapSettings
 
 
 @dataclass
@@ -17,13 +18,7 @@ class Settings:
     content scraping, browser automation, and proxy management.
 
     Attributes:
-        follow_sitemap_index (bool): Whether to follow sitemap index files.
-        sitemap_html_fallback (bool): Whether to fallback to HTML parsing if sitemap is missing.
-        max_crawl_depth (int): Maximum depth for sitemap/link discovery.
-        max_crawl_pages (int): Maximum number of pages to discover via sitemaps.
-        sitemap_user_agent (str): User agent specifically for sitemap fetching.
-        sitemap_respect_robots (bool): Whether to respect robots.txt.
-        sitemap_deduplicate (bool): Whether to deduplicate URLs during discovery.
+        sitemap (SitemapSettings): Configuration for sitemap discovery.
         start_date (Optional[date]): Filter content published on or after this date.
         end_date (Optional[date]): Filter content published on or before this date.
         strict_date_filter (bool): Whether to discard items where date cannot be determined.
@@ -49,19 +44,7 @@ class Settings:
         human_behavior_settings (HumanBehaviorSettings): Configuration for human simulation.
     """
 
-    follow_sitemap_index: bool = True
-    sitemap_html_fallback: bool = True
-    max_crawl_depth: int = 3
-    max_crawl_pages: int = 500
-    sitemap_user_agent: str = (
-        "Mozilla/5.0 (compatible; UniversalURLFetcher/1.0; "
-        "+https://github.com/sayedshaun/onecrawler)"
-    )
-    sitemap_respect_robots: bool = True
-    sitemap_deduplicate: bool = True
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    strict_date_filter: bool = False
+    sitemap: SitemapSettings = field(default_factory=SitemapSettings)
     verbose: bool = True
 
     link_extraction_strategy: Literal["shallow", "deep"] = "deep"
