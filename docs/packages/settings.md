@@ -51,13 +51,13 @@ settings = Settings(
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `follow_sitemap_index` | `bool` | `True` | Traverse sitemap indexes |
-| `sitemap_html_fallback` | `bool` | `True` | Crawl pages when no sitemaps found |
-| `max_crawl_depth` | `int` | `3` | Depth limit for HTML fallback |
-| `max_crawl_pages` | `int` | `500` | Page limit for HTML fallback |
-| `sitemap_user_agent` | `str` | Custom | User agent for sitemap requests |
-| `sitemap_respect_robots` | `bool` | `True` | Follow robots.txt rules |
-| `sitemap_deduplicate` | `bool` | `True` | Remove duplicate URLs |
+| `sitemap.follow_index` | `bool` | `True` | Traverse sitemap indexes |
+| `sitemap.html_fallback` | `bool` | `True` | Crawl pages when no sitemaps found |
+| `sitemap.max_depth` | `int` | `3` | Depth limit for HTML fallback |
+| `sitemap.max_pages` | `int` | `500` | Page limit for HTML fallback |
+| `sitemap.user_agent` | `str` | Custom | User agent for sitemap requests |
+| `sitemap.respect_robots` | `bool` | `True` | Follow robots.txt rules |
+| `sitemap.deduplicate` | `bool` | `True` | Remove duplicate URLs |
 
 #### Browser Settings
 

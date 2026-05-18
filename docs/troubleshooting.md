@@ -25,7 +25,7 @@ Then try:
 
 - remove or loosen `include_link_patterns`
 - increase `request_timeout`
-- keep `sitemap_html_fallback=True`
+- keep `sitemap.html_fallback=True`
 - lower `concurrency` if the site is rejecting bursts
 - start from the canonical origin, such as `https://www.example.com`
 

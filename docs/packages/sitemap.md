@@ -97,23 +97,25 @@ if __name__ == "__main__":
 ### Advanced Configuration
 
 ```python
-from onecrawler import Settings, UniversalSiteMap
+from onecrawler import Settings, UniversalSiteMap, SitemapSettings
 
 settings = Settings(
-    follow_sitemap_index=True,
-    sitemap_html_fallback=True,
-    max_crawl_depth=3,
-    max_crawl_pages=500,
-    sitemap_user_agent="MyCrawler/1.0",
-    sitemap_respect_robots=True,
-    sitemap_deduplicate=True
+    sitemap=SitemapSettings(
+        follow_index=True,
+        html_fallback=True,
+        max_depth=3,
+        max_pages=500,
+        user_agent="MyCrawler/1.0",
+        respect_robots=True,
+        deduplicate=True
+    )
 )
 
 sitemap = UniversalSiteMap(settings)
 ```
 
 !!! warning "HTML fallback can broaden scope"
-    `sitemap_html_fallback=True` is useful during exploration, but it can crawl
+    `sitemap.html_fallback=True` is useful during exploration, but it can crawl
     same-origin pages when XML sitemaps are missing. Pair it with
     `link_extraction_limit` and `include_link_patterns`.
 
@@ -136,13 +138,13 @@ Sitemap behavior is controlled through `Settings`:
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `follow_sitemap_index` | Traverse sitemap indexes | `True` |
-| `sitemap_html_fallback` | Crawl pages when no sitemaps | `True` |
-| `max_crawl_depth` | Depth limit for HTML fallback | `3` |
-| `max_crawl_pages` | Page limit for HTML fallback | `500` |
-| `sitemap_user_agent` | User agent for sitemap requests | Custom |
-| `sitemap_respect_robots` | Follow robots.txt rules | `True` |
-| `sitemap_deduplicate` | Remove duplicate URLs | `True` |
+| `sitemap.follow_index` | Traverse sitemap indexes | `True` |
+| `sitemap.html_fallback` | Crawl pages when no sitemaps | `True` |
+| `sitemap.max_depth` | Depth limit for HTML fallback | `3` |
+| `sitemap.max_pages` | Page limit for HTML fallback | `500` |
+| `sitemap.user_agent` | User agent for sitemap requests | Custom |
+| `sitemap.respect_robots` | Follow robots.txt rules | `True` |
+| `sitemap.deduplicate` | Remove duplicate URLs | `True` |
 
 ## Discovery Process
 
@@ -159,7 +161,7 @@ UniversalSiteMap follows this discovery order:
 
 !!! tip "Disable fallback for strict sitemap jobs"
     If a scheduled job should only trust XML sitemap sources, set
-    `sitemap_html_fallback=False` after you confirm the sitemap URLs you need.
+    `sitemap.html_fallback=False` after you confirm the sitemap URLs you need.
 
 ## Sitemap Formats Supported
 

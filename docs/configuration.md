@@ -46,15 +46,15 @@ settings = Settings(
 
 | Field | Default | Use it for |
 | --- | --- | --- |
-| `follow_sitemap_index` | `True` | Traverse sitemap indexes and nested XML sitemaps |
-| `sitemap_html_fallback` | `True` | Crawl same-origin HTML pages when no sitemap records are found |
-| `max_crawl_depth` | `3` | Depth limit for HTML fallback |
-| `max_crawl_pages` | `500` | Page cap for HTML fallback |
-| `sitemap_user_agent` | OneCrawler UA | User agent for sitemap HTTP requests |
-| `sitemap_respect_robots` | `True` | Intended robots.txt behavior |
-| `sitemap_deduplicate` | `True` | Normalize and remove duplicate sitemap URLs |
+| `sitemap.follow_index` | `True` | Traverse sitemap indexes and nested XML sitemaps |
+| `sitemap.html_fallback` | `True` | Crawl same-origin HTML pages when no sitemap records are found |
+| `sitemap.max_depth` | `3` | Depth limit for HTML fallback |
+| `sitemap.max_pages` | `500` | Page cap for HTML fallback |
+| `sitemap.user_agent` | OneCrawler UA | User agent for sitemap HTTP requests |
+| `sitemap.respect_robots` | `True` | Intended robots.txt behavior |
+| `sitemap.deduplicate` | `True` | Normalize and remove duplicate sitemap URLs |
 
-Best practice: keep `sitemap_html_fallback=True` during exploration, then turn it
+Best practice: keep `sitemap.html_fallback=True` during exploration, then turn it
 off for predictable scheduled jobs if you only trust XML sitemap sources.
 
 !!! note "HTML fallback is discovery, not scraping"
