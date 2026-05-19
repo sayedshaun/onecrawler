@@ -2,6 +2,7 @@ import asyncio
 import logging
 from collections import deque
 from typing import AsyncGenerator, List, Optional, Set
+from urllib.parse import urldefrag
 
 from playwright.async_api import Page
 
@@ -172,8 +173,6 @@ class LinkSpider:
         Returns:
             List[str]: A list of absolute URLs found on the page.
         """
-        from urllib.parse import urldefrag
-
         raw = await page.eval_on_selector_all(
             "a", "els => els.map(e => e.href).filter(Boolean)"
         )
