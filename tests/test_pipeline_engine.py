@@ -34,25 +34,13 @@ def load_pipeline_modules():
 
     mock_module = MagicMock()
 
-    general_module = load_module(
-        "onecrawler.crawler.general", "onecrawler/crawler/general.py"
-    )
-    range_module = load_module(
-        "onecrawler.crawler.range", "onecrawler/crawler/range.py"
-    )
-    schedule_module = load_module(
-        "onecrawler.crawler.schedule", "onecrawler/crawler/schedule.py"
+    crawl_module = load_module(
+        "onecrawler.crawler.crawl", "onecrawler/crawler/crawl.py"
     )
 
     for attr in ("Crawler", "CrawlerRuntime", "Pipeline", "PipelineRuntime"):
-        if hasattr(general_module, attr):
-            setattr(mock_module, attr, getattr(general_module, attr))
-
-    if hasattr(range_module, "RangeCrawler"):
-        mock_module.RangeCrawler = range_module.RangeCrawler
-
-    if hasattr(schedule_module, "ScheduleCrawler"):
-        mock_module.ScheduleCrawler = schedule_module.ScheduleCrawler
+        if hasattr(crawl_module, attr):
+            setattr(mock_module, attr, getattr(crawl_module, attr))
 
     return mock_module
 
@@ -63,7 +51,7 @@ class TestPipeline:
         install_trafilatura_stub()
         cls.onecrawler_module = load_pipeline_modules()
         cls.pipeline_module = load_module(
-            "onecrawler.crawler.general", "onecrawler/crawler/general.py"
+            "onecrawler.crawler.crawl", "onecrawler/crawler/crawl.py"
         )
 
         # Load settings modules
@@ -107,7 +95,7 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_engine_initialization(self):
         """Test Crawler can be initialized with basic settings."""
-        engine = self.onecrawler_module.RangeCrawler(self.mock_settings)
+        engine = self.onecrawler_module.Crawler(self.mock_settings)
 
         assert engine.settings == self.mock_settings
         assert engine.strategy is None
@@ -121,7 +109,7 @@ class TestPipeline:
         self.mock_settings.start_date = date(2024, 1, 1)
         self.mock_settings.end_date = date(2024, 12, 31)
 
-        engine = self.onecrawler_module.RangeCrawler(self.mock_settings)
+        engine = self.onecrawler_module.Crawler(self.mock_settings)
 
         assert engine.settings.start_date == date(2024, 1, 1)
         assert engine.settings.end_date == date(2024, 12, 31)
@@ -129,12 +117,12 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_engine_start_initializes_browser_and_strategy(self):
         """Test that start() method properly initializes browser and strategy."""
-        engine = self.onecrawler_module.RangeCrawler(self.mock_settings)
+        engine = self.onecrawler_module.Crawler(self.mock_settings)
 
-        # Mock GoogleChrome and HeuristicStrategy where RangeCrawler imports them
+        # Mock GoogleChrome and HeuristicStrategy where Crawler imports them
         with (
-            patch("onecrawler.crawler.range.GoogleChrome") as mock_chrome,
-            patch("onecrawler.crawler.range.HeuristicStrategy") as mock_strategy,
+            patch("onecrawler.crawler.crawl.GoogleChrome") as mock_chrome,
+            patch("onecrawler.crawler.crawl.HeuristicStrategy") as mock_strategy,
         ):
             mock_chrome_instance = AsyncMock()
             mock_chrome.return_value = mock_chrome_instance
@@ -159,7 +147,7 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_engine_close_cleans_up_resources(self):
         """Test that close() method properly cleans up browser resources."""
-        engine = self.onecrawler_module.RangeCrawler(self.mock_settings)
+        engine = self.onecrawler_module.Crawler(self.mock_settings)
 
         # Mock browser
         mock_browser = AsyncMock()
@@ -172,7 +160,7 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_engine_close_with_no_browser(self):
         """Test that close() handles case when browser is not initialized."""
-        engine = self.onecrawler_module.RangeCrawler(self.mock_settings)
+        engine = self.onecrawler_module.Crawler(self.mock_settings)
 
         # Should not raise exception
         await engine.close()
@@ -180,7 +168,7 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_engine_run_requires_engine_to_be_open(self):
         """Test that run() method raises error when engine is not started."""
-        engine = self.onecrawler_module.RangeCrawler(self.mock_settings)
+        engine = self.onecrawler_module.Crawler(self.mock_settings)
 
         with pytest.raises(RuntimeError):
             await engine.run("https://example.com")
@@ -192,11 +180,11 @@ class TestPipeline:
 
         # Mock all dependencies
         with (
-            patch("onecrawler.crawler.general.GoogleChrome") as mock_chrome,
-            patch("onecrawler.crawler.general.HeuristicStrategy") as mock_strategy,
-            patch("onecrawler.crawler.general.BFScheduler") as mock_scheduler,
-            patch("onecrawler.crawler.general.LinkSpider") as mock_spider,
-            patch("onecrawler.crawler.general.BrowserPool") as mock_pool,
+            patch("onecrawler.crawler.crawl.GoogleChrome") as mock_chrome,
+            patch("onecrawler.crawler.crawl.HeuristicStrategy") as mock_strategy,
+            patch("onecrawler.crawler.crawl.BFScheduler") as mock_scheduler,
+            patch("onecrawler.crawler.crawl.LinkSpider") as mock_spider,
+            patch("onecrawler.crawler.crawl.BrowserPool") as mock_pool,
         ):
             # Setup mocks
             mock_chrome_instance = AsyncMock()
@@ -213,14 +201,14 @@ class TestPipeline:
             mock_pool_instance = AsyncMock()
             mock_pool.return_value = mock_pool_instance
 
-            # Mock PipelineRuntime
+            # Mock CrawlerRuntime
             mock_runtime = AsyncMock()
             mock_runtime.run.return_value = [
                 {"url": "https://example.com/test", "content": "test"}
             ]
 
             with patch(
-                "onecrawler.crawler.general.CrawlerRuntime", return_value=mock_runtime
+                "onecrawler.crawler.crawl.CrawlerRuntime", return_value=mock_runtime
             ) as mock_runtime_cls:
                 await engine.start()
                 result = await engine.run("https://example.com")

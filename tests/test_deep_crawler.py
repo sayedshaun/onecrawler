@@ -36,7 +36,6 @@ class TestDeepCrawler:
         assert await scheduler.next() == "https://example.com/priority"
         assert await scheduler.next() == "https://example.com"
         assert await scheduler.next() == "https://example.com/a"
-        scheduler.mark_visited("https://example.com/a")
         await scheduler.add("https://example.com/a")
         assert await scheduler.next() is None
 
@@ -55,6 +54,17 @@ class TestDeepCrawler:
                 "https://other.com/b",
                 123,
                 "mailto:test@example.com",
+            ]
+        )
+
+        assert await spider.parse(page) == ["https://example.com/a"]
+
+    async def test_link_spider_rejects_prefix_lookalike_domains(self):
+        spider = deep_module.LinkSpider("https://example.com")
+        page = FakePage(
+            [
+                "https://example.com/a",
+                "https://example.com.evil.test/b",
             ]
         )
 
@@ -118,3 +128,28 @@ class TestDeepCrawler:
         result = await asyncio.wait_for(runtime.run(), timeout=1)
 
         assert result == ["https://example.com/a"]
+
+    async def test_runtime_zero_limit_returns_no_links(self):
+        class Pool:
+            async def acquire(self):
+                raise AssertionError("crawler should not acquire a page")
+
+        class Spider:
+            async def parse(self, page):
+                raise AssertionError("crawler should not parse pages")
+
+        runtime = deep_module.BFSRuntime(
+            scheduler=deep_module.BFScheduler("https://example.com"),
+            pool=Pool(),
+            spider=Spider(),
+            base_prefix="https://example.com",
+            max_links=0,
+            human_behavior_settings=deep_module.HumanBehaviorSettings(),
+            include_pattern=None,
+            enable_human_behaviors=False,
+            concurrency=1,
+        )
+
+        result = await asyncio.wait_for(runtime.run(), timeout=1)
+
+        assert result == []
