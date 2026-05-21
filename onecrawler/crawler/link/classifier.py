@@ -1,7 +1,8 @@
 import asyncio
 import warnings
 from functools import lru_cache
-from typing import List, Optional
+from typing import List
+from urllib.parse import unquote
 
 try:
     import importlib.util
