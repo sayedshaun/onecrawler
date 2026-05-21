@@ -55,7 +55,7 @@ settings = Settings(
 | `sitemap.deduplicate` | `True` | Normalize and remove duplicate sitemap URLs |
 
 Best practice: keep `sitemap.html_fallback=True` during exploration, then turn it
-off for predictable scheduled jobs if you only trust XML sitemap sources.
+off for predictable production jobs if you only trust XML sitemap sources.
 
 !!! note "HTML fallback is discovery, not scraping"
     Sitemap HTML fallback is only for finding URLs when XML sources are missing. Use
@@ -344,7 +344,7 @@ settings = Settings(
 | Use Case | Recommended Settings |
 | --- | --- |
 | **Small blog** | `link_extraction_limit=50`, `concurrency=3`, no human behaviors |
-| **News site** | `link_extraction_limit=200`, `concurrency=5`, date filtering |
+| **News site** | `link_extraction_limit=200`, `concurrency=5`, focused path filters |
 | **JavaScript-heavy** | `link_extraction_limit=100`, `concurrency=3`, enable human behaviors |
 | **Production crawling** | `link_extraction_limit=150`, `concurrency=4`, proxy pool required |
 

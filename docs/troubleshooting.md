@@ -167,7 +167,7 @@ Recommended response:
 - use a clear user agent
 - respect robots.txt and site terms
 - crawl narrower sections
-- schedule jobs during quieter periods
+- run jobs during quieter periods
 
 Avoid treating blocking as only a technical problem. Production crawling should be
 predictable and respectful.

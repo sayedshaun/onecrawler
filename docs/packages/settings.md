@@ -9,7 +9,7 @@ The `onecrawler.settings` package provides comprehensive configuration classes f
 !!! tip "Treat settings as the crawl contract"
     Put scope, limits, concurrency, retries, proxy behavior, and output format in
     `Settings`. Explicit settings make crawls easier to review, reproduce,
-    and schedule.
+    and operate.
 
 ## Classes
 

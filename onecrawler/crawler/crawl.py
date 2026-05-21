@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 import warnings
 from typing import AsyncGenerator, Callable, List, Optional, Tuple
@@ -17,6 +18,17 @@ from .link.helper import (
 from .scraper.heuristic.script import HeuristicStrategy
 
 logger = logging.getLogger(__name__)
+
+
+async def _goto(page, *args, **kwargs):
+    navigation = asyncio.create_task(page.goto(*args, **kwargs))
+    try:
+        return await navigation
+    except asyncio.CancelledError:
+        navigation.cancel()
+        with contextlib.suppress(BaseException):
+            await navigation
+        raise
 
 
 class CrawlerRuntime:
@@ -48,6 +60,9 @@ class CrawlerRuntime:
         self.strategy = strategy
 
         self.base_prefix = base_prefix
+        parsed = urlparse(base_prefix)
+        self.base_scheme = parsed.scheme
+        self.base_netloc = parsed.netloc.lower()
         self.max_links = max_links
         self.include_pattern = include_pattern
         self.exclude_pattern = exclude_pattern
@@ -70,6 +85,13 @@ class CrawlerRuntime:
 
         self.content_filter = content_filter
 
+    def _same_origin(self, link: str) -> bool:
+        parsed = urlparse(link)
+        return (
+            parsed.scheme == self.base_scheme
+            and parsed.netloc.lower() == self.base_netloc
+        )
+
     async def worker(self):
         while not self.stop_event.is_set():
             async with self._active_lock:
@@ -87,18 +109,11 @@ class CrawlerRuntime:
                 await asyncio.sleep(0.2)
                 continue
 
-            if url in self.scheduler.visited:
-                async with self._active_lock:
-                    self._active_workers -= 1
-                continue
-
             page = await self.pool.acquire()
 
             try:
-                self.scheduler.mark_visited(url)
-
                 try:
-                    await page.goto(url, wait_until="domcontentloaded")
+                    await _goto(page, url, wait_until="domcontentloaded")
                 except Exception as e:
                     logger.warning("Failed to load %s: %s", url, e)
                     continue
@@ -131,7 +146,7 @@ class CrawlerRuntime:
                     if self.stop_event.is_set():
                         break
 
-                    if not link.startswith(self.base_prefix):
+                    if not self._same_origin(link):
                         continue
 
                     if self.include_pattern:
@@ -201,12 +216,16 @@ class CrawlerRuntime:
                     self._active_workers -= 1
 
     async def run(self) -> list:
+        if self.max_links <= 0:
+            return []
 
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
-        await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.gather(*tasks)
         return self.content
 
     async def stream(self) -> AsyncGenerator[dict, None]:
+        if self.max_links <= 0:
+            return
 
         self.streaming = True
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
@@ -225,7 +244,12 @@ class CrawlerRuntime:
                         break
 
         finally:
-            await asyncio.gather(*tasks, return_exceptions=True)
+            self.stop_event.set()
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await asyncio.gather(*tasks, return_exceptions=True)
 
 
 class Crawler(BaseEngine):
@@ -272,6 +296,7 @@ class Crawler(BaseEngine):
             base_prefix=base_prefix,
             max_links=self.settings.link_extraction_limit,
             include_pattern=self.settings.include_link_patterns,
+            exclude_pattern=self.settings.exclude_link_patterns,
             enable_human_behaviors=self.settings.enable_human_behaviors,
             human_behavior_settings=self.settings.human_behavior_settings,
             concurrency=self.settings.concurrency,
@@ -296,18 +321,3 @@ class Crawler(BaseEngine):
                 yield item
         finally:
             await pool.close()
-
-
-class Pipeline(Crawler):
-    """Deprecated alias for Crawler. Use Crawler instead."""
-
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "Pipeline is deprecated. Use Crawler instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        super().__init__(*args, **kwargs)
-
-
-PipelineRuntime = CrawlerRuntime

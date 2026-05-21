@@ -123,15 +123,3 @@ class Scraper(BaseEngine):
         self.logger.info(f"Scraping completed: {len(cleaned)}/{len(links)} success")
 
         return cleaned if isinstance(link, list) else (cleaned[0] if cleaned else None)
-
-
-class ScraperEngine(Scraper):
-    """Deprecated. Use ``Scraper`` instead."""
-
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "ScraperEngine is deprecated. Use Scraper instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        super().__init__(*args, **kwargs)

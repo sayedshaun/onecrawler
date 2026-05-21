@@ -44,24 +44,6 @@ async with LinkExtractor(settings) as engine:
     Use `shallow` for listing pages where all target links are visible on one page.
     Use `deep` only when you need recursive discovery.
 
-### LinkClassifierPipeline
-
-Crawler for classifying and filtering extracted links based on various criteria.
-
-```python
-from onecrawler.crawler.link.classifier import LinkClassifierPipeline
-
-classifier = LinkClassifierPipeline(settings)
-filtered_links = classifier.classify(links)
-```
-
-#### Features
-
-- **Domain filtering**: Ensure same-origin links
-- **Path pattern matching**: Wildcard-based URL filtering
-- **Deduplication**: Remove duplicate URLs
-- **Normalization**: Clean and standardize URLs
-
 ## Usage Examples
 
 ### Shallow Link Extraction

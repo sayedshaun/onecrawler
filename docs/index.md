@@ -42,12 +42,11 @@ Use it when you are building:
 - search indexing jobs
 - data collection scripts for analysis or monitoring
 - internal tools that need repeatable URL discovery and content extraction
-- prototypes that may later become scheduled crawler jobs
+- prototypes that may later become production crawlers
 
 !!! note "Use GenAI for semantics, not bulk text"
     Heuristic extraction is the better default for large text extraction jobs. Use
-    GenAI when you need summaries, classification, field normalization, or a typed
-    schema.
+    GenAI when you need summaries, field normalization, or a typed schema.
 
 ## Recommended Workflow
 

@@ -2,7 +2,7 @@ import asyncio
 import logging
 from collections import deque
 from typing import AsyncGenerator, List, Optional, Set
-from urllib.parse import urldefrag
+from urllib.parse import urldefrag, urlparse
 
 from playwright.async_api import Page
 
@@ -52,17 +52,27 @@ class BFScheduler:
             return bool(self.queue or self.priority)
 
     async def next(self) -> Optional[str]:
-        """Retrieves the next URL to visit from the queues.
+        """Retrieves the next URL to visit and atomically marks it as visited.
+
+        Marking visited here — inside the scheduler lock — eliminates the
+        TOCTOU window that existed when next() and mark_visited() were
+        separate operations. No two workers can ever dequeue the same URL.
 
         Returns:
             Optional[str]: The next URL, or None if queues are empty.
         """
         async with self.lock:
             if self.priority:
-                return self.priority.popleft()
-            if self.queue:
-                return self.queue.popleft()
-            return None
+                url = self.priority.popleft()
+            elif self.queue:
+                url = self.queue.popleft()
+            else:
+                return None
+
+            # Atomically mark as visited so no other worker can pick this URL up.
+            self.visited.add(url)
+            self.in_queue.discard(url)
+            return url
 
     async def add(self, url: str, priority: bool = False):
         """Adds a new URL to the scheduler.
@@ -85,14 +95,8 @@ class BFScheduler:
             else:
                 self.queue.append(url)
 
-    def mark_visited(self, url: str):
-        """Marks a URL as visited and removes it from the tracking set.
-
-        Args:
-            url (str): The URL to mark as visited.
-        """
-        self.visited.add(url)
-        self.in_queue.discard(url)
+    # mark_visited() is intentionally removed. Visiting is now done atomically
+    # inside next(), so there is no longer a separate mark step.
 
 
 class BrowserPool:
@@ -163,6 +167,16 @@ class LinkSpider:
             base_prefix (str): Domain prefix (e.g., "https://example.com").
         """
         self.base_prefix = base_prefix
+        parsed = urlparse(base_prefix)
+        self.base_scheme = parsed.scheme
+        self.base_netloc = parsed.netloc.lower()
+
+    def _same_origin(self, link: str) -> bool:
+        parsed = urlparse(link)
+        return (
+            parsed.scheme == self.base_scheme
+            and parsed.netloc.lower() == self.base_netloc
+        )
 
     async def parse(self, page) -> List[str]:
         """Parses a page and extracts all relevant links.
@@ -179,7 +193,7 @@ class LinkSpider:
         return [
             urldefrag(link).url
             for link in raw
-            if isinstance(link, str) and link.startswith(self.base_prefix)
+            if isinstance(link, str) and self._same_origin(link)
         ]
 
 
@@ -219,6 +233,9 @@ class BFSRuntime:
         self.spider = spider
 
         self.base_prefix = base_prefix
+        parsed = urlparse(base_prefix)
+        self.base_scheme = parsed.scheme
+        self.base_netloc = parsed.netloc.lower()
         self.max_links = max_links
         self.include_pattern = include_pattern
         self.exclude_pattern = exclude_pattern
@@ -238,6 +255,13 @@ class BFSRuntime:
         self.stream_queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1000)
         self.streaming: bool = streaming
 
+    def _same_origin(self, link: str) -> bool:
+        parsed = urlparse(link)
+        return (
+            parsed.scheme == self.base_scheme
+            and parsed.netloc.lower() == self.base_netloc
+        )
+
     async def worker(self):
         """A worker task that processes URLs and discovers new links.
 
@@ -245,37 +269,40 @@ class BFSRuntime:
         and enqueue newly found links back into the scheduler.
         """
         while not self.stop_event.is_set():
+            # --- Dequeue + active-worker bookkeeping under one lock acquire ---
+            # next() now atomically marks the URL visited, so there is no
+            # TOCTOU window between dequeuing and marking.
             async with self._active_lock:
                 url = await self.scheduler.next()
 
                 if url is None:
-                    # Queue is empty. If no worker has a reserved URL, crawling is done.
                     if self._active_workers == 0:
+                        # Queue is empty and no worker holds a URL — done.
                         self.stop_event.set()
                         return
-
+                    # Another worker is still processing; it may enqueue more.
                 else:
                     self._active_workers += 1
+            # -----------------------------------------------------------------
 
             if url is None:
-                # Another worker is still processing and may enqueue more URLs.
                 await asyncio.sleep(0.2)
                 continue
 
-            if url in self.scheduler.visited:
-                async with self._active_lock:
-                    self._active_workers -= 1
-                continue
-
+            # Every path from here that exits without entering the try/finally
+            # block below MUST decrement _active_workers itself.
+            # Currently there are none — the try/finally is entered immediately
+            # after acquire(), which itself is the only await before the block.
             page = await self.pool.acquire()
 
             try:
-                self.scheduler.mark_visited(url)
+                # mark_visited() call removed — next() handles this atomically.
 
                 try:
                     await page.goto(url, wait_until="domcontentloaded")
                 except Exception as e:
                     logger.warning("Failed to load %s: %s", url, e)
+                    # continue is safe here; finally still runs.
                     continue
 
                 if self.enable_human_behaviors:
@@ -306,7 +333,7 @@ class BFSRuntime:
                     if self.stop_event.is_set():
                         break
 
-                    if not link.startswith(self.base_prefix):
+                    if not self._same_origin(link):
                         continue
 
                     if self.include_pattern:
@@ -327,14 +354,19 @@ class BFSRuntime:
 
                     await self.scheduler.add(link)
 
+                    should_stream = False
                     async with self.lock:
+                        if len(self.results_set) >= self.max_links:
+                            self.stop_event.set()
+                            return
+
                         if link in self.results_set:
                             continue
 
                         self.results_set.add(link)
 
                         if self.streaming:
-                            await self.stream_queue.put(link)
+                            should_stream = True
                         else:
                             self.results.append(link)
 
@@ -347,7 +379,12 @@ class BFSRuntime:
 
                         if len(self.results_set) >= self.max_links:
                             self.stop_event.set()
-                            return
+
+                    if should_stream:
+                        await self.stream_queue.put(link)
+
+                    if self.stop_event.is_set():
+                        return
 
             finally:
                 await self.pool.release(page)
@@ -360,9 +397,12 @@ class BFSRuntime:
         Returns:
             List[str]: A list of all discovered absolute URLs.
         """
+        if self.max_links <= 0:
+            return []
+
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
 
-        await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.gather(*tasks)
         return self.results
 
     async def stream(self) -> AsyncGenerator[str, None]:
@@ -371,6 +411,9 @@ class BFSRuntime:
         Yields:
             str: Discovered absolute URL.
         """
+        if self.max_links <= 0:
+            return
+
         self.streaming = True
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
 
@@ -388,4 +431,7 @@ class BFSRuntime:
                         break
 
         finally:
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)

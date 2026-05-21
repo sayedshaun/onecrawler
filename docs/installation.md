@@ -91,6 +91,6 @@ the slowest part of a fresh environment.
 If you only use `UniversalSiteMap`, you do not need to launch a browser. Sitemap
 discovery uses HTTP clients and XML parsing, so it is lighter than browser crawling.
 
-!!! tip "Pin versions for scheduled jobs"
+!!! tip "Pin versions for repeatable jobs"
     For repeatable crawls, pin OneCrawler and Playwright versions in your deployment
     environment. Browser behavior can change across dependency upgrades.

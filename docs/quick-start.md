@@ -6,7 +6,7 @@ title: Quick start
 
 This guide shows the fastest useful paths through OneCrawler. The examples are
 small enough to paste into a script, but they use the same structure you would keep
-in a scheduled production job.
+in a production job.
 
 ## Install
 
@@ -152,7 +152,7 @@ for pages that require interpretation or normalization.
 
 !!! tip "Use GenAI selectively"
     A good pattern is heuristic extraction first, then GenAI only for records that
-    need classification, summarization, field normalization, or schema-shaped output.
+    need summarization, field normalization, or schema-shaped output.
 
 ## All-in-One Crawler: Crawler
 
@@ -188,20 +188,6 @@ async def main():
 
     with open("news_articles.json", "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
-```
-
-**With date filtering:**
-```python
-from onecrawler import RangeCrawler
-from onecrawler import Settings
-
-settings = Settings()
-async with RangeCrawler(
-    settings, 
-    start_date="2024-01-01", 
-    end_date="2024-12-31"
-) as engine:
-    results = await engine.run("https://example.com/news")
 ```
 
 **For JavaScript-heavy sites:**
