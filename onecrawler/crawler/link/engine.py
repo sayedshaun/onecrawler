@@ -158,15 +158,3 @@ class LinkExtractor(BaseEngine):
 
         finally:
             await pool.close()
-
-
-class LinkExtractionEngine(LinkExtractor):
-    """Deprecated. Use ``LinkExtractor`` instead."""
-
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "LinkExtractionEngine is deprecated. Use LinkExtractor instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        super().__init__(*args, **kwargs)

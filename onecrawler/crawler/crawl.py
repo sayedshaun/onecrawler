@@ -321,18 +321,3 @@ class Crawler(BaseEngine):
                 yield item
         finally:
             await pool.close()
-
-
-class Pipeline(Crawler):
-    """Deprecated alias for Crawler. Use Crawler instead."""
-
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "Pipeline is deprecated. Use Crawler instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        super().__init__(*args, **kwargs)
-
-
-PipelineRuntime = CrawlerRuntime
