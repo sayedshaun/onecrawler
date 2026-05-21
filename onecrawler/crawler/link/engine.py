@@ -85,7 +85,7 @@ class LinkExtractor(BaseEngine):
                 url=url,
                 browser=self.browser,
                 include_link_patterns=self.settings.include_link_patterns,
-                link_classification=self.settings.link_classification,
+                exclude_link_patterns=self.settings.exclude_link_patterns,
                 max_links=self.settings.link_extraction_limit,
             )
 

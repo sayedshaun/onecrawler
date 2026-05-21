@@ -2,7 +2,6 @@ import logging
 from typing import List, Optional
 from urllib.parse import urlparse
 
-from .classifier import LinkClassifierPipeline
 from .helper import wildcard_link_match
 
 logger = logging.getLogger(__name__)
@@ -12,7 +11,7 @@ async def extract_url_from_current_page(
     url: str,
     browser,
     include_link_patterns: Optional[List[str]] = None,
-    link_classification: bool = False,
+    exclude_link_patterns: Optional[List[str]] = None,
     max_links: Optional[int] = None,
 ) -> List[str]:
     """Extracts internal links from a single page.
@@ -25,7 +24,7 @@ async def extract_url_from_current_page(
         url (str): The URL of the page to parse.
         browser (GoogleChrome): The browser instance to use.
         include_link_patterns (Optional[List[str]]): Glob patterns for path filtering.
-        link_classification (bool): Whether to use AI to filter 'content' links.
+        exclude_link_patterns (Optional[List[str]]): Glob patterns for path filtering.
         max_links (Optional[int]): Maximum number of links to extract.
 
     Returns:
@@ -35,12 +34,6 @@ async def extract_url_from_current_page(
 
     links = set()
     page = await browser.new_page()
-
-    classifier = (
-        LinkClassifierPipeline(confidence_threshold=0.8)
-        if link_classification
-        else None
-    )
 
     try:
         logger.debug(f"Navigating to {url}")
@@ -86,8 +79,13 @@ async def extract_url_from_current_page(
                 ):
                     continue
 
-            if classifier:
-                if not await classifier.is_valid(href):
+            if exclude_link_patterns:
+                if wildcard_link_match(
+                    href,
+                    base_prefix,
+                    exclude_link_patterns,
+                ):
+                    logger.debug(f"Excluded URL: {href}")
                     continue
 
             links.add(href)
