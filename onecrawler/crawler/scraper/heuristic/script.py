@@ -1,8 +1,20 @@
 import asyncio
+import contextlib
 import json
 from typing import Any, Optional
 
 import trafilatura
+
+
+async def _goto(page, *args, **kwargs):
+    navigation = asyncio.create_task(page.goto(*args, **kwargs))
+    try:
+        return await navigation
+    except asyncio.CancelledError:
+        navigation.cancel()
+        with contextlib.suppress(BaseException):
+            await navigation
+        raise
 
 
 class HeuristicStrategy:
@@ -43,14 +55,16 @@ class HeuristicStrategy:
         if self.browser:
             page = await self.browser.new_page()
             try:
-                await page.goto(
+                await _goto(
+                    page,
                     url,
                     wait_until=self.settings.browser_settings.runtime.wait_until,
                     timeout=self.settings.browser_settings.runtime.timeout,
                 )
                 html = await page.content()
             finally:
-                await page.close()
+                with contextlib.suppress(Exception):
+                    await page.close()
         else:
             html = await asyncio.to_thread(trafilatura.fetch_url, url)
 
