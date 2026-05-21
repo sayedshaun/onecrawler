@@ -160,8 +160,8 @@ UniversalSiteMap follows this discovery order:
 4. **HTML fallback**: Crawl pages if no sitemaps found
 
 !!! tip "Disable fallback for strict sitemap jobs"
-    If a scheduled job should only trust XML sitemap sources, set
-    `sitemap.html_fallback=False` after you confirm the sitemap URLs you need.
+    If a job should only trust XML sitemap sources, set `sitemap.html_fallback=False`
+    after you confirm the sitemap URLs you need.
 
 ## Sitemap Formats Supported
 

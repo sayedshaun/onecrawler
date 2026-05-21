@@ -175,8 +175,8 @@ Fields:
 - Must have Ollama server running with the specified model
 
 !!! warning "Model names change over time"
-    Check your provider's current model list before publishing examples or running
-    scheduled jobs. Keep model identifiers configurable in production.
+    Check your provider's current model list before publishing examples. Keep model
+    identifiers configurable in production.
 
 ## BrowserSettings
 
@@ -254,18 +254,11 @@ async with Crawler(settings) as engine:
     results = await engine.run("https://example.com")
 ```
 
-```python
-# With date filtering
-async with Crawler(settings, start_date="2024-01-01", end_date="2024-12-31") as engine:
-    results = await engine.run("https://example.com")
-```
-
 Returns a list of content dictionaries with extracted data from discovered pages.
 
 ### Key Features
 
 - **Orchestrated Workflow:** Combines link discovery, browser automation, and content extraction
-- **Date Filtering:** Filter content by publication date range
 - **Human Behavior Simulation:** Optional realistic browsing patterns
 - **Proxy Support:** Built-in proxy rotation for production crawling
 - **Concurrent Processing:** Configurable worker pool for efficient crawling
@@ -275,8 +268,6 @@ Returns a list of content dictionaries with extracted data from discovered pages
 | Parameter | Type | Required | Default | Purpose |
 | --- | --- | --- | --- | --- |
 | `settings` | `Settings` | Yes | - | Configuration for all crawling components |
-| `start_date` | `str` | No | `None` | Filter content from this date (YYYY-MM-DD) |
-| `end_date` | `str` | No | `None` | Filter content until this date (YYYY-MM-DD) |
 
 ### Proxy Configuration
 
@@ -294,24 +285,12 @@ settings = Settings(
 
 Without proper proxy configuration, your crawler may be blocked by target websites.
 
-!!! note "Date filtering depends on extracted metadata"
-    `start_date` and `end_date` work when extracted content includes a `filedate` or
-    `date` field in `YYYY-MM-DD` format.
-
 ### Usage Patterns
 
 **Simple crawling:**
 ```python
 async with Crawler(settings) as engine:
     content = await engine.run("https://example.com")
-```
-
-**With date filtering:**
-```python
-async with Crawler(settings, 
-                         start_date="2024-01-01", 
-                         end_date="2024-06-30") as engine:
-    content = await engine.run("https://example.com/news")
 ```
 
 **Manual lifecycle:**
@@ -323,9 +302,3 @@ try:
 finally:
     await engine.close()
 ```
-
-## LinkClassifierPipeline
-
-Publicly exported link classifier Crawler used by shallow extraction when
-`link_classification=True`. Most users should start with `include_link_patterns`
-because path filters are explicit, easy to debug, and deterministic.
