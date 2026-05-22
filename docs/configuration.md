@@ -299,22 +299,47 @@ settings = Settings(
 | `enable_human_behaviors` | `False` (default) or `True` | Simulate human browsing patterns |
 | `human_behavior_settings` | Customizable if enabled | Configure delays, scrolls, mouse movements |
 
-### Date Filtering Configuration
+### Content Filtering
 
-Crawler supports date-based content filtering via constructor parameters:
+Crawler supports composable content filtering via the `filters` parameter on
+`.run()` and `.stream()`. Filters are applied after content extraction.
 
 ```python
-# Filter content by publication date
-async with Crawler(settings, 
-                         start_date="2024-01-01", 
-                         end_date="2024-12-31") as engine:
-    results = await engine.run("https://example.com/news")
+from onecrawler.filters import by_date, by_keywords
+from onecrawler.filters.chain import AND
+
+content_filter = AND(
+    by_date(start="2024-01-01", end="2024-12-31"),
+    by_keywords(["python", "async"]),
+)
+
+async with Crawler(settings) as engine:
+    results = await engine.run("https://example.com/news", filters=content_filter)
 ```
 
-**Date Requirements:**
-- Format: `YYYY-MM-DD`
-- Content must have `filedate` or `date` field
-- Applied after content extraction
+**Available filters:**
+
+| Filter | Purpose |
+| --- | --- |
+| `by_date(start, end)` | Keep items within a `YYYY-MM-DD` date range |
+| `by_keywords(keywords)` | Keep items whose text contains any keyword |
+| `by_files(types)` | Keep items by logical file type (`pdf`, `image`, `docx`, `text`) |
+| `by_extension(extensions)` | Keep items by URL file extension |
+| `by_cosine_similarity(query, threshold)` | Keep items semantically similar to a query |
+
+**Composing filters:**
+
+Use `AND`, `OR`, and `NOT` from `onecrawler.filters.chain`:
+
+```python
+from onecrawler.filters.chain import AND, OR, NOT
+
+f = AND(by_date(start="2024-01-01"), NOT(by_files(["pdf"])))
+```
+
+!!! note "Filters run post-extraction"
+    Content must be extracted before filters can evaluate it. Date filters read
+    the `filedate` or `date` field; pages without a parseable date are excluded.
 
 ### Human Behavior Settings
 

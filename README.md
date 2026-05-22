@@ -47,6 +47,7 @@ async with Scraper(settings) as scraper_engine:
 | **Sitemap discovery** | Resolves `robots.txt`, common sitemap paths, nested indexes, `.xml.gz`, feeds, and HTML fallback |
 | **Browser link extraction** | Shallow and deep Playwright-backed discovery for JavaScript-rendered or sitemap-poor sites |
 | **URL filtering** | Wildcard path filters with `include_link_patterns` |
+| **Content filtering** | Composable post-extraction filters by date, keywords, file type, and cosine similarity with `AND`/`OR`/`NOT` logic |
 | **Async performance** | Tunable concurrency, retries, timeouts, and crawl limits |
 | **Content extraction** | Heuristic extraction with `trafilatura` for fast article-like content |
 | **GenAI extraction** | Optional model-assisted extraction for strongly typed Pydantic outputs |
@@ -124,6 +125,29 @@ docker run -it --rm -v $(pwd):/app onecrawler python your_script.py
 ---
 
 ## Quick Start
+```python
+from onecrawler import Crawler, Settings
+
+async def main():
+    settings = Settings(
+        link_extraction_limit=10,
+        concurrency=7
+    )
+
+    async with Crawler(settings) as engine:
+        results = await engine.run("https://www.example.com/")
+
+    with open("output.json", "w", encoding="utf-8") as f:
+        json.dump(results, f, ensure_ascii=False, indent=4)
+
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
+```
+
+
+## Separate Workflow
 
 ```python
 import json
@@ -193,6 +217,95 @@ if __name__ == "__main__":
 
 > [!NOTE]
 > Deep extraction follows internal links recursively. Use `shallow` strategy when you only need links visible on a single listing page — it's significantly faster.
+
+---
+
+## Content Filtering
+
+Filter crawled results by date, keywords, file type, or semantic similarity. Filters are passed to `Crawler.run()` or `Crawler.stream()` and applied after content extraction.
+
+```python
+import asyncio
+from onecrawler import Crawler, Settings
+from onecrawler.filters import by_date, by_keywords
+from onecrawler.filters.chain import AND
+
+
+async def main():
+    settings = Settings(
+        link_extraction_limit=50,
+        concurrency=5,
+    )
+
+    # Keep only pages from 2025 that mention "python" or "async"
+    content_filter = AND(
+        by_date(start="2025-01-01", end="2025-12-31"),
+        by_keywords(["python", "async"]),
+    )
+
+    async with Crawler(settings) as engine:
+        results = await engine.run(
+            "https://example.com/blog",
+            filters=content_filter,
+        )
+
+    print(f"Matched {len(results)} pages")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### Available Filters
+
+| Filter | Import | Purpose |
+| --- | --- | --- |
+| `by_date(start, end)` | `onecrawler.filters` | Keep items within a `YYYY-MM-DD` date range |
+| `by_keywords(keywords)` | `onecrawler.filters` | Keep items whose text contains any keyword |
+| `by_files(types)` | `onecrawler.filters` | Keep items by logical file type (`pdf`, `image`, `docx`, `text`) |
+| `by_extension(extensions)` | `onecrawler.filters` | Keep items by URL file extension (`.pdf`, `.jpg`) |
+| `by_cosine_similarity(query, threshold)` | `onecrawler.filters` | Keep items whose text is semantically similar to a query |
+
+### Composing Filters
+
+Use `AND`, `OR`, and `NOT` from `onecrawler.filters.chain` to combine filters:
+
+```python
+from onecrawler.filters import by_date, by_keywords, by_files
+from onecrawler.filters.chain import AND, OR, NOT
+
+# Pages from 2025 that mention "python" but are not PDFs
+f = AND(
+    by_date(start="2025-01-01"),
+    by_keywords(["python"]),
+    NOT(by_files(["pdf"])),
+)
+
+# Pages that mention "AI" or are from 2025
+f = OR(
+    by_keywords(["AI"]),
+    by_date(start="2025-01-01", end="2025-12-31"),
+)
+```
+
+### Streaming With Filters
+
+Filters work with `Crawler.stream()` for real-time filtered output:
+
+```python
+async with Crawler(settings) as engine:
+    async for item in engine.stream(
+        "https://example.com/news",
+        filters=by_cosine_similarity("climate policy", threshold=0.3),
+    ):
+        print(item["title"])
+```
+
+> [!TIP]
+> Filters run after content extraction, so they work with any scraping strategy. Use `by_cosine_similarity` for topic-focused crawls and `by_date` to keep results fresh.
+
+> [!NOTE]
+> `by_date` reads the `filedate` or `date` field from extracted content. Pages without a parseable date are excluded when a date filter is active.
 
 ---
 
