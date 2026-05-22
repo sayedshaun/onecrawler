@@ -277,6 +277,50 @@ chain.add(by_cosine_similarity("web scraping"))
 keep = chain({"text": "python web scraping", "date": "2025-03-15"})
 ```
 
+## Custom Filters
+
+You can easily write your own custom filters to implement advanced filtering logic (such as deep semantic similarity, content analysis, or third-party API integration). 
+
+A custom filter is simply any callable that takes a `dict` (the extracted page item) and returns a `bool` (`True` to keep the item, `False` to discard it). If you want your filter to accept parameters, you can write a factory function that returns a closure.
+
+Here is an example of a custom semantic similarity filter using the `sentence-transformers` library:
+
+```python
+from typing import Callable
+from sentence_transformers import SentenceTransformer, util
+
+def by_semantic_similarity(query: str, threshold: float = 0.3) -> Callable[[dict], bool]:
+    # Load the model once when the filter is initialized
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    query_emb = model.encode(query, convert_to_tensor=True)
+
+    def _filter(item: dict) -> bool:
+        # Check title, content or text fields
+        doc_text = item.get("content") or item.get("title") or item.get("text") or ""
+        if not doc_text:
+            return False
+        
+        # Compute semantic similarity using embeddings
+        doc_emb = model.encode(doc_text, convert_to_tensor=True)
+        score = float(util.cos_sim(query_emb, doc_emb)[0][0])
+        return score >= threshold
+
+    return _filter
+```
+
+### Usage with the Crawler
+
+You can pass your custom filter directly to the crawler's execution or streaming methods, exactly like built-in filters:
+
+```python
+async with Crawler(settings) as engine:
+    async for item in engine.stream(
+        "https://example.com/news",
+        filters=by_semantic_similarity("artificial intelligence", threshold=0.35),
+    ):
+        print(item["title"])
+```
+
 ## Best Practices
 
 1. **Combine URL and content filters**: Use `include_link_patterns` for URL-level
