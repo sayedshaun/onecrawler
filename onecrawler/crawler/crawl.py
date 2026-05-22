@@ -278,7 +278,10 @@ class Crawler(BaseEngine):
             await self.browser.close()
 
     async def _create_runtime(
-        self, url: str, streaming: bool = False
+        self,
+        url: str,
+        streaming: bool = False,
+        content_filter: Optional[Callable[[dict], bool]] = None,
     ) -> Tuple[CrawlerRuntime, BrowserPool]:
         parsed = urlparse(url)
         base_prefix = f"{parsed.scheme}://{parsed.netloc}"
@@ -301,21 +304,23 @@ class Crawler(BaseEngine):
             human_behavior_settings=self.settings.human_behavior_settings,
             concurrency=self.settings.concurrency,
             streaming=streaming,
-            content_filter=None,
+            content_filter=content_filter,
         )
         return runtime, pool
 
-    async def run(self, url: str) -> list[dict]:
+    async def run(self, url: str, filters=None) -> list[dict]:
         self._ensure_open()
-        runtime, pool = await self._create_runtime(url)
+        runtime, pool = await self._create_runtime(url, content_filter=filters)
         try:
             return await runtime.run()
         finally:
             await pool.close()
 
-    async def stream(self, url: str) -> AsyncGenerator[dict, None]:
+    async def stream(self, url: str, filters=None) -> AsyncGenerator[dict, None]:
         self._ensure_open()
-        runtime, pool = await self._create_runtime(url, streaming=True)
+        runtime, pool = await self._create_runtime(
+            url, streaming=True, content_filter=filters
+        )
         try:
             async for item in runtime.stream():
                 yield item
