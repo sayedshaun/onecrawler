@@ -60,7 +60,9 @@ class Scraper(BaseEngine):
             if not self.settings.genai:
                 raise ValueError("GenAI settings is required for GenAI strategy")
 
-            self.strategy = GenAIStrategy(settings=self.settings.genai)
+            self.strategy = GenAIStrategy(
+                settings=self.settings.genai, browser=self.browser
+            )
             await self.strategy.initialize()
 
         else:
@@ -78,7 +80,7 @@ class Scraper(BaseEngine):
                 return await fn()
             except Exception as e:
                 if attempt == self.retries - 1:
-                    self.logger.error(f"Final failure: {e}")
+                    self.logger.error(f"Final failure [{type(e).__name__}]: {e}")
                     return None
                 await asyncio.sleep(2**attempt)
 
