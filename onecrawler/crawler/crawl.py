@@ -1,8 +1,7 @@
 import asyncio
 import contextlib
 import logging
-import warnings
-from typing import AsyncGenerator, Callable, List, Optional, Tuple
+from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple
 from urllib.parse import urlparse
 
 from ..browser import GoogleChrome
@@ -16,6 +15,14 @@ from .link.helper import (
     wildcard_link_match,
 )
 from .scraper.heuristic.script import HeuristicStrategy
+
+try:
+    from .scraper.genai.executor import GenAIStrategy
+except ImportError as e:
+    GenAIStrategy = None
+    _GENAI_IMPORT_ERROR = e
+else:
+    _GENAI_IMPORT_ERROR = None
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +46,7 @@ class CrawlerRuntime:
         spider: LinkSpider,
         base_prefix: str,
         max_links: int,
-        strategy: Optional[HeuristicStrategy] = None,
+        strategy: Optional[Any] = None,
         human_behavior_settings: HumanBehaviorSettings = HumanBehaviorSettings,
         include_pattern: Optional[List[str]] = None,
         exclude_pattern: Optional[List[str]] = None,
@@ -94,20 +101,16 @@ class CrawlerRuntime:
 
     async def worker(self):
         while not self.stop_event.is_set():
-            async with self._active_lock:
-                url = await self.scheduler.next()
+            url = await self.scheduler.next()
 
+            async with self._active_lock:
                 if url is None:
                     if self._active_workers == 0:
                         self.stop_event.set()
-                        return
-
+                    await asyncio.sleep(0.2)
+                    continue
                 else:
                     self._active_workers += 1
-
-            if url is None:
-                await asyncio.sleep(0.2)
-                continue
 
             page = await self.pool.acquire()
 
@@ -142,6 +145,37 @@ class CrawlerRuntime:
                         max_mouse_sleep=self.human_behavior_settings.max_mouse_sleep,
                     )
 
+                async with self.lock:
+                    if not self.stop_event.is_set() and url not in self.results_set:
+                        self.results_set.add(url)
+                        try:
+                            content = await self.strategy.extract(url)
+                            if content is None:
+                                logger.info(
+                                    "Content extraction returned None for %s", url
+                                )
+                            elif self.content_filter is None or self.content_filter(
+                                content
+                            ):
+                                self.results.append(url)
+                                self.content.append(content)
+                                if self.streaming:
+                                    await self.stream_queue.put(content)
+                                logger.info(
+                                    "Discovered %s/%s links; link=%s",
+                                    len(self.results),
+                                    self.max_links,
+                                    url,
+                                )
+                            else:
+                                logger.info("Content did not pass filter for %s", url)
+                        except Exception as e:
+                            logger.error("Error extracting content for %s: %s", url, e)
+
+                        if len(self.results) >= self.max_links:
+                            self.stop_event.set()
+
+                # Enqueue discovered child links for future visits
                 for link in links:
                     if self.stop_event.is_set():
                         break
@@ -165,50 +199,9 @@ class CrawlerRuntime:
                         ):
                             continue
 
-                    await self.scheduler.add(link)
-
                     async with self.lock:
-                        if len(self.results) >= self.max_links:
-                            self.stop_event.set()
-                            return
-
-                        if link in self.results_set:
-                            continue
-
-                        self.results_set.add(link)
-
-                        try:
-                            content = await self.strategy.extract(link)
-                            if content is None:
-                                logger.info(
-                                    "Content extraction returned None for %s", link
-                                )
-                                continue
-
-                            if self.content_filter is None or self.content_filter(
-                                content
-                            ):
-                                self.results.append(link)
-                                self.content.append(content)
-                                if self.streaming:
-                                    await self.stream_queue.put(content)
-                                logger.info("Content is valid, added to results")
-                            else:
-                                logger.info("Content is not valid for date range")
-                        except Exception as e:
-                            logger.error("Error extracting content for %s: %s", link, e)
-                            continue
-
-                        logger.info(
-                            "Discovered %s/%s links; link=%s",
-                            len(self.results),
-                            self.max_links,
-                            link,
-                        )
-
-                        if len(self.results) >= self.max_links:
-                            self.stop_event.set()
-                            return
+                        if link not in self.results_set:
+                            await self.scheduler.add(link)
 
             finally:
                 await self.pool.release(page)
@@ -227,7 +220,6 @@ class CrawlerRuntime:
         if self.max_links <= 0:
             return
 
-        self.streaming = True
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
 
         try:
@@ -269,9 +261,38 @@ class Crawler(BaseEngine):
 
     async def start(self):
         self._closed = False
+
+        scraping_strategy = getattr(self.settings, "scraping_strategy", "heuristic")
+        if not isinstance(scraping_strategy, str):
+            scraping_strategy = "heuristic"
+
+        if scraping_strategy == "genai":
+            if not getattr(self.settings, "genai", None):
+                raise ValueError("GenAI settings is required for GenAI strategy")
+            if GenAIStrategy is None:
+                raise ImportError(
+                    "GenAI dependencies are not installed. Install with "
+                    '`pip install "onecrawler[genai]"` to use '
+                    'scraping_strategy="genai".'
+                ) from _GENAI_IMPORT_ERROR
+
+            strategy = GenAIStrategy(settings=self.settings.genai)
+            await strategy.initialize()
+        elif scraping_strategy != "heuristic":
+            raise ValueError(f"Unknown strategy: {scraping_strategy}")
+        else:
+            strategy = None
+
         self.browser = GoogleChrome(self.settings.browser_settings)
         await self.browser.start()
-        self.strategy = HeuristicStrategy(settings=self.settings, browser=self.browser)
+
+        if scraping_strategy == "heuristic":
+            strategy = HeuristicStrategy(
+                settings=self.settings,
+                browser=self.browser,
+            )
+
+        self.strategy = strategy
 
     async def close(self):
         if self.browser:
