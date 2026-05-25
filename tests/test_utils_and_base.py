@@ -72,11 +72,11 @@ class TestUtilsAndBase:
         assert elapsed >= 0
         assert result == "done"
 
-    async def test_save_json_writes_utf8_json(self):
+    async def test_dump_json_writes_utf8_json(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "data.json"
 
-            writter_module.save_json({"name": "Onecrawler"}, str(target))
+            writter_module.dump_json({"name": "Onecrawler"}, str(target))
 
             assert json.loads(target.read_text(encoding="utf-8")) == {
                 "name": "Onecrawler"
