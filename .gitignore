@@ -63,5 +63,4 @@ Thumbs.db
 *.json
 *.jsonl
 *.temp
-temp.py
-test.py
+*.test.py
