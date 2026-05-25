@@ -14,6 +14,7 @@ class AgentState(TypedDict):
 
     url: str
     llm: Any
+    browser: Any
     markdown: Optional[str]
     prompt: Optional[str]
     response: Optional[Any]
