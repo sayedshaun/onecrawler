@@ -92,6 +92,7 @@ Then pass the final URL list to `Scraper`.
 | Explore a site section recursively | deep link extraction | Follows internal links until your settings limit |
 | Extract readable article text | heuristic scraping | Fast, deterministic, and does not require model calls |
 | Produce strongly typed output | GenAI scraping with a Pydantic schema | Best fit when downstream systems require a stable structured shape |
+| Filter results by date, keywords, or topic | `onecrawler.filters` with `AND`/`OR`/`NOT` | Composable post-extraction filters keep only relevant content |
 | Avoid noisy crawls | `include_link_patterns` | Keeps discovery focused on URL paths you trust |
 
 ## Documentation Map
@@ -99,6 +100,7 @@ Then pass the final URL list to `Scraper`.
 - [Installation](installation.md): package setup, browser requirements, optional extras
 - [Quick start](quick-start.md): first complete discovery and scraping workflows
 - [Configuration](configuration.md): crawler settings and configuration
+- [Filters](packages/filters.md): composable content filters for date, keywords, file type, and similarity
 - [Link Extraction](packages/link-extraction.md): `LinkExtractor` and link discovery
 - [Sitemap Discovery](packages/sitemap.md): `UniversalSiteMap` and URL collection
 - [Scraping Engine](packages/scraping.md): `Scraper` and content extraction

@@ -27,6 +27,16 @@ from onecrawler import (
     SitemapStats,
     UniversalSiteMap,
 )
+
+# Filters (import from subpackage)
+from onecrawler.filters import (
+    by_date,
+    by_extension,
+    by_files,
+    by_keywords,
+    by_cosine_similarity,
+)
+from onecrawler.filters.chain import AND, OR, NOT
 ```
 
 ## Settings
@@ -302,3 +312,72 @@ try:
 finally:
     await engine.close()
 ```
+
+**With content filters:**
+```python
+from onecrawler.filters import by_date, by_keywords
+from onecrawler.filters.chain import AND
+
+filter_fn = AND(
+    by_date(start="2024-01-01"),
+    by_keywords(["python"]),
+)
+
+async with Crawler(settings) as engine:
+    results = await engine.run("https://example.com", filters=filter_fn)
+```
+
+## Filters
+
+Post-extraction content filters that can be passed to `Crawler.run()` and
+`Crawler.stream()`. Filters are composable using `AND`, `OR`, and `NOT`.
+
+### Individual Filters
+
+```python
+from onecrawler.filters import (
+    by_date,
+    by_extension,
+    by_files,
+    by_keywords,
+    by_cosine_similarity,
+)
+```
+
+| Filter | Signature | Purpose |
+| --- | --- | --- |
+| `by_date` | `by_date(start=None, end=None)` | Keep items within a `YYYY-MM-DD` range |
+| `by_keywords` | `by_keywords(keywords)` | Keep items whose text contains any keyword |
+| `by_files` | `by_files(types)` | Keep items by logical file type: `pdf`, `image`, `docx`, `text` |
+| `by_extension` | `by_extension(extensions)` | Keep items by URL file extension |
+| `by_cosine_similarity` | `by_cosine_similarity(query, threshold=0.25)` | Keep items semantically similar to a query |
+
+Each filter function returns a `Callable[[dict], bool]` that accepts a content
+dictionary and returns `True` to keep or `False` to discard.
+
+### FilterChain Operators
+
+```python
+from onecrawler.filters.chain import AND, OR, NOT
+```
+
+| Operator | Purpose |
+| --- | --- |
+| `AND(*filters)` | Keep items that pass **all** filters |
+| `OR(*filters)` | Keep items that pass **any** filter |
+| `NOT(filter)` | Invert a single filter |
+
+```python
+from onecrawler.filters import by_date, by_keywords, by_files
+from onecrawler.filters.chain import AND, NOT
+
+f = AND(
+    by_date(start="2024-01-01", end="2024-12-31"),
+    by_keywords(["python", "async"]),
+    NOT(by_files(["pdf"])),
+)
+```
+
+!!! tip "Filters are post-extraction"
+    Filters evaluate content after extraction. They work with both heuristic and
+    GenAI scraping strategies.

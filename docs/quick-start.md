@@ -210,6 +210,25 @@ async with Crawler(settings) as engine:
     results = await engine.run("https://spa-example.com")
 ```
 
+**With content filtering:**
+```python
+from onecrawler.filters import by_date, by_cosine_similarity
+from onecrawler.filters.chain import AND
+
+content_filter = AND(
+    by_date(start="2025-01-01"),
+    by_cosine_similarity("technology trends", threshold=0.3),
+)
+
+async with Crawler(settings) as engine:
+    results = await engine.run("https://example.com/news", filters=content_filter)
+```
+
+!!! tip "Combine URL and content filters"
+    Use `include_link_patterns` to scope URL discovery and `onecrawler.filters`
+    to refine extracted content. Together they keep crawls focused and results
+    relevant.
+
 ## Practical Defaults
 
 Start conservative:

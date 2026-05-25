@@ -1,9 +1,12 @@
 import asyncio
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from ....settings.genai import GenerativeAISettings
 from .graph import build_graph
 from .model import LLMManager
+
+if TYPE_CHECKING:
+    from ....browser import GoogleChrome
 
 
 class GenAIStrategy:
@@ -16,12 +19,16 @@ class GenAIStrategy:
         graph (Optional[CompiledGraph]): The compiled state graph for extraction.
     """
 
-    def __init__(self, settings: GenerativeAISettings):
+    def __init__(
+        self, settings: GenerativeAISettings, browser: Optional["GoogleChrome"] = None
+    ):
         """Initializes GenAIStrategy.
 
         Args:
             settings (GenerativeAISettings): The GenAI configuration settings.
+            browser (Optional[GoogleChrome]): A started browser instance for JS-heavy pages.
         """
+        self.browser = browser
         self.llm = LLMManager(
             schema=settings.output_schema,
             model_provider=settings.provider,
@@ -58,6 +65,7 @@ class GenAIStrategy:
         state = {
             "url": url,
             "llm": self.llm,
+            "browser": self.browser,
         }
 
         result = await self.graph.ainvoke(state)

@@ -111,6 +111,7 @@ nav:
     - Quick Start: quick-start.md
     - Configuration: configuration.md
   - Packages:
+    - Filters: packages/filters.md
     - Link Extraction: packages/link-extraction.md
     - Sitemap Discovery: packages/sitemap.md
     - Scraping Engine: packages/scraping.md

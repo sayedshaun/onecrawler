@@ -87,6 +87,9 @@ class TestPipeline:
         self.mock_settings.concurrency = 2
         self.mock_settings.link_extraction_limit = 5
         self.mock_settings.include_link_patterns = ["/news/*"]
+        self.mock_settings.exclude_link_patterns = None
+        self.mock_settings.scraping_strategy = "heuristic"
+        self.mock_settings.genai = None
         self.mock_settings.enable_human_behaviors = False
         self.mock_settings.human_behavior_settings = (
             self.simulation_settings_module.HumanBehaviorSettings()
@@ -141,6 +144,35 @@ class TestPipeline:
             )
 
             # Verify engine attributes are set
+            assert engine.browser == mock_chrome_instance
+            assert engine.strategy == mock_strategy_instance
+
+    @pytest.mark.asyncio
+    async def test_pipeline_engine_start_initializes_genai_strategy(self):
+        """Test that start() initializes GenAI strategy when configured."""
+        self.mock_settings.scraping_strategy = "genai"
+        self.mock_settings.genai = MagicMock()
+        engine = self.onecrawler_module.Crawler(self.mock_settings)
+
+        with (
+            patch("onecrawler.crawler.crawl.GoogleChrome") as mock_chrome,
+            patch("onecrawler.crawler.crawl.GenAIStrategy") as mock_strategy,
+            patch("onecrawler.crawler.crawl.HeuristicStrategy") as mock_heuristic,
+        ):
+            mock_chrome_instance = AsyncMock()
+            mock_chrome.return_value = mock_chrome_instance
+            mock_strategy_instance = MagicMock()
+            mock_strategy_instance.initialize = AsyncMock()
+            mock_strategy.return_value = mock_strategy_instance
+
+            await engine.start()
+
+            mock_chrome.assert_called_once_with(self.mock_browser_settings)
+            mock_chrome_instance.start.assert_called_once()
+            mock_strategy.assert_called_once_with(settings=self.mock_settings.genai)
+            mock_strategy_instance.initialize.assert_called_once()
+            mock_heuristic.assert_not_called()
+
             assert engine.browser == mock_chrome_instance
             assert engine.strategy == mock_strategy_instance
 
