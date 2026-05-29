@@ -85,7 +85,7 @@ class BFSRuntime:
                     self._active_workers += 1
 
             if url is None:
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.05)
                 continue
 
             page = await self.pool.acquire()

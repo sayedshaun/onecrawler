@@ -109,10 +109,12 @@ class CrawlerRuntime:
                 if url is None:
                     if self._active_workers == 0:
                         self.stop_event.set()
-                    await asyncio.sleep(0.2)
-                    continue
                 else:
                     self._active_workers += 1
+
+            if url is None:
+                await asyncio.sleep(0.05)
+                continue
 
             page = await self.pool.acquire()
 
