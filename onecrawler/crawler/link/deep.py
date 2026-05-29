@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import sys
 from tqdm import tqdm
 from typing import AsyncGenerator, List, Optional, Set
 
@@ -43,6 +44,7 @@ class BFSRuntime:
         concurrency: int = 5,
         streaming: bool = False,
         wait_until: str = "domcontentloaded",
+        show_progress: bool = True,
     ):
         self.scheduler = scheduler
         self.pool = pool
@@ -56,6 +58,7 @@ class BFSRuntime:
         self.human_behavior_settings = human_behavior_settings
         self.concurrency = concurrency
         self.wait_until = wait_until
+        self.show_progress = show_progress
 
         self.stop_event: asyncio.Event = asyncio.Event()
         self.results: List[str] = []
@@ -234,6 +237,7 @@ class BFSRuntime:
             desc="Link Extracting",
             unit="link",
             dynamic_ncols=True,
+            disable=(not self.show_progress or not sys.stderr.isatty()),
         )
 
         try:

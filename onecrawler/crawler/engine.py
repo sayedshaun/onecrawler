@@ -339,6 +339,7 @@ class LinkExtractor(BaseEngine):
             concurrency=self.settings.concurrency,
             streaming=True,
             wait_until=self.settings.browser_settings.runtime.wait_until,
+            show_progress=self.settings.show_progress,
         )
 
         try:

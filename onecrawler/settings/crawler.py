@@ -38,6 +38,7 @@ class Settings:
         proxies (Optional[List[ProxySettings]]): List of proxies for rotation.
         proxy_rotation_method (Literal["round_robin", "random"]): Strategy for proxy rotation.
         browser_settings (BrowserSettings): Configuration for the browser instance.
+        show_progress (bool): Whether to display tqdm progress bars.
         enable_logging (bool): Whether to enable standard logging.
         logging_level (str): The logging level (e.g., "INFO").
         enable_human_behaviors (bool): Whether to simulate human browsing patterns.
@@ -68,6 +69,8 @@ class Settings:
     proxy_rotation_method: Literal["round_robin", "random"] = "round_robin"
 
     browser_settings: BrowserSettings = field(default_factory=BrowserSettings)
+
+    show_progress: bool = True
 
     enable_logging: bool = False
     logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
