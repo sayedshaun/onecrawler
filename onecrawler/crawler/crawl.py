@@ -155,7 +155,7 @@ class CrawlerRuntime:
                         try:
                             content = await self.strategy.extract(url)
                             if content is None:
-                                logger.info(
+                                logger.debug(
                                     "Content extraction returned None for %s", url
                                 )
                             elif self.content_filter is None or self.content_filter(
@@ -165,16 +165,18 @@ class CrawlerRuntime:
                                 self.content.append(content)
                                 if self.streaming:
                                     await self.stream_queue.put(content)
-                                logger.info(
+                                logger.debug(
                                     "Discovered %s/%s links; link=%s",
                                     len(self.results),
                                     self.max_links,
                                     url,
                                 )
                             else:
-                                logger.info("Content did not pass filter for %s", url)
+                                logger.debug("Content did not pass filter for %s", url)
                         except Exception as e:
-                            logger.error("Error extracting content for %s: %s", url, e)
+                            logger.warning(
+                                "Error extracting content for %s: %s", url, e
+                            )
 
                         if len(self.results) >= self.max_links:
                             self.stop_event.set()

@@ -160,7 +160,7 @@ class BFSRuntime:
                         else:
                             self.results.append(link)
 
-                        logger.info(
+                        logger.debug(
                             "Discovered %s/%s links; link=%s",
                             len(self.results_set),
                             self.max_links,

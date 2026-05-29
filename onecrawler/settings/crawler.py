@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass, field
 from datetime import date
 from typing import List, Literal, Optional
@@ -83,6 +84,10 @@ class Settings:
 
     def __post_init__(self):
         """Validates settings after initialization."""
+        if self.enable_logging:
+            logging.getLogger("onecrawler").setLevel(self.logging_level)
+            logging.getLogger("trafilatura").setLevel(logging.ERROR)
+
         if self.proxy and self.proxies:
             raise ValueError("Use either proxy or proxies, not both")
 

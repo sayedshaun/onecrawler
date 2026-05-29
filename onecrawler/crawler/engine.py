@@ -120,7 +120,7 @@ class Scraper(BaseEngine):
 
                     await asyncio.sleep(2**attempt)
                 else:
-                    self.logger.error(f"Final failure [{type(e).__name__}]: {e}")
+                    self.logger.warning(f"Final failure [{type(e).__name__}]: {e}")
 
                     return None
 
@@ -174,7 +174,7 @@ class Scraper(BaseEngine):
                     raise
 
                 except Exception as e:
-                    self.logger.error(
+                    self.logger.warning(
                         f"Streaming task failed: [{type(e).__name__}] {e}"
                     )
 
