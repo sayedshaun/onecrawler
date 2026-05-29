@@ -7,7 +7,9 @@ from urllib.parse import urlparse
 from ..browser import GoogleChrome
 from ..settings.simulation import HumanBehaviorSettings
 from .base import BaseEngine
-from .link.deep import BFScheduler, BrowserPool, LinkSpider
+from .scheduler import BFScheduler
+from .pool import BrowserPool
+from .spider import LinkSpider
 from .link.helper import (
     human_delay,
     human_mouse_move,
