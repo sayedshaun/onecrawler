@@ -19,8 +19,13 @@ async def _fetch_with_browser(url: str, browser) -> Optional[str]:
         Optional[str]: The page's inner HTML, or None if navigation failed.
     """
     page = await browser.new_page()
+    runtime = browser.settings.runtime
     try:
-        await page.goto(url, wait_until="domcontentloaded")
+        await page.goto(
+            url,
+            wait_until=runtime.wait_until,
+            timeout=runtime.timeout,
+        )
         return await page.content()
     except Exception:
         return None
