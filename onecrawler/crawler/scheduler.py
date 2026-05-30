@@ -2,6 +2,7 @@ import asyncio
 from collections import deque
 from typing import Optional, Set
 
+
 class BFScheduler:
     """A scheduler for Breadth-First Search crawling.
 

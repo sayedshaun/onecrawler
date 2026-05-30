@@ -112,7 +112,7 @@ class BrowserSettings:
         proxy (Optional[ProxySettings]): Proxy configuration.
     """
 
-    user_data_dir: str = ".temp/browser_profile"
+    user_data_dir: str = ".chrome"
 
     launch: LaunchSettings = field(default_factory=LaunchSettings)
     context: ContextSettings = field(default_factory=ContextSettings)

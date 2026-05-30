@@ -1,18 +1,19 @@
-import sys
 import asyncio
-from tqdm import tqdm
-from urllib.parse import urlparse
+import sys
 from typing import Any, AsyncGenerator, List, Optional, Union
+from urllib.parse import urlparse
+
+from tqdm import tqdm
 
 from ..browser import GoogleChrome
 from ..settings.crawler import Settings
 from .base import BaseEngine
+from .link.deep import BFSRuntime
+from .link.shallow import extract_url_from_current_page
+from .pool import BrowserPool
+from .scheduler import BFScheduler
 from .scraper.genai.executor import GenAIStrategy
 from .scraper.heuristic.script import HeuristicStrategy
-from .link.shallow import extract_url_from_current_page
-from .link.deep import BFSRuntime
-from .scheduler import BFScheduler
-from .pool import BrowserPool
 from .spider import LinkSpider
 
 

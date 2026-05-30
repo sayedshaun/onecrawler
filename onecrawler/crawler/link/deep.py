@@ -1,8 +1,9 @@
 import asyncio
 import logging
 import sys
-from tqdm import tqdm
 from typing import AsyncGenerator, List, Optional, Set
+
+from tqdm import tqdm
 
 from ...settings.simulation import HumanBehaviorSettings
 from ..pool import BrowserPool

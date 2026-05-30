@@ -7,16 +7,16 @@ from urllib.parse import urlparse
 from ..browser import GoogleChrome
 from ..settings.simulation import HumanBehaviorSettings
 from .base import BaseEngine
-from .scheduler import BFScheduler
-from .pool import BrowserPool
-from .spider import LinkSpider
 from .link.helper import (
     human_delay,
     human_mouse_move,
     human_scroll,
     wildcard_link_match,
 )
+from .pool import BrowserPool
+from .scheduler import BFScheduler
 from .scraper.heuristic.script import HeuristicStrategy
+from .spider import LinkSpider
 
 try:
     from .scraper.genai.executor import GenAIStrategy

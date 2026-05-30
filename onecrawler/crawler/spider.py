@@ -1,5 +1,5 @@
 from typing import List
-from urllib.parse import urlparse, urldefrag
+from urllib.parse import urldefrag, urlparse
 
 
 class LinkSpider:
