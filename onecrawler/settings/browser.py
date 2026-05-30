@@ -92,17 +92,12 @@ class RuntimeSettings:
         timeout (int): Global timeout for operations.
         action_timeout (int): Timeout for user actions like clicks.
         navigation_timeout (int): Timeout for page navigation.
-        max_retries (int): Number of times to retry failed operations.
-        retry_delay (float): Delay between retries in seconds.
     """
 
     wait_until: str = "domcontentloaded"
     timeout: int = 30000
     action_timeout: int = 30000
     navigation_timeout: int = 30000
-
-    max_retries: int = 2
-    retry_delay: float = 1.0
 
 
 @dataclass
@@ -117,7 +112,7 @@ class BrowserSettings:
         proxy (Optional[ProxySettings]): Proxy configuration.
     """
 
-    user_data_dir: str = ".temp/browser_profile"
+    user_data_dir: str = ".chrome"
 
     launch: LaunchSettings = field(default_factory=LaunchSettings)
     context: ContextSettings = field(default_factory=ContextSettings)

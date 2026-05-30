@@ -47,6 +47,24 @@ class TestCrawlerSettings:
         assert settings.genai == genai_settings
         assert settings.scraping_output_format == "json"
 
+    def test_sitemap_date_filters_live_in_sitemap_settings(self):
+        from datetime import date
+
+        settings = crawler_module.Settings(
+            sitemap=crawler_module.SitemapSettings(
+                start_date=date(2024, 1, 1),
+                end_date=date(2024, 12, 31),
+                strict_date_filter=True,
+            )
+        )
+
+        assert settings.sitemap.start_date == date(2024, 1, 1)
+        assert settings.sitemap.end_date == date(2024, 12, 31)
+        assert settings.sitemap.strict_date_filter is True
+        assert not hasattr(settings, "start_date")
+        assert not hasattr(settings, "end_date")
+        assert not hasattr(settings, "strict_date_filter")
+
     def test_single_proxy_is_attached_to_browser_settings(self):
         proxy = browser_module.ProxySettings(server="http://proxy.example:8080")
 

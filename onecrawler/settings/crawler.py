@@ -1,5 +1,5 @@
+import logging
 from dataclasses import dataclass, field
-from datetime import date
 from typing import List, Literal, Optional
 
 from ..proxy.pool import ProxyPool
@@ -19,9 +19,6 @@ class Settings:
 
     Attributes:
         sitemap (SitemapSettings): Configuration for sitemap discovery.
-        start_date (Optional[date]): Filter content published on or after this date.
-        end_date (Optional[date]): Filter content published on or before this date.
-        strict_date_filter (bool): Whether to discard items where date cannot be determined.
         verbose (bool): Whether to enable verbose output/logging.
         link_extraction_strategy (Literal["shallow", "deep"]): Strategy for finding links on pages.
         link_extraction_limit (int): Maximum number of valid links to extract per run.
@@ -38,6 +35,7 @@ class Settings:
         proxies (Optional[List[ProxySettings]]): List of proxies for rotation.
         proxy_rotation_method (Literal["round_robin", "random"]): Strategy for proxy rotation.
         browser_settings (BrowserSettings): Configuration for the browser instance.
+        show_progress (bool): Whether to display tqdm progress bars.
         enable_logging (bool): Whether to enable standard logging.
         logging_level (str): The logging level (e.g., "INFO").
         enable_human_behaviors (bool): Whether to simulate human browsing patterns.
@@ -69,6 +67,8 @@ class Settings:
 
     browser_settings: BrowserSettings = field(default_factory=BrowserSettings)
 
+    show_progress: bool = True
+
     enable_logging: bool = False
     logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
@@ -80,6 +80,10 @@ class Settings:
 
     def __post_init__(self):
         """Validates settings after initialization."""
+        if self.enable_logging:
+            logging.getLogger("onecrawler").setLevel(self.logging_level)
+            logging.getLogger("trafilatura").setLevel(logging.ERROR)
+
         if self.proxy and self.proxies:
             raise ValueError("Use either proxy or proxies, not both")
 

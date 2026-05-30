@@ -7,14 +7,16 @@ from urllib.parse import urlparse
 from ..browser import GoogleChrome
 from ..settings.simulation import HumanBehaviorSettings
 from .base import BaseEngine
-from .link.deep import BFScheduler, BrowserPool, LinkSpider
 from .link.helper import (
     human_delay,
     human_mouse_move,
     human_scroll,
     wildcard_link_match,
 )
+from .pool import BrowserPool
+from .scheduler import BFScheduler
 from .scraper.heuristic.script import HeuristicStrategy
+from .spider import LinkSpider
 
 try:
     from .scraper.genai.executor import GenAIStrategy
@@ -107,10 +109,12 @@ class CrawlerRuntime:
                 if url is None:
                     if self._active_workers == 0:
                         self.stop_event.set()
-                    await asyncio.sleep(0.2)
-                    continue
                 else:
                     self._active_workers += 1
+
+            if url is None:
+                await asyncio.sleep(0.05)
+                continue
 
             page = await self.pool.acquire()
 
@@ -151,7 +155,7 @@ class CrawlerRuntime:
                         try:
                             content = await self.strategy.extract(url)
                             if content is None:
-                                logger.info(
+                                logger.debug(
                                     "Content extraction returned None for %s", url
                                 )
                             elif self.content_filter is None or self.content_filter(
@@ -161,16 +165,18 @@ class CrawlerRuntime:
                                 self.content.append(content)
                                 if self.streaming:
                                     await self.stream_queue.put(content)
-                                logger.info(
+                                logger.debug(
                                     "Discovered %s/%s links; link=%s",
                                     len(self.results),
                                     self.max_links,
                                     url,
                                 )
                             else:
-                                logger.info("Content did not pass filter for %s", url)
+                                logger.debug("Content did not pass filter for %s", url)
                         except Exception as e:
-                            logger.error("Error extracting content for %s: %s", url, e)
+                            logger.warning(
+                                "Error extracting content for %s: %s", url, e
+                            )
 
                         if len(self.results) >= self.max_links:
                             self.stop_event.set()

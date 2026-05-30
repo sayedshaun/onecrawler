@@ -695,9 +695,9 @@ class UniversalSiteMap:
             logging.info(f"Strategies used: {strategies_used}")
 
         # Filter by lastmod date range
-        start_date = self.settings.start_date
-        end_date = self.settings.end_date
-        strict_date_filter = self.settings.strict_date_filter
+        start_date = self.settings.sitemap.start_date
+        end_date = self.settings.sitemap.end_date
+        strict_date_filter = self.settings.sitemap.strict_date_filter
         if start_date is not None or end_date is not None:
             filtered: list[URLRecord] = []
             for rec in all_records:
