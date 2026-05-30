@@ -1,6 +1,5 @@
 import logging
 from dataclasses import dataclass, field
-from datetime import date
 from typing import List, Literal, Optional
 
 from ..proxy.pool import ProxyPool
@@ -20,9 +19,6 @@ class Settings:
 
     Attributes:
         sitemap (SitemapSettings): Configuration for sitemap discovery.
-        start_date (Optional[date]): Filter content published on or after this date.
-        end_date (Optional[date]): Filter content published on or before this date.
-        strict_date_filter (bool): Whether to discard items where date cannot be determined.
         verbose (bool): Whether to enable verbose output/logging.
         link_extraction_strategy (Literal["shallow", "deep"]): Strategy for finding links on pages.
         link_extraction_limit (int): Maximum number of valid links to extract per run.

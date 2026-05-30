@@ -106,16 +106,18 @@ class TestPipeline:
 
     @pytest.mark.asyncio
     async def test_pipeline_engine_initialization_with_date_filters(self):
-        """Test Crawler initialization with date filters via settings."""
+        """Test Crawler initialization with date filters via sitemap settings."""
         from datetime import date
 
-        self.mock_settings.start_date = date(2024, 1, 1)
-        self.mock_settings.end_date = date(2024, 12, 31)
+        self.mock_settings.sitemap = self.settings_module.SitemapSettings(
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 12, 31),
+        )
 
         engine = self.onecrawler_module.Crawler(self.mock_settings)
 
-        assert engine.settings.start_date == date(2024, 1, 1)
-        assert engine.settings.end_date == date(2024, 12, 31)
+        assert engine.settings.sitemap.start_date == date(2024, 1, 1)
+        assert engine.settings.sitemap.end_date == date(2024, 12, 31)
 
     @pytest.mark.asyncio
     async def test_pipeline_engine_start_initializes_browser_and_strategy(self):
