@@ -10,10 +10,10 @@ class TestCrawlerSettings:
         first = crawler_module.Settings()
         second = crawler_module.Settings()
 
-        first.browser_settings.launch.args.append("--first-only")
+        first.browser_settings.args.append("--first-only")
 
-        assert "--first-only" in first.browser_settings.launch.args
-        assert "--first-only" not in second.browser_settings.launch.args
+        assert "--first-only" in first.browser_settings.args
+        assert "--first-only" not in second.browser_settings.args
 
     def test_genai_strategy_requires_genai_settings(self):
         with pytest.raises(ValueError, match="genai settings is required"):

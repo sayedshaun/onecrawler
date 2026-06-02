@@ -69,16 +69,14 @@ Use it when the target site needs JavaScript rendering, a custom user agent, pro
 routing, a stored session, or a different viewport.
 
 ```python
-from onecrawler import BrowserSettings, ContextSettings, Settings
+from onecrawler import BrowserSettings, Settings
 
 
 settings = Settings(
     browser_settings=BrowserSettings(
-        context=ContextSettings(
-            viewport={"width": 1440, "height": 900},
-            locale="en-US",
-            timezone_id="UTC",
-        )
+        viewport={"width": 1440, "height": 900},
+        locale="en-US",
+        timezone_id="UTC",
     )
 )
 ```
@@ -86,13 +84,11 @@ settings = Settings(
 For authenticated crawling, use Playwright storage state:
 
 ```python
-from onecrawler import BrowserSettings, ContextSettings, Settings
+from onecrawler import BrowserSettings, Settings
 
 
 settings = Settings(
-    browser_settings=BrowserSettings(
-        context=ContextSettings(storage_state="auth-state.json")
-    )
+    browser_settings=BrowserSettings(storage_state="auth-state.json")
 )
 ```
 
@@ -249,7 +245,7 @@ genai=GenerativeAISettings(
 | `api_key` | `str` | Conditional | `None` | API key for OpenAI/Google, optional for Ollama |
 | `output_schema` | `BaseModel` | Conditional | `None` | Pydantic model for structured output |
 | `base_url` | `str` | Optional | `None` | Custom endpoint URL (required for Ollama) |
-| `reasoning` | `bool` | No | `False` | Enable reasoning for supported models |
+| `provider_kwargs` | `dict[str, Any]` | No | `None` | Provider-specific keyword arguments |
 
 ### Usage Tips
 

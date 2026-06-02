@@ -5,11 +5,10 @@ import re
 import time
 import warnings
 from datetime import date
-from typing import AsyncGenerator, List, Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple
 from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
 
-import aiohttp
 from curl_cffi.requests import AsyncSession
 from lxml import etree
 
@@ -79,11 +78,11 @@ class SiteMap:
         Args:
             settings (Settings): The configuration object.
         """
-        self.semaphore = asyncio.Semaphore(settings.concurrency)
+        self.settings = settings
         self.visited_sitemaps: Set[str] = set()
         self.urls: Set[str] = set()
         self.stats = SitemapStats()
-        self.timeout = settings.browser_settings.runtime.timeout
+        self.timeout = settings.request_timeout
         self.filter_pattern = settings.include_link_patterns
         self.base_prefix = ""
 
@@ -99,18 +98,15 @@ class SiteMap:
             url.rstrip("/") + "/sitemap.xml" if not url.endswith("sitemap.xml") else url
         )
 
-    async def _fetch(self, session: aiohttp.ClientSession, url: str) -> Optional[bytes]:
-        """Fetches a URL using aiohttp."""
+    async def _fetch(self, client: "HTTPClient", url: str) -> Optional[bytes]:
+        """Fetches a URL using the shared sitemap HTTP client."""
         try:
-            async with self.semaphore:
-                async with session.get(url, timeout=self.timeout) as r:
-                    if r.status == 200:
-                        return await r.read()
+            return await client.get(url)
         except Exception:
             self.stats.errors += 1
         return None
 
-    async def _parse(self, session: aiohttp.ClientSession, sitemap_url: str):
+    async def _parse(self, client: "HTTPClient", sitemap_url: str):
         """Recursively parses sitemaps and sitemap indexes."""
         if sitemap_url in self.visited_sitemaps:
             return
@@ -118,7 +114,7 @@ class SiteMap:
         self.visited_sitemaps.add(sitemap_url)
         self.stats.sitemaps += 1
 
-        data = await self._fetch(session, sitemap_url)
+        data = await self._fetch(client, sitemap_url)
         if not data:
             return
 
@@ -135,7 +131,7 @@ class SiteMap:
             for sm in root:
                 loc = sm.find(".//{*}loc")
                 if loc is not None and loc.text:
-                    tasks.append(self._parse(session, loc.text.strip()))
+                    tasks.append(self._parse(client, loc.text.strip()))
             await asyncio.gather(*tasks)
 
         elif "urlset" in tag:
@@ -168,9 +164,15 @@ class SiteMap:
         self.sitemap_url = self._sitemap_url(url)
         parsed = urlparse(url)
         self.base_prefix = f"{parsed.scheme}://{parsed.netloc}"
-        timeout = aiohttp.ClientTimeout(total=self.timeout)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            await self._parse(session, self.sitemap_url)
+        async with HTTPClient(
+            self.settings.concurrency,
+            self.settings.request_timeout,
+            self.settings.sitemap.user_agent,
+            self.settings.max_retries,
+            self.settings.retry_delay,
+            self.settings.create_proxy_pool(),
+        ) as client:
+            await self._parse(client, self.sitemap_url)
         return list(self.urls), self.stats
 
     async def run(self, url: str) -> List[str]:

@@ -15,18 +15,15 @@ explain when and why to use them; this page is for quick lookup.
 ```python
 from onecrawler import (
     BrowserSettings,
-    ContextSettings,
     Settings,
-    GenerativeAISettings,
-    HumanBehaviorSettings,
     LinkExtractor,
     Crawler,
-    ProxySettings,
     Scraper,
     SiteMap,
-    SitemapStats,
     UniversalSiteMap,
 )
+
+from onecrawler.settings import GenerativeAISettings, HumanBehaviorSettings, ProxySettings
 
 # Filters (import from subpackage)
 from onecrawler.filters import (
@@ -151,7 +148,7 @@ settings = GenerativeAISettings(
     api_key="YOUR_API_KEY",  # Required for OpenAI/Google, optional for Ollama
     output_schema=MyPydanticModel,  # Pydantic model for structured output
     base_url=None,  # Optional: custom endpoint (e.g., Ollama instance)
-    reasoning=False,  # Optional: enable reasoning for supported models
+    provider_kwargs=None,  # Optional: provider-specific keyword arguments
 )
 ```
 
@@ -164,7 +161,7 @@ Fields:
 | `api_key` | `str` | Conditional | API key for OpenAI/Google, optional for Ollama |
 | `output_schema` | `BaseModel` | Conditional | Pydantic model for structured output |
 | `base_url` | `str` | Optional | Custom endpoint URL (required for Ollama) |
-| `reasoning` | `bool` | No | Enable reasoning for supported models |
+| `provider_kwargs` | `dict[str, Any]` | No | Provider-specific keyword arguments |
 
 ### Provider-Specific Requirements
 
@@ -196,7 +193,7 @@ settings.
 ```python
 settings = Settings(
     browser_settings=BrowserSettings(
-        context=ContextSettings(viewport={"width": 1366, "height": 768})
+        viewport={"width": 1366, "height": 768}
     )
 )
 ```

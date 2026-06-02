@@ -127,6 +127,7 @@ docker run -it --rm -v $(pwd):/app onecrawler python your_script.py
 ## Quick Start
 ```python
 from onecrawler import Crawler, Settings
+from onecrawler.utils import writter
 
 async def main():
     settings = Settings(
@@ -137,9 +138,7 @@ async def main():
     async with Crawler(settings) as engine:
         results = await engine.run("https://www.example.com/")
 
-    with open("output.json", "w", encoding="utf-8") as f:
-        json.dump(results, f, ensure_ascii=False, indent=4)
-
+    writter.dump_json(results, "output.json")
 
 if __name__ == "__main__":
     import asyncio
@@ -152,7 +151,7 @@ if __name__ == "__main__":
 ```python
 import json
 from onecrawler import Settings, LinkExtractor, Scraper
-
+from onecrawler.utils import writter
 
 async def main():
     settings = Settings(
@@ -170,13 +169,11 @@ async def main():
     async with Scraper(settings) as scraper_engine:
         results = await scraper_engine.run(links)
 
-    with open("output.json", "w", encoding="utf-8") as f:
-        json.dump(results, f, ensure_ascii=False, indent=4)
+    writter.dump_json(results, "output.json")
 
 
 if __name__ == "__main__":
     import asyncio
-
     asyncio.run(main())
 ```
 

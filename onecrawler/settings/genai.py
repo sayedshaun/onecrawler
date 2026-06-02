@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Literal, Optional, Type
+from typing import Any, Literal, Optional, Type
 
 from pydantic import BaseModel
 
@@ -14,7 +14,7 @@ class GenerativeAISettings:
         api_key (Optional[str]): API key for the provider, if required.
         output_schema (Optional[Type[BaseModel]]): Pydantic model for structured output.
         base_url (Optional[str]): Base URL for providers like Ollama or custom endpoints.
-        reasoning (bool): Whether to enable reasoning/thought processes if supported.
+        provider_kwargs (Optional[dict[str, Any]]): Provider-specific keyword arguments.
     """
 
     provider: Literal["google", "openai", "ollama"]
@@ -22,4 +22,5 @@ class GenerativeAISettings:
     api_key: Optional[str] = None
     output_schema: Optional[Type[BaseModel]] = None
     base_url: Optional[str] = None
-    reasoning: bool = False
+    provider_kwargs: Optional[dict[str, Any]] = None
+    timeout: Optional[float] = None

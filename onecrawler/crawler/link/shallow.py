@@ -34,14 +34,15 @@ async def extract_url_from_current_page(
 
     links = set()
     page = await browser.new_page()
+    runtime = browser.settings.runtime
 
     try:
         logger.debug(f"Navigating to {url}")
 
         await page.goto(
             url,
-            wait_until="domcontentloaded",
-            timeout=15000,
+            wait_until=runtime.wait_until,
+            timeout=runtime.timeout,
         )
 
         hrefs = await page.eval_on_selector_all(

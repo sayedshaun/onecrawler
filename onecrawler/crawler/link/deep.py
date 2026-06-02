@@ -5,6 +5,7 @@ from typing import AsyncGenerator, List, Optional, Set
 
 from tqdm import tqdm
 
+from ...settings.browser import BrowserSettings
 from ...settings.simulation import HumanBehaviorSettings
 from ..pool import BrowserPool
 from ..scheduler import BFScheduler
@@ -44,9 +45,11 @@ class BFSRuntime:
         enable_human_behaviors: bool = False,
         concurrency: int = 5,
         streaming: bool = False,
-        wait_until: str = "domcontentloaded",
+        wait_until: Optional[str] = None,
+        timeout: Optional[int] = None,
         show_progress: bool = True,
     ):
+        browser_settings = BrowserSettings()
         self.scheduler = scheduler
         self.pool = pool
         self.spider = spider
@@ -58,7 +61,8 @@ class BFSRuntime:
         self.enable_human_behaviors = enable_human_behaviors
         self.human_behavior_settings = human_behavior_settings
         self.concurrency = concurrency
-        self.wait_until = wait_until
+        self.wait_until = wait_until or browser_settings.wait_until
+        self.timeout = timeout or browser_settings.timeout
         self.show_progress = show_progress
 
         self.stop_event: asyncio.Event = asyncio.Event()
@@ -96,7 +100,11 @@ class BFSRuntime:
 
             try:
                 try:
-                    await page.goto(url, wait_until=self.wait_until)
+                    await page.goto(
+                        url,
+                        wait_until=self.wait_until,
+                        timeout=self.timeout,
+                    )
                 except Exception as e:
                     logger.warning("Failed to load %s: %s", url, e)
                     continue

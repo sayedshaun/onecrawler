@@ -111,29 +111,27 @@ genai = GenerativeAISettings(
 | `api_key` | `str` | Conditional | API key for OpenAI/Google |
 | `output_schema` | `BaseModel` | Conditional | Pydantic model for structured output |
 | `base_url` | `str` | Optional | Custom endpoint URL (required for Ollama) |
-| `reasoning` | `bool` | No | Enable reasoning for supported models |
+| `provider_kwargs` | `dict[str, Any]` | No | Provider-specific keyword arguments |
 
 ### BrowserSettings
 
 Playwright browser configuration.
 
 ```python
-from onecrawler import BrowserSettings, ContextSettings
+from onecrawler import BrowserSettings
 
 browser_settings = BrowserSettings(
-    context=ContextSettings(
-        viewport={"width": 1440, "height": 900},
-        locale="en-US",
-        timezone_id="UTC"
-    )
+    viewport={"width": 1440, "height": 900},
+    locale="en-US",
+    timezone_id="UTC",
 )
 ```
 
 !!! tip "Use storage state for authenticated pages"
     For logged-in crawls, create a Playwright `storage_state` file and reference it
-    from `ContextSettings`. Keep that file private because it may contain cookies.
+    from `BrowserSettings`. Keep that file private because it may contain cookies.
 
-#### Context Settings
+#### Browser Settings Fields
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
@@ -249,15 +247,13 @@ settings = Settings(
 ### Browser Configuration
 
 ```python
-from onecrawler import Settings, BrowserSettings, ContextSettings
+from onecrawler import Settings, BrowserSettings
 
 settings = Settings(
     browser_settings=BrowserSettings(
-        context=ContextSettings(
-            viewport={"width": 1920, "height": 1080},
-            locale="en-US",
-            user_agent="MyCrawler/1.0"
-        )
+        viewport={"width": 1920, "height": 1080},
+        locale="en-US",
+        user_agent="MyCrawler/1.0",
     )
 )
 ```

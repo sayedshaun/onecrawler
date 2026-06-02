@@ -5,6 +5,7 @@ from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple
 from urllib.parse import urlparse
 
 from ..browser import GoogleChrome
+from ..settings.browser import BrowserSettings
 from ..settings.simulation import HumanBehaviorSettings
 from .base import BaseEngine
 from .link.helper import (
@@ -49,16 +50,19 @@ class CrawlerRuntime:
         base_prefix: str,
         max_links: int,
         strategy: Optional[Any] = None,
-        human_behavior_settings: HumanBehaviorSettings = HumanBehaviorSettings,
+        human_behavior_settings: Optional[HumanBehaviorSettings] = None,
         include_pattern: Optional[List[str]] = None,
         exclude_pattern: Optional[List[str]] = None,
         enable_human_behaviors: bool = False,
         concurrency: int = 5,
         streaming: bool = False,
         content_filter: Optional[Callable[[dict], bool]] = None,
+        wait_until: Optional[str] = None,
+        timeout: Optional[int] = None,
         *args,
         **kwargs,
     ):
+        browser_settings = BrowserSettings()
         self.scheduler = scheduler
         self.pool = pool
         self.spider = spider
@@ -87,6 +91,8 @@ class CrawlerRuntime:
         self.lock = asyncio.Lock()
         self.stream_queue = asyncio.Queue(maxsize=1000)
         self.streaming = streaming
+        self.wait_until = wait_until or browser_settings.wait_until
+        self.timeout = timeout or browser_settings.timeout
 
         # Track how many workers are actively processing a URL
         self._active_workers = 0
@@ -120,7 +126,12 @@ class CrawlerRuntime:
 
             try:
                 try:
-                    await _goto(page, url, wait_until="domcontentloaded")
+                    await _goto(
+                        page,
+                        url,
+                        wait_until=self.wait_until,
+                        timeout=self.timeout,
+                    )
                 except Exception as e:
                     logger.warning("Failed to load %s: %s", url, e)
                     continue
@@ -332,6 +343,8 @@ class Crawler(BaseEngine):
             concurrency=self.settings.concurrency,
             streaming=streaming,
             content_filter=content_filter,
+            wait_until=self.settings.browser_settings.wait_until,
+            timeout=self.settings.browser_settings.timeout,
         )
         return runtime, pool
 

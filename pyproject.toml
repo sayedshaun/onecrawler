@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "onecrawler"
-version = "0.1.5"
+version = "0.1.6"
 description = "An async python crawling framework for discovering URLs, extracting links, and scraping structured content."
 readme = "README.md"
 license = "MIT"
@@ -26,19 +26,18 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
 ]
 dependencies = [
-    "aiohttp>=3.13.5",
     "curl_cffi>=0.15.0",
     "tqdm>=4.67.3",
     "pydantic>=2.13.3",
     "playwright>=1.58.0",
     "trafilatura>=2.0.0",
     "lxml>=5.4.0",
-    "toml>=0.10.2"
+    "toml>=0.10.2",
+    "httpx>=0.28.1"
 ]
 
 [project.optional-dependencies]
 genai = [
-    "langchain>=1.2.17",
     "langgraph>=1.1.10",
 ]
 dev = [
