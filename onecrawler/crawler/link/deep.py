@@ -5,7 +5,7 @@ from typing import AsyncGenerator, List, Optional, Set
 
 from tqdm import tqdm
 
-from ...settings.browser import RuntimeSettings
+from ...settings.browser import BrowserSettings
 from ...settings.simulation import HumanBehaviorSettings
 from ..pool import BrowserPool
 from ..scheduler import BFScheduler
@@ -49,7 +49,7 @@ class BFSRuntime:
         timeout: Optional[int] = None,
         show_progress: bool = True,
     ):
-        runtime_settings = RuntimeSettings()
+        browser_settings = BrowserSettings()
         self.scheduler = scheduler
         self.pool = pool
         self.spider = spider
@@ -61,8 +61,8 @@ class BFSRuntime:
         self.enable_human_behaviors = enable_human_behaviors
         self.human_behavior_settings = human_behavior_settings
         self.concurrency = concurrency
-        self.wait_until = wait_until or runtime_settings.wait_until
-        self.timeout = timeout or runtime_settings.timeout
+        self.wait_until = wait_until or browser_settings.wait_until
+        self.timeout = timeout or browser_settings.timeout
         self.show_progress = show_progress
 
         self.stop_event: asyncio.Event = asyncio.Event()

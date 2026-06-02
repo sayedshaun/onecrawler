@@ -5,7 +5,7 @@ from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple
 from urllib.parse import urlparse
 
 from ..browser import GoogleChrome
-from ..settings.browser import RuntimeSettings
+from ..settings.browser import BrowserSettings
 from ..settings.simulation import HumanBehaviorSettings
 from .base import BaseEngine
 from .link.helper import (
@@ -62,7 +62,7 @@ class CrawlerRuntime:
         *args,
         **kwargs,
     ):
-        runtime_settings = RuntimeSettings()
+        browser_settings = BrowserSettings()
         self.scheduler = scheduler
         self.pool = pool
         self.spider = spider
@@ -91,8 +91,8 @@ class CrawlerRuntime:
         self.lock = asyncio.Lock()
         self.stream_queue = asyncio.Queue(maxsize=1000)
         self.streaming = streaming
-        self.wait_until = wait_until or runtime_settings.wait_until
-        self.timeout = timeout or runtime_settings.timeout
+        self.wait_until = wait_until or browser_settings.wait_until
+        self.timeout = timeout or browser_settings.timeout
 
         # Track how many workers are actively processing a URL
         self._active_workers = 0
@@ -343,8 +343,8 @@ class Crawler(BaseEngine):
             concurrency=self.settings.concurrency,
             streaming=streaming,
             content_filter=content_filter,
-            wait_until=self.settings.browser_settings.runtime.wait_until,
-            timeout=self.settings.browser_settings.runtime.timeout,
+            wait_until=self.settings.browser_settings.wait_until,
+            timeout=self.settings.browser_settings.timeout,
         )
         return runtime, pool
 

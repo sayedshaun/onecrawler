@@ -80,7 +80,14 @@ class Scraper(BaseEngine):
                 raise ValueError("GenAI settings are required for GenAI strategy")
 
             self.strategy = GenAIStrategy(
-                settings=self.settings.genai,
+                provider=self.settings.genai.provider,
+                model_name=self.settings.genai.model_name,
+                max_retries=self.settings.max_retries,
+                api_key=self.settings.genai.api_key,
+                base_url=self.settings.genai.base_url,
+                output_schema=self.settings.genai.output_schema,
+                provider_kwargs=self.settings.genai.provider_kwargs,
+                timeout=self.settings.genai.timeout,
                 browser=self.browser,
             )
 
@@ -138,10 +145,7 @@ class Scraper(BaseEngine):
 
             return await self._retry(task)
 
-    async def stream(
-        self,
-        link: Union[str, List[str]],
-    ) -> AsyncGenerator[Any, None]:
+    async def stream(self, link: Union[str, List[str]]) -> AsyncGenerator[Any, None]:
         """Streams extracted results as they complete."""
 
         self._ensure_open()
@@ -184,10 +188,7 @@ class Scraper(BaseEngine):
 
         self.logger.info("Streaming scrape completed")
 
-    async def run(
-        self,
-        link: Union[str, List[str]],
-    ) -> Union[Any, List[Any], None]:
+    async def run(self, link: Union[str, List[str]]) -> Union[Any, List[Any], None]:
         """Runs the scraper and collects all results."""
 
         results = []
