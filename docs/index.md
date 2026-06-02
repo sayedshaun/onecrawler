@@ -57,8 +57,8 @@ browser pages just to discover links.
 ```python
 import asyncio
 
-from onecrawler import Settings, UniversalSiteMap
-
+from onecrawler import Settings, LinkExtractor, Scraper
+from onecrawler.utils import writter
 
 async def main():
     settings = Settings(
@@ -67,9 +67,15 @@ async def main():
         concurrency=10,
     )
 
-    sitemap = UniversalSiteMap(settings)
-    urls = await sitemap.run("https://example.com")
-    print(f"Found {len(urls)} URLs")
+    async with LinkExtractor(settings) as extractor:
+        urls = await extractor.run("https://example.com")
+        print(f"Found {len(urls)} URLs")
+
+    async with Scraper(settings) as scraper:
+        results = await scraper.run(urls)
+        print(f"Scraped {len(results)} pages")
+
+    writter.dump_json(results, "output.json")
 
 
 if __name__ == "__main__":
