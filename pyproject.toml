@@ -32,15 +32,16 @@ dependencies = [
     "playwright>=1.58.0",
     "trafilatura>=2.0.0",
     "lxml>=5.4.0",
-    "toml>=0.10.2",
-    "httpx>=0.28.1"
+    "httpx>=0.28.1",
 ]
 
 [project.optional-dependencies]
 genai = [
     "langgraph>=1.1.10",
+    "markdownify>=1.2.2"
 ]
 dev = [
+    "toml>=0.10.2",
     "black>=26.3.1",
     "isort>=8.0.1",
     "pytest>=9.0.3",

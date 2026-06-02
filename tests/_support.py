@@ -22,6 +22,31 @@ def ensure_package(name: str) -> types.ModuleType:
         if path not in module.__path__:
             module.__path__.append(path)
 
+    if name == "onecrawler":
+        if not hasattr(module, "__version__"):
+            version_str = None
+            try:
+                import re
+
+                pyproject_path = ROOT / "pyproject.toml"
+                with pyproject_path.open("r", encoding="utf-8") as f:
+                    content = f.read()
+                match = re.search(r'(?m)^version\s*=\s*["\']([^"\']+)["\']', content)
+                if match:
+                    version_str = match.group(1)
+            except Exception:
+                pass
+
+            if not version_str:
+                try:
+                    from importlib.metadata import version
+
+                    version_str = version("onecrawler")
+                except Exception:
+                    pass
+
+            module.__version__ = version_str or "0.0.0"
+
     parts = name.split(".")
 
     for i in range(1, len(parts)):
