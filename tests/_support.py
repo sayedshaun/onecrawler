@@ -13,9 +13,14 @@ def ensure_package(name: str) -> types.ModuleType:
     package_path = ROOT.joinpath(*name.split("."))
 
     if module is None:
-        module = types.ModuleType(name)
-        module.__path__ = [str(package_path)] if package_path.is_dir() else []
-        sys.modules[name] = module
+        try:
+            import importlib
+
+            module = importlib.import_module(name)
+        except Exception:
+            module = types.ModuleType(name)
+            module.__path__ = [str(package_path)] if package_path.is_dir() else []
+            sys.modules[name] = module
 
     elif hasattr(module, "__path__") and package_path.is_dir():
         path = str(package_path)
