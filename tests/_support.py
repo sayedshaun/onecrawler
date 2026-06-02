@@ -27,6 +27,7 @@ def ensure_package(name: str) -> types.ModuleType:
             version_str = None
             try:
                 import re
+
                 pyproject_path = ROOT / "pyproject.toml"
                 with pyproject_path.open("r", encoding="utf-8") as f:
                     content = f.read()
@@ -39,6 +40,7 @@ def ensure_package(name: str) -> types.ModuleType:
             if not version_str:
                 try:
                     from importlib.metadata import version
+
                     version_str = version("onecrawler")
                 except Exception:
                     pass
