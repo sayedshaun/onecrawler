@@ -74,7 +74,9 @@ class GoogleChrome:
                 permissions=self.settings.permissions,
                 storage_state=self.settings.storage_state,
                 base_url=self.settings.base_url,
-                proxy=self.settings.proxy.as_playwright() if self.settings.proxy else None,
+                proxy=(
+                    self.settings.proxy.as_playwright() if self.settings.proxy else None
+                ),
             )
 
             self._started = True
