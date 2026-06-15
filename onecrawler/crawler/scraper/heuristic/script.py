@@ -5,16 +5,7 @@ from typing import Any, Optional
 
 import trafilatura
 
-
-async def _goto(page, *args, **kwargs):
-    navigation = asyncio.create_task(page.goto(*args, **kwargs))
-    try:
-        return await navigation
-    except asyncio.CancelledError:
-        navigation.cancel()
-        with contextlib.suppress(BaseException):
-            await navigation
-        raise
+from ...navigation import goto
 
 
 class HeuristicStrategy:
@@ -30,32 +21,14 @@ class HeuristicStrategy:
     """
 
     def __init__(self, settings: Any, browser: Any = None):
-        """Initializes HeuristicStrategy.
-
-        Args:
-            settings (Settings): The configuration object.
-            browser (Optional[GoogleChrome]): The browser instance to use.
-        """
         self.settings = settings
         self.browser = browser
 
     async def extract(self, url: str) -> Optional[Any]:
-        """Extracts content from a URL using heuristics.
-
-        Args:
-            url (str): The URL to extract content from.
-
-        Returns:
-            Optional[Any]: The extracted content in the configured format,
-                or None if extraction fails.
-
-        Raises:
-            ValueError: If JSON output is requested but parsing fails.
-        """
         if self.browser:
             page = await self.browser.new_page()
             try:
-                await _goto(
+                await goto(
                     page,
                     url,
                     wait_until=self.settings.browser_settings.runtime.wait_until,

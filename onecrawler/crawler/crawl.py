@@ -14,6 +14,7 @@ from .link.helper import (
     human_scroll,
     wildcard_link_match,
 )
+from .navigation import goto
 from .pool import BrowserPool
 from .scheduler import BFScheduler
 from .scraper.heuristic.script import HeuristicStrategy
@@ -28,17 +29,6 @@ else:
     _GENAI_IMPORT_ERROR = None
 
 logger = logging.getLogger(__name__)
-
-
-async def _goto(page, *args, **kwargs):
-    navigation = asyncio.create_task(page.goto(*args, **kwargs))
-    try:
-        return await navigation
-    except asyncio.CancelledError:
-        navigation.cancel()
-        with contextlib.suppress(BaseException):
-            await navigation
-        raise
 
 
 class CrawlerRuntime:
@@ -126,7 +116,7 @@ class CrawlerRuntime:
 
             try:
                 try:
-                    await _goto(
+                    await goto(
                         page,
                         url,
                         wait_until=self.wait_until,
