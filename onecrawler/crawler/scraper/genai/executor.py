@@ -1,7 +1,6 @@
 import asyncio
 from typing import TYPE_CHECKING, Any, Optional
 
-from .graph import build_graph
 from .model import ModelManager
 
 if TYPE_CHECKING:
@@ -38,6 +37,8 @@ class GenAIStrategy:
     async def initialize(self):
         async with self._init_lock:
             if self.graph is None:
+                from .graph import build_graph
+
                 self.graph = build_graph()
 
     async def extract(self, url: str) -> Optional[Any]:
