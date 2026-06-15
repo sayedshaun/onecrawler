@@ -17,16 +17,9 @@ from .link.helper import (
 from .navigation import goto
 from .pool import BrowserPool
 from .scheduler import BFScheduler
+from .scraper.genai.executor import GenAIStrategy
 from .scraper.heuristic.script import HeuristicStrategy
 from .spider import LinkSpider
-
-try:
-    from .scraper.genai.executor import GenAIStrategy
-except ImportError as e:
-    GenAIStrategy = None
-    _GENAI_IMPORT_ERROR = e
-else:
-    _GENAI_IMPORT_ERROR = None
 
 logger = logging.getLogger(__name__)
 
@@ -276,19 +269,8 @@ class Crawler(BaseEngine):
         if scraping_strategy == "genai":
             if not getattr(self.settings, "genai", None):
                 raise ValueError("GenAI settings is required for GenAI strategy")
-            if GenAIStrategy is None:
-                raise ImportError(
-                    "GenAI dependencies are not installed. Install with "
-                    '`pip install "onecrawler[genai]"` to use '
-                    'scraping_strategy="genai".'
-                ) from _GENAI_IMPORT_ERROR
-
-            strategy = GenAIStrategy(settings=self.settings.genai)
-            await strategy.initialize()
         elif scraping_strategy != "heuristic":
             raise ValueError(f"Unknown strategy: {scraping_strategy}")
-        else:
-            strategy = None
 
         self.browser = GoogleChrome(self.settings.browser_settings)
         await self.browser.start()
@@ -298,6 +280,19 @@ class Crawler(BaseEngine):
                 settings=self.settings,
                 browser=self.browser,
             )
+        else:
+            strategy = GenAIStrategy(
+                provider=self.settings.genai.provider,
+                model_name=self.settings.genai.model_name,
+                max_retries=self.settings.max_retries,
+                api_key=self.settings.genai.api_key,
+                base_url=self.settings.genai.base_url,
+                output_schema=self.settings.genai.output_schema,
+                provider_kwargs=self.settings.genai.provider_kwargs,
+                timeout=self.settings.genai.timeout,
+                browser=self.browser,
+            )
+            await strategy.initialize()
 
         self.strategy = strategy
 
