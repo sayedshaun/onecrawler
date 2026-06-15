@@ -90,6 +90,7 @@ class TestPipeline:
         self.mock_settings.exclude_link_patterns = None
         self.mock_settings.scraping_strategy = "heuristic"
         self.mock_settings.genai = None
+        self.mock_settings.max_retries = 2
         self.mock_settings.enable_human_behaviors = False
         self.mock_settings.human_behavior_settings = (
             self.simulation_settings_module.HumanBehaviorSettings()
@@ -171,7 +172,17 @@ class TestPipeline:
 
             mock_chrome.assert_called_once_with(self.mock_browser_settings)
             mock_chrome_instance.start.assert_called_once()
-            mock_strategy.assert_called_once_with(settings=self.mock_settings.genai)
+            mock_strategy.assert_called_once_with(
+                provider=self.mock_settings.genai.provider,
+                model_name=self.mock_settings.genai.model_name,
+                max_retries=self.mock_settings.max_retries,
+                api_key=self.mock_settings.genai.api_key,
+                base_url=self.mock_settings.genai.base_url,
+                output_schema=self.mock_settings.genai.output_schema,
+                provider_kwargs=self.mock_settings.genai.provider_kwargs,
+                timeout=self.mock_settings.genai.timeout,
+                browser=mock_chrome_instance,
+            )
             mock_strategy_instance.initialize.assert_called_once()
             mock_heuristic.assert_not_called()
 

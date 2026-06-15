@@ -21,12 +21,19 @@ async def fetch_html_node(state: AgentState) -> AgentState:
 
     try:
         page = await browser.new_page()
-        runtime = browser.settings.runtime
+        browser_settings = browser.settings
 
-        await page.goto(url, wait_until=runtime.wait_until, timeout=runtime.timeout)
+        await page.goto(
+            url,
+            wait_until=browser_settings.wait_until,
+            timeout=browser_settings.timeout,
+        )
 
         with contextlib.suppress(Exception):
-            await page.wait_for_load_state(runtime.wait_until, timeout=runtime.timeout)
+            await page.wait_for_load_state(
+                browser_settings.wait_until,
+                timeout=browser_settings.timeout,
+            )
 
         state["html"] = await page.content()
         return state

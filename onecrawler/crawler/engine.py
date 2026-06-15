@@ -340,8 +340,8 @@ class LinkExtractor(BaseEngine):
             human_behavior_settings=self.settings.human_behavior_settings,
             concurrency=self.settings.concurrency,
             streaming=True,
-            wait_until=self.settings.browser_settings.runtime.wait_until,
-            timeout=self.settings.browser_settings.runtime.timeout,
+            wait_until=self.settings.browser_settings.wait_until,
+            timeout=self.settings.browser_settings.timeout,
             show_progress=self.settings.show_progress,
         )
 

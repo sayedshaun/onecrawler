@@ -68,7 +68,17 @@ AI-powered content extraction using language models.
 ```python
 from onecrawler.crawler.scraper.genai.executor import GenAIStrategy
 
-strategy = GenAIStrategy(settings=genai_settings)
+strategy = GenAIStrategy(
+    provider=genai_settings.provider,
+    model_name=genai_settings.model_name,
+    max_retries=2,
+    api_key=genai_settings.api_key,
+    base_url=genai_settings.base_url,
+    output_schema=genai_settings.output_schema,
+    provider_kwargs=genai_settings.provider_kwargs,
+    timeout=genai_settings.timeout,
+    browser=browser,
+)
 content = await strategy.extract(url)
 ```
 
@@ -84,7 +94,6 @@ content = await strategy.extract(url)
 ### Heuristic Scraping
 
 ```python
-import asyncio
 from onecrawler import Settings, Scraper
 
 async def scrape_heuristic():
@@ -101,13 +110,13 @@ async def scrape_heuristic():
     return data
 
 if __name__ == "__main__":
+    import asyncio
     asyncio.run(scrape_heuristic())
 ```
 
 ### GenAI Scraping
 
 ```python
-import asyncio
 from pydantic import BaseModel
 from onecrawler import Settings, GenerativeAISettings, Scraper
 
@@ -137,6 +146,7 @@ async def scrape_with_ai():
     return data
 
 if __name__ == "__main__":
+    import asyncio
     asyncio.run(scrape_with_ai())
 ```
 
@@ -261,23 +271,21 @@ The scraper handles various error conditions:
 ### Save to File
 
 ```python
-import json
 from onecrawler import Settings, Scraper
+from onecrawler.utils import writter
 
 async def scrape_and_save():
     settings = Settings(scraping_strategy="heuristic")
     
     async with Scraper(settings) as scraper:
         data = await scraper.run("https://example.com/article")
-    
-    with open("output.json", "w") as f:
-        json.dump(data, f, indent=2)
+
+    writter.dump_json(data, "output.json")
 ```
 
 ### Database Integration
 
 ```python
-import asyncio
 from onecrawler import Settings, Scraper
 
 async def scrape_to_database():

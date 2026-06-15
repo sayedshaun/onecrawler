@@ -126,19 +126,17 @@ docker run -it --rm -v $(pwd):/app onecrawler python your_script.py
 
 ## Quick Start
 ```python
-from onecrawler import Crawler, Settings
+from onecrawler import Settings, Crawler
 from onecrawler.utils import writter
 
 async def main():
-    settings = Settings(
-        link_extraction_limit=10,
-        concurrency=7
-    )
+    settings = Settings(link_extraction_limit=100, concurrency=5)
 
     async with Crawler(settings) as engine:
-        results = await engine.run("https://www.example.com/")
+        results = await engine.run("https://www.prothomalo.com/")
 
     writter.dump_json(results, "output.json")
+
 
 if __name__ == "__main__":
     import asyncio
@@ -149,7 +147,6 @@ if __name__ == "__main__":
 ## Separate Workflow
 
 ```python
-import json
 from onecrawler import Settings, LinkExtractor, Scraper
 from onecrawler.utils import writter
 

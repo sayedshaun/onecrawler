@@ -55,8 +55,6 @@ cleanest, and least expensive way to collect URLs because it avoids opening many
 browser pages just to discover links.
 
 ```python
-import asyncio
-
 from onecrawler import Settings, LinkExtractor, Scraper
 from onecrawler.utils import writter
 
@@ -79,6 +77,7 @@ async def main():
 
 
 if __name__ == "__main__":
+    import asyncio
     asyncio.run(main())
 ```
 
