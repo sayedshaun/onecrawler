@@ -56,7 +56,7 @@ settings = Settings(
 | `sitemap.max_depth` | `int` | `3` | Depth limit for HTML fallback |
 | `sitemap.max_pages` | `int` | `500` | Page limit for HTML fallback |
 | `sitemap.user_agent` | `str` | Custom | User agent for sitemap requests |
-| `sitemap.respect_robots` | `bool` | `True` | Follow robots.txt rules |
+| `sitemap.respect_robots` | `bool` | `True` | Reserved; not currently enforced by discovery |
 | `sitemap.deduplicate` | `bool` | `True` | Remove duplicate URLs |
 
 #### Browser Settings
@@ -137,7 +137,7 @@ browser_settings = BrowserSettings(
 |---------|------|---------|-------------|
 | `viewport` | `dict` | `{"width": 1366, "height": 768}` | Browser viewport size |
 | `locale` | `str` | `"en-US"` | Browser locale |
-| `timezone_id` | `str` | `"UTC"` | Timezone identifier |
+| `timezone_id` | `str` | `"Asia/Dhaka"` | Timezone identifier |
 | `user_agent` | `str` | Default | Custom user agent |
 | `storage_state` | `str` | `None` | Path to browser storage state |
 
@@ -183,11 +183,11 @@ human_settings = HumanBehaviorSettings(
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `min_delay` | `float` | `0.5` | Minimum delay between actions |
-| `max_delay` | `float` | `2.0` | Maximum delay between actions |
-| `max_scrolls` | `int` | `20` | Maximum scroll actions |
-| `min_mouse_moves` | `int` | `2` | Minimum mouse movements |
-| `max_mouse_moves` | `int` | `8` | Maximum mouse movements |
+| `min_delay` | `float` | `0.3` | Minimum delay between actions |
+| `max_delay` | `float` | `1.2` | Maximum delay between actions |
+| `max_scrolls` | `int` | `50` | Maximum scroll actions |
+| `min_mouse_moves` | `int` | `5` | Minimum mouse movements |
+| `max_mouse_moves` | `int` | `15` | Maximum mouse movements |
 
 !!! note "Simulation trades speed for coverage"
     Human behavior settings can reveal lazy-loaded links, but each delay and scroll
