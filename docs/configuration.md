@@ -32,9 +32,9 @@ settings = Settings(
 | `link_extraction_strategy` | `"deep"` | Browser link discovery mode: `deep` or `shallow` |
 | `link_extraction_limit` | `50` | Hard cap on collected links |
 | `include_link_patterns` | `None` | Allow-list URL paths such as `["/news/*"]` |
-| `exclude_link_patterns` | `None` | Reserved for exclusion-style filtering |
+| `exclude_link_patterns` | `None` | Deny-list URL paths such as `["/admin/*"]` |
 | `scraping_strategy` | `"heuristic"` | `heuristic` or `genai` extraction |
-| `scraping_output_format` | `"json"` | `markdown`, `json`, `csv`, `html`, `python`, `txt`, `xml`, or `xmltei` |
+| `scraping_output_format` | `"json"` | `markdown`, `json`, `xml`, or `xmltei` |
 | `concurrency` | `10` | Number of async workers |
 | `max_retries` | `2` | Retry attempts for transient failures |
 | `request_timeout` | `10` | Per-request timeout in seconds |
