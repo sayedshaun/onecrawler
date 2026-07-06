@@ -57,7 +57,7 @@ content = await strategy.extract(url)
 #### Features
 
 - **Fast extraction**: No model calls, deterministic results
-- **Multiple formats**: HTML, text, metadata extraction
+- **Multiple formats**: Markdown, JSON, XML, and XML-TEI output
 - **Language detection**: Automatic language identification
 - **Content cleaning**: Removes boilerplate and navigation
 
@@ -199,8 +199,8 @@ Scraping behavior is controlled through `Settings`:
 
 - **JSON**: Structured data with metadata
 - **Markdown**: Clean text formatting
-- **HTML**: Original HTML structure
-- **Text**: Plain text content
+- **XML**: Original TEI-agnostic XML structure
+- **XML-TEI**: TEI-conformant XML output
 
 ### GenAI Strategy
 
