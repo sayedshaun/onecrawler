@@ -51,7 +51,7 @@ async with Scraper(settings) as scraper_engine:
 | **Async performance** | Tunable concurrency, retries, timeouts, and crawl limits |
 | **Content extraction** | Heuristic extraction with `trafilatura` for fast article-like content |
 | **GenAI extraction** | Optional model-assisted extraction for strongly typed Pydantic outputs |
-| **Output formats** | `markdown`, `json`, `txt`, `xml`, `xmltei` |
+| **Output formats** | `markdown`, `json`, `xml`, `xmltei` |
 | **Proxy support** | Single proxy or rotating proxy pools for browser and sitemap workflows |
 | **Browser controls** | Viewport, user agent, locale, timezone, storage state, and runtime settings |
 
@@ -404,14 +404,14 @@ settings = Settings(
             password="pass",
         ),
     ],
-    proxy_rotation="round_robin",
+    proxy_rotation_method="round_robin",
 )
 ```
 
-Use `proxy=ProxySettings(...)` for a single proxy, or `proxies=[...]` with `proxy_rotation` for a pool.
+Use `proxy=ProxySettings(...)` for a single proxy, or `proxies=[...]` with `proxy_rotation_method` for a pool.
 
 > [!TIP]
-> `round_robin` rotation distributes requests evenly across your proxy pool. For rate-limited targets, pair this with a modest `concurrency` value and a `request_delay` to avoid triggering bans.
+> `round_robin` rotation distributes requests evenly across your proxy pool. For rate-limited targets, pair this with a modest `concurrency` value and a `retry_delay` to avoid triggering bans.
 
 ---
 
