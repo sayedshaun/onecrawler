@@ -18,15 +18,20 @@ class GeminiLLM(BaseLLM):
         timeout: float = 300.0,
         **generation_config: Any,
     ) -> None:
-        self.api_key = api_key
         self.model = model
         self.base_url = base_url.rstrip("/")
-        self.client = httpx.AsyncClient(timeout=timeout)
+        self.client = httpx.AsyncClient(
+            timeout=timeout,
+            headers={"x-goog-api-key": api_key},
+        )
 
         self.generation_config = generation_config
 
     def _url(self) -> str:
-        return f"{self.base_url}/models/{self.model}:generateContent?key={self.api_key}"
+        # Key is sent via the x-goog-api-key header (not the URL) so it
+        # never ends up in logs, proxies, or exception messages that
+        # include the request URL.
+        return f"{self.base_url}/models/{self.model}:generateContent"
 
     async def generate(self, prompt: str, schema: Optional[Type[T]] = None) -> T | str:
         payload: dict[str, Any] = {
