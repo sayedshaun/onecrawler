@@ -1,5 +1,7 @@
 from typing import Callable, Iterable
 
+from .base import CONTENT_URL_FIELD, resolve_field
+
 FILE_TYPE_MAP = {
     "pdf": [".pdf"],
     "docx": [".docx"],
@@ -8,23 +10,32 @@ FILE_TYPE_MAP = {
 }
 
 
-def by_extension(extensions: Iterable[str]) -> Callable[[dict], bool]:
-    """
-    Filter by URL file extension.
-    """
+def by_extension(
+    extensions: Iterable[str],
+    *,
+    field: str = CONTENT_URL_FIELD,
+) -> Callable[[dict], bool]:
+    """Filter by the file extension of the item's URL (``field``)."""
 
     allowed = {
         ext.lower() if ext.startswith(".") else f".{ext.lower()}" for ext in extensions
     }
 
     def _filter(item: dict) -> bool:
-        url = (item.get("url") or "").lower()
+        url = resolve_field(item, (field,), filter_name="by_extension")
+        if not url:
+            return False
+        url = url.lower()
         return any(url.endswith(ext) for ext in allowed)
 
     return _filter
 
 
-def by_files(types: Iterable[str]) -> Callable[[dict], bool]:
+def by_files(
+    types: Iterable[str],
+    *,
+    field: str = CONTENT_URL_FIELD,
+) -> Callable[[dict], bool]:
     """
     Filter by logical file types: pdf, docx, image, etc.
     """
@@ -38,4 +49,4 @@ def by_files(types: Iterable[str]) -> Callable[[dict], bool]:
         else:
             allowed_exts.add(f".{t}")
 
-    return by_extension(allowed_exts)
+    return by_extension(allowed_exts, field=field)
