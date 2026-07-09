@@ -32,6 +32,10 @@ async def extract_url_from_current_page(
     """
     logger.info(f"Starting shallow link extraction from {url}")
 
+    if max_links == 0:
+        logger.info("max_links is 0, skipping link extraction")
+        return []
+
     links = set()
     page = await browser.new_page()
     browser_settings = browser.settings
@@ -91,7 +95,7 @@ async def extract_url_from_current_page(
 
             links.add(href)
 
-            if max_links and len(links) >= max_links:
+            if max_links is not None and len(links) >= max_links:
                 logger.info("Reached max_links limit, stopping early")
                 break
 
