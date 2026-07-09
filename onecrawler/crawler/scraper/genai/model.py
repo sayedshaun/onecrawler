@@ -66,8 +66,14 @@ class ModelManager:
             )
 
         if provider == "openai":
-            if not self.api_key:
-                raise ValueError("api_key is required for OpenAI")
+            # A custom base_url means an OpenAI-compatible server (llama.cpp,
+            # vLLM, LM Studio, ...), which is typically keyless. Only require a
+            # key when targeting the real api.openai.com default.
+            if not self.api_key and not self.base_url:
+                raise ValueError(
+                    "api_key is required for OpenAI. Set base_url to use a "
+                    "keyless OpenAI-compatible server (e.g. llama.cpp, vLLM)."
+                )
 
             return OpenAILLM(
                 api_key=self.api_key,

@@ -10,10 +10,16 @@ class GenerativeAISettings:
 
     Attributes:
         provider (Literal["google", "openai", "ollama"]): The AI service provider.
+            Use "openai" with a custom ``base_url`` to target any
+            OpenAI-compatible server (llama.cpp, vLLM, LM Studio, LocalAI, ...);
+            ``api_key`` is optional for those keyless endpoints.
         model_name (str): The name of the specific model to use (e.g., "gemini-1.5-flash").
-        api_key (Optional[str]): API key for the provider, if required.
+        api_key (Optional[str]): API key for the provider. Required for the real
+            OpenAI/Gemini endpoints; optional when ``base_url`` points at a
+            keyless OpenAI-compatible server.
         output_schema (Optional[Type[BaseModel]]): Pydantic model for structured output.
-        base_url (Optional[str]): Base URL for providers like Ollama or custom endpoints.
+        base_url (Optional[str]): Base URL for Ollama, an OpenAI-compatible
+            server, or any custom endpoint.
         provider_kwargs (Optional[dict[str, Any]]): Provider-specific keyword arguments.
     """
 

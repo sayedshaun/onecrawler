@@ -70,7 +70,7 @@ def _to_strict_schema(schema: dict) -> dict:
 class OpenAILLM(BaseLLM):
     def __init__(
         self,
-        api_key: str,
+        api_key: Optional[str] = None,
         model: str = "gpt-4o-mini",
         base_url: str = "https://api.openai.com/v1",
         timeout: float = 300.0,
@@ -79,13 +79,16 @@ class OpenAILLM(BaseLLM):
         self.model = model
         self.model_kwargs = model_kwargs
 
+        headers = {"Content-Type": "application/json"}
+        # Keyless OpenAI-compatible servers (llama.cpp, vLLM, ...) don't want an
+        # Authorization header; only send it when a key is actually configured.
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
         self.client = httpx.AsyncClient(
             base_url=base_url.rstrip("/"),
             timeout=timeout,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
+            headers=headers,
         )
 
     async def generate(self, prompt: str, schema: Optional[Type[T]] = None) -> T | str:
