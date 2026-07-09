@@ -56,6 +56,7 @@ async def test_llm_manager_uses_custom_provider_and_forwards_schema(monkeypatch)
     assert manager.model.kwargs == {
         "api_key": "test-key",
         "model": "test-model",
+        "base_url": "https://api.openai.com/v1",
     }
     assert manager.model.calls == [("extract this", Output)]
     assert result == {"prompt": "extract this", "schema": Output}
