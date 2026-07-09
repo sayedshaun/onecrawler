@@ -56,7 +56,7 @@ settings = Settings(
 | `sitemap.max_depth` | `int` | `3` | Depth limit for HTML fallback |
 | `sitemap.max_pages` | `int` | `500` | Page limit for HTML fallback |
 | `sitemap.user_agent` | `str` | Custom | User agent for sitemap requests |
-| `sitemap.respect_robots` | `bool` | `True` | Reserved; not currently enforced by discovery |
+| `sitemap.respect_robots` | `bool` | `True` | Enforced by `UniversalSiteMap`: filters sitemap URLs and gates HTML fallback via `robots.txt` (the lower-level `SiteMap` class does not enforce it) |
 | `sitemap.deduplicate` | `bool` | `True` | Remove duplicate URLs |
 
 #### Browser Settings
@@ -111,6 +111,7 @@ genai = GenerativeAISettings(
 | `api_key` | `str` | Conditional | API key for OpenAI/Google |
 | `output_schema` | `BaseModel` | Conditional | Pydantic model for structured output |
 | `base_url` | `str` | Optional | Custom endpoint URL (required for Ollama) |
+| `timeout` | `float` | Optional | Per-provider request timeout override in seconds (provider default when unset) |
 | `provider_kwargs` | `dict[str, Any]` | No | Provider-specific keyword arguments |
 
 ### BrowserSettings

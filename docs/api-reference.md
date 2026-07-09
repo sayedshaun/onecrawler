@@ -161,14 +161,15 @@ Fields:
 | `api_key` | `str` | Conditional | API key for OpenAI/Google, optional for Ollama |
 | `output_schema` | `BaseModel` | Conditional | Pydantic model for structured output |
 | `base_url` | `str` | Optional | Custom endpoint URL (required for Ollama) |
+| `timeout` | `float` | Optional | Per-provider request timeout override in seconds (provider default when unset) |
 | `provider_kwargs` | `dict[str, Any]` | No | Provider-specific keyword arguments |
 
 ### Provider-Specific Requirements
 
 #### OpenAI
-- `api_key` required
+- `api_key` required only for the default `api.openai.com` endpoint
 - Supports GPT models (gpt-3.5-turbo, gpt-4, gpt-4o, etc.)
-- No `base_url` needed (uses default OpenAI endpoint)
+- Set `base_url` to target any OpenAI-compatible server (llama.cpp, vLLM, LM Studio, …); `api_key` is optional for those keyless endpoints
 
 #### Google
 - `api_key` required

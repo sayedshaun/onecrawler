@@ -72,7 +72,7 @@ f = by_date(end="2025-06-30")
 | `end` | `str` | No | End date in `YYYY-MM-DD` format (inclusive) |
 
 !!! note "Date field requirements"
-    `by_date` reads the `filedate` or `date` field from the content dictionary.
+    `by_date` reads the `date` or `filedate` field from the content dictionary.
     Pages without a parseable date are excluded when this filter is active.
 
 ### by_keywords
@@ -158,7 +158,7 @@ f = by_cosine_similarity("climate change policy", threshold=0.3)
 | `query` | `str` | Yes | — | Query text to compare against |
 | `threshold` | `float` | No | `0.25` | Minimum cosine similarity score to keep |
 
-The filter checks the `content`, `title`, or `text` field (in that order). It
+The filter checks the `text`, `content`, or `title` field (in that order). It
 uses word-level tokenization and term-frequency cosine similarity — no external
 dependencies or embeddings required.
 

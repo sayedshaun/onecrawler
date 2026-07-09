@@ -299,7 +299,7 @@ async with Crawler(settings) as engine:
 > Filters run after content extraction, so they work with any scraping strategy. Use `by_cosine_similarity` for topic-focused crawls and `by_date` to keep results fresh.
 
 > [!NOTE]
-> `by_date` reads the `filedate` or `date` field from extracted content. Pages without a parseable date are excluded when a date filter is active.
+> `by_date` reads the `date` or `filedate` field from extracted content. Pages without a parseable date are excluded when a date filter is active.
 
 ---
 
@@ -364,9 +364,12 @@ if __name__ == "__main__":
 
 | Provider | Requires | Models |
 | --- | --- | --- |
-| **OpenAI** | `api_key` | GPT-4o, GPT-4o-mini, etc. |
+| **OpenAI** | `api_key` (optional with a custom `base_url`) | GPT-4o, GPT-4o-mini, or any OpenAI-compatible server |
 | **Google** | `api_key` | Gemini models |
 | **Ollama** | `base_url` (no key needed) | Any locally hosted model |
+
+> [!NOTE]
+> Set `base_url` on the `openai` provider to target any OpenAI-compatible server (llama.cpp, vLLM, LM Studio, LocalAI, …). `api_key` is optional for those keyless endpoints — it is only required for the real `api.openai.com` default.
 
 ### Ollama Example
 
