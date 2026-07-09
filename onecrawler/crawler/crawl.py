@@ -96,7 +96,10 @@ class CrawlerRuntime:
 
             async with self._active_lock:
                 if url is None:
-                    if self._active_workers == 0:
+                    if (
+                        self._active_workers == 0
+                        and not await self.scheduler.has_next()
+                    ):
                         self.stop_event.set()
                 else:
                     self._active_workers += 1
@@ -105,7 +108,13 @@ class CrawlerRuntime:
                 await asyncio.sleep(0.05)
                 continue
 
-            page = await self.pool.acquire()
+            try:
+                page = await self.pool.acquire()
+            except Exception as e:
+                logger.warning("Failed to acquire page for %s: %s", url, e)
+                async with self._active_lock:
+                    self._active_workers -= 1
+                continue
 
             try:
                 try:
@@ -144,21 +153,35 @@ class CrawlerRuntime:
                     )
 
                 async with self.lock:
-                    if not self.stop_event.is_set() and url not in self.results_set:
+                    should_extract = (
+                        not self.stop_event.is_set() and url not in self.results_set
+                    )
+                    if should_extract:
                         self.results_set.add(url)
-                        try:
-                            content = await self.strategy.extract(url)
-                            if content is None:
-                                logger.debug(
-                                    "Content extraction returned None for %s", url
-                                )
-                            elif self.content_filter is None or self.content_filter(
+
+                if should_extract:
+                    try:
+                        content = await self.strategy.extract(url)
+                        if content is None:
+                            logger.debug("Content extraction returned None for %s", url)
+                        else:
+                            if isinstance(content, dict):
+                                content["url"] = url
+                            else:
+                                content = {"text": content, "url": url}
+
+                            if self.content_filter is None or self.content_filter(
                                 content
                             ):
-                                self.results.append(url)
-                                self.content.append(content)
+                                async with self.lock:
+                                    self.results.append(url)
+                                    self.content.append(content)
+                                    if len(self.results) >= self.max_links:
+                                        self.stop_event.set()
+
                                 if self.streaming:
                                     await self.stream_queue.put(content)
+
                                 logger.debug(
                                     "Discovered %s/%s links; link=%s",
                                     len(self.results),
@@ -167,13 +190,8 @@ class CrawlerRuntime:
                                 )
                             else:
                                 logger.debug("Content did not pass filter for %s", url)
-                        except Exception as e:
-                            logger.warning(
-                                "Error extracting content for %s: %s", url, e
-                            )
-
-                        if len(self.results) >= self.max_links:
-                            self.stop_event.set()
+                    except Exception as e:
+                        logger.warning("Error extracting content for %s: %s", url, e)
 
                 # Enqueue discovered child links for future visits
                 for link in links:
@@ -203,6 +221,12 @@ class CrawlerRuntime:
                         if link not in self.results_set:
                             await self.scheduler.add(link)
 
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.warning(
+                    "Worker error processing %s: [%s] %s", url, type(e).__name__, e
+                )
             finally:
                 await self.pool.release(page)
                 async with self._active_lock:
@@ -213,7 +237,12 @@ class CrawlerRuntime:
             return []
 
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
-        await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, Exception):
+                logger.warning(
+                    "Worker task failed: [%s] %s", type(result).__name__, result
+                )
         return self.content
 
     async def stream(self) -> AsyncGenerator[dict, None]:
@@ -241,7 +270,14 @@ class CrawlerRuntime:
                 if not task.done():
                     task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
-                await asyncio.gather(*tasks, return_exceptions=True)
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for result in results:
+                    if isinstance(result, Exception) and not isinstance(
+                        result, asyncio.CancelledError
+                    ):
+                        logger.warning(
+                            "Worker task failed: [%s] %s", type(result).__name__, result
+                        )
 
 
 class Crawler(BaseEngine):
@@ -297,6 +333,9 @@ class Crawler(BaseEngine):
         self.strategy = strategy
 
     async def close(self):
+        if self.strategy:
+            await self.strategy.close()
+
         if self.browser:
             await self.browser.close()
 

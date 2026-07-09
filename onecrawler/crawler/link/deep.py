@@ -86,7 +86,10 @@ class BFSRuntime:
 
             async with self._active_lock:
                 if url is None:
-                    if self._active_workers == 0:
+                    if (
+                        self._active_workers == 0
+                        and not await self.scheduler.has_next()
+                    ):
                         self.stop_event.set()
                         return
                 else:
@@ -96,7 +99,13 @@ class BFSRuntime:
                 await asyncio.sleep(0.05)
                 continue
 
-            page = await self.pool.acquire()
+            try:
+                page = await self.pool.acquire()
+            except Exception as e:
+                logger.warning("Failed to acquire page for %s: %s", url, e)
+                async with self._active_lock:
+                    self._active_workers -= 1
+                continue
 
             try:
                 try:
@@ -186,6 +195,12 @@ class BFSRuntime:
                     if self.stop_event.is_set():
                         break
 
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.warning(
+                    "Worker error processing %s: [%s] %s", url, type(e).__name__, e
+                )
             finally:
                 await self.pool.release(page)
                 async with self._active_lock:
@@ -201,7 +216,12 @@ class BFSRuntime:
             return []
 
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
-        await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, Exception):
+                logger.warning(
+                    "Worker task failed: [%s] %s", type(result).__name__, result
+                )
         return self.results
 
     # async def stream(self) -> AsyncGenerator[str, None]:
@@ -269,5 +289,12 @@ class BFSRuntime:
                 if not t.done():
                     t.cancel()
 
-            await asyncio.gather(*tasks, return_exceptions=True)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for result in results:
+                if isinstance(result, Exception) and not isinstance(
+                    result, asyncio.CancelledError
+                ):
+                    logger.warning(
+                        "Worker task failed: [%s] %s", type(result).__name__, result
+                    )
             pbar.close()
