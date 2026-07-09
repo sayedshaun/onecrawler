@@ -1,5 +1,6 @@
 import csv
 import json
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,8 +20,16 @@ def _serialize(obj: Any) -> Any:
     if isinstance(obj, Path):
         return str(obj)
 
-    # fallback
-    return obj
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+
+    if isinstance(obj, (set, frozenset)):
+        return list(obj)
+
+    # json.dump's `default` must raise (not return obj unchanged) — returning
+    # the same unserializable object back makes the encoder think it found a
+    # circular reference and raise a confusing ValueError instead.
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
 def dump_json(
@@ -84,10 +93,18 @@ def dump_csv(
 
     rows = [_serialize(row) for row in rows]
 
+    fieldnames: list = []
+    seen = set()
+    for row in rows:
+        for key in row.keys():
+            if key not in seen:
+                seen.add(key)
+                fieldnames.append(key)
+
     path = Path(filename)
 
     with path.open("w", newline="", encoding=encoding) as f:
-        writer = csv.DictWriter(f, fieldnames=rows[0].keys())
+        writer = csv.DictWriter(f, fieldnames=fieldnames, restval="")
         writer.writeheader()
         writer.writerows(rows)
 
