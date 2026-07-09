@@ -20,15 +20,12 @@ class HumanBehaviorSettings:
         max_mouse_steps (int): Maximum steps per mouse movement.
     """
 
-    # Delay settings
     min_delay: float = 0.3
     max_delay: float = 1.2
 
-    # Scroll settings
     max_scrolls: int = 50
     scroll_pause: float = 1.0
 
-    # Mouse settings
     min_mouse_moves: int = 5
     max_mouse_moves: int = 15
 

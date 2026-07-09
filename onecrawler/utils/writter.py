@@ -8,15 +8,12 @@ from typing import Any
 def _serialize(obj: Any) -> Any:
     """Convert unsupported objects into serializable Python objects."""
 
-    # Pydantic v2
     if hasattr(obj, "model_dump"):
         return obj.model_dump()
 
-    # Pydantic v1
     if hasattr(obj, "dict"):
         return obj.dict()
 
-    # pathlib.Path
     if isinstance(obj, Path):
         return str(obj)
 
@@ -59,7 +56,6 @@ def dump_jsonl(
 ) -> None:
     path = Path(filename)
 
-    # single object → wrap into list
     if not isinstance(data, list):
         data = [data]
 

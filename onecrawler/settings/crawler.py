@@ -78,7 +78,6 @@ class Settings:
     enable_logging: bool = False
     logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
-    # Performance optimization flags
     enable_human_behaviors: bool = False
     human_behavior_settings: HumanBehaviorSettings = field(
         default_factory=HumanBehaviorSettings

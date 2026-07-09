@@ -224,37 +224,6 @@ class BFSRuntime:
                 )
         return self.results
 
-    # async def stream(self) -> AsyncGenerator[str, None]:
-    #     """Starts the workers and yields discovered URLs as they are found.
-
-    #     Yields:
-    #         str: Discovered absolute URL.
-    #     """
-    #     if self.max_links <= 0:
-    #         return
-
-    #     tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
-
-    #     try:
-    #         while True:
-    #             try:
-    #                 item = await asyncio.wait_for(
-    #                     self.stream_queue.get(),
-    #                     timeout=0.5,
-    #                 )
-    #                 yield item
-
-    #             except asyncio.TimeoutError:
-    #                 if all(task.done() for task in tasks) and self.stream_queue.empty():
-    #                     break
-
-    #     finally:
-    #         self.stop_event.set()
-    #         for task in tasks:
-    #             if not task.done():
-    #                 task.cancel()
-    #         await asyncio.gather(*tasks, return_exceptions=True)
-
     async def stream(self) -> AsyncGenerator[str, None]:
         if self.max_links <= 0:
             return

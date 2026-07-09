@@ -291,7 +291,6 @@ class HTTPClient:
 
                 if resp.status_code == 200:
                     data = resp.content
-                    # Handle gzip-compressed sitemaps
                     if (
                         url.endswith(".gz")
                         or resp.headers.get("Content-Encoding") == "gzip"
@@ -434,23 +433,20 @@ class SitemapParser:
         all_records: list[URLRecord] = []
         all_sitemaps: list[str] = []
 
-        # Seed the queue
         queue: list[str] = [u for u in sitemap_urls if u not in self._visited_sitemaps]
 
         while queue:
-            # Deduplicate current batch against already-visited
             batch = []
             for url in queue:
                 if url not in self._visited_sitemaps:
                     batch.append(url)
 
-            queue = []  # Reset for next wave of children
+            queue = []
             if not batch:
                 break
 
             all_sitemaps.extend(batch)
 
-            # Fetch + parse this batch concurrently
             tasks = [self._parse_one(url) for url in batch]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -707,12 +703,10 @@ class UniversalSiteMap:
                 follow_index=self.settings.sitemap.follow_index,
             )
 
-            # STRATEGY 1: robots.txt
             sitemap_urls = await robots.fetch_sitemaps(base_url)
             if sitemap_urls:
                 strategies_used.append("robots.txt")
 
-            # STRATEGY 2: Common sitemap paths
             probe_tasks = [
                 self._probe_url(client, urljoin(base_url, path))
                 for path in COMMON_SITEMAP_PATHS
@@ -728,13 +722,11 @@ class UniversalSiteMap:
                 strategies_used.append("common_paths")
                 sitemap_urls.extend(new_common)
 
-            # STRATEGY 3: Parse all sitemaps
             if sitemap_urls:
                 strategies_used.append("sitemap_xml")
                 records, _ = await sitemap_parser.parse_all(sitemap_urls)
                 all_records.extend(records)
 
-            # STRATEGY 4: HTML crawl fallback
             if not all_records and self.settings.sitemap.html_fallback:
                 strategies_used.append("html_crawl")
                 crawler = HTMLCrawler(
@@ -758,7 +750,6 @@ class UniversalSiteMap:
         if self.settings.verbose:
             logging.info(f"Strategies used: {strategies_used}")
 
-        # Filter by lastmod date range
         start_date = self.settings.sitemap.start_date
         end_date = self.settings.sitemap.end_date
         strict_date_filter = self.settings.sitemap.strict_date_filter
@@ -777,10 +768,8 @@ class UniversalSiteMap:
                 filtered.append(rec)
             all_records = filtered
 
-        # Filter out XML URLs
         all_records = [r for r in all_records if not is_xml_url(r.url)]
 
-        # Section filter (include_patterns)
         if self.settings.include_link_patterns:
             all_records = [
                 r
@@ -790,7 +779,6 @@ class UniversalSiteMap:
                 )
             ]
 
-        # Deduplication
         if self.settings.sitemap.deduplicate:
             seen: set[str] = set()
             deduped: list[URLRecord] = []
@@ -801,7 +789,6 @@ class UniversalSiteMap:
                     deduped.append(rec)
             all_records = deduped
 
-        # Cap at max_urls
         if len(all_records) > self.settings.link_extraction_limit:
             all_records = all_records[: self.settings.link_extraction_limit]
 

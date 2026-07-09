@@ -1,6 +1,5 @@
 from typing import Callable, Iterable
 
-# Mapping logical file types → extensions
 FILE_TYPE_MAP = {
     "pdf": [".pdf"],
     "docx": [".docx"],
@@ -37,7 +36,6 @@ def by_files(types: Iterable[str]) -> Callable[[dict], bool]:
         if t in FILE_TYPE_MAP:
             allowed_exts.update(FILE_TYPE_MAP[t])
         else:
-            # treat unknown type as extension
             allowed_exts.add(f".{t}")
 
     return by_extension(allowed_exts)

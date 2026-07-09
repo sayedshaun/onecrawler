@@ -77,7 +77,6 @@ class CrawlerRuntime:
         self.wait_until = wait_until or browser_settings.wait_until
         self.timeout = timeout or browser_settings.timeout
 
-        # Track how many workers are actively processing a URL
         self._active_workers = 0
         self._active_lock = asyncio.Lock()
 
@@ -193,7 +192,6 @@ class CrawlerRuntime:
                     except Exception as e:
                         logger.warning("Error extracting content for %s: %s", url, e)
 
-                # Enqueue discovered child links for future visits
                 for link in links:
                     if self.stop_event.is_set():
                         break

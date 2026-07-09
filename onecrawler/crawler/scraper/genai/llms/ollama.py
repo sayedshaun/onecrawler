@@ -20,7 +20,6 @@ class OllamaLLM(BaseLLM):
         self.base_url = base_url.rstrip("/")
         self.client = httpx.AsyncClient(timeout=timeout)
 
-        # Anything passed becomes an Ollama option
         self.options = options
 
     def _url(self, path: str) -> str:

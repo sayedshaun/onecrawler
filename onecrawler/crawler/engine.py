@@ -63,12 +63,10 @@ class Scraper(BaseEngine):
         """Starts the scraper engine."""
         self._closed = False
 
-        # Browser
         if self.settings.browser_settings:
             self.browser = GoogleChrome(settings=self.settings.browser_settings)
             await self.browser.start()
 
-        # Strategy
         if self.settings.scraping_strategy == "heuristic":
             self.strategy = HeuristicStrategy(
                 settings=self.settings,
@@ -235,7 +233,6 @@ class LinkExtractor(BaseEngine):
 
         self.settings = settings
 
-        # future-ready placeholders
         self.session = None
 
         self.logger.info("LinkExtractor initialized")
