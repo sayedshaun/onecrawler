@@ -91,7 +91,7 @@ def dump_csv(
     if not rows:
         return
 
-    rows = [_serialize(row) for row in rows]
+    rows = [row if isinstance(row, dict) else _serialize(row) for row in rows]
 
     fieldnames: list = []
     seen = set()
