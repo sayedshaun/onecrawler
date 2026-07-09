@@ -40,8 +40,8 @@ theme:
     - search.share
     - content.code.annotate
     - content.code.copy
-  logo: static/onecrawl_logo.png
-  favicon: static/onecrawl_logo.png
+  logo: static/onecrawl_logo.svg
+  favicon: static/onecrawl_logo.svg
 
 # Plugins
 plugins:
