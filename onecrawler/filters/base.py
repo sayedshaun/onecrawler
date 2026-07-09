@@ -3,11 +3,9 @@ from typing import Callable, List, Optional, Sequence
 
 logger = logging.getLogger(__name__)
 
-# The canonical keys onecrawler's built-in content strategies emit and that the
-# built-in filters read. The heuristic (trafilatura) strategy produces `text`,
-# `title`, `date`, `filedate`, `url`; string outputs (markdown/xml) are wrapped
-# as {"text": ..., "url": ...}. GenAIStrategy emits a user-defined schema, so
-# each filter accepts a `field`/`fields` override to point at the right key.
+# Canonical content keys the built-in strategies emit: trafilatura produces
+# text/title/date/filedate/url; string outputs are wrapped as {text, url}.
+# GenAIStrategy uses a user-defined schema, hence the per-filter field override.
 CONTENT_TEXT_FIELDS = ("text", "content", "title")
 CONTENT_DATE_FIELDS = ("date", "filedate")
 CONTENT_URL_FIELD = "url"

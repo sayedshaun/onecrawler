@@ -12,8 +12,7 @@ from onecrawler.filters.chain import AND, NOT, OR
 
 class TestByCosineSimilarity:
     def test_scores_against_body_text_not_title(self):
-        # Regression: previously `content`/`title` preceded `text`, so a short
-        # title (present in JSON output) was scored instead of the body.
+        # Regression: `title` must not be scored in place of the body `text`.
         body = "machine learning models train on large datasets " * 20
         item = {"title": "cats and dogs", "text": body, "url": "http://x/a.html"}
         f = by_cosine_similarity("machine learning datasets models", threshold=0.2)
