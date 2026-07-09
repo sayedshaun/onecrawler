@@ -65,3 +65,6 @@ class HeuristicStrategy:
                 raise ValueError(f"Failed to parse extracted JSON: {e}")
 
         return extracted
+
+    async def close(self) -> None:
+        pass

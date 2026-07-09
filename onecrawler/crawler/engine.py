@@ -104,6 +104,9 @@ class Scraper(BaseEngine):
 
     async def close(self):
         """Closes the scraper engine."""
+        if self.strategy:
+            await self.strategy.close()
+
         if self.browser:
             await self.browser.close()
 
