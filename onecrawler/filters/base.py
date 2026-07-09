@@ -13,9 +13,6 @@ class FilterChain:
         return self
 
     def __call__(self, item: dict) -> bool:
-        if not self.filters:
-            return True
-
         if self.mode == "AND":
             return all(f(item) for f in self.filters)
 
