@@ -24,22 +24,11 @@ class HeuristicStrategy:
         self.settings = settings
         self.browser = browser
 
-    async def extract(self, url: str) -> Optional[Any]:
-        if self.browser:
-            page = await self.browser.new_page()
-            try:
-                await goto(
-                    page,
-                    url,
-                    wait_until=self.settings.browser_settings.wait_until,
-                    timeout=self.settings.browser_settings.timeout,
-                )
-                html = await page.content()
-            finally:
-                with contextlib.suppress(Exception):
-                    await page.close()
-        else:
-            html = await asyncio.to_thread(trafilatura.fetch_url, url)
+    async def extract(self, url: str, html: Optional[str] = None) -> Optional[Any]:
+        # `html` lets a caller (e.g. the combined Crawler) hand over the page
+        # it already loaded, so we skip a redundant second navigation.
+        if html is None:
+            html = await self._fetch_html(url)
 
         if not html:
             return None
@@ -65,6 +54,23 @@ class HeuristicStrategy:
                 raise ValueError(f"Failed to parse extracted JSON: {e}")
 
         return extracted
+
+    async def _fetch_html(self, url: str) -> Optional[str]:
+        """Fetches raw HTML for `url` when no pre-loaded page is supplied."""
+        if self.browser:
+            page = await self.browser.new_page()
+            try:
+                await goto(
+                    page,
+                    url,
+                    wait_until=self.settings.browser_settings.wait_until,
+                    timeout=self.settings.browser_settings.timeout,
+                )
+                return await page.content()
+            finally:
+                with contextlib.suppress(Exception):
+                    await page.close()
+        return await asyncio.to_thread(trafilatura.fetch_url, url)
 
     async def close(self) -> None:
         pass

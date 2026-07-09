@@ -160,7 +160,10 @@ class CrawlerRuntime:
 
                 if should_extract:
                     try:
-                        content = await self.strategy.extract(url)
+                        # Reuse the page this worker already loaded instead of
+                        # letting the strategy navigate to the URL a second time.
+                        html = await page.content()
+                        content = await self.strategy.extract(url, html=html)
                         if content is None:
                             logger.debug("Content extraction returned None for %s", url)
                         else:

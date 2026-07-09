@@ -8,6 +8,7 @@ class AgentState(TypedDict, total=False):
     browser: Any
     llm: Any
     url: str
+    prefetched_html: str | None
     html: str | None
     markdown: str | None
     prompt: str | None

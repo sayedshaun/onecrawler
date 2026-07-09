@@ -388,6 +388,59 @@ class TestPipeline:
         content_no_date = {"url": "https://example.com/test"}
         assert runtime.content_filter is None or runtime.content_filter(content_no_date)
 
+    @pytest.mark.asyncio
+    async def test_worker_reuses_loaded_page_html(self):
+        """The worker hands the already-loaded page's HTML to the strategy
+        instead of letting it navigate to the URL a second time."""
+        html_marker = "<html><body>REUSED</body></html>"
+
+        class FakePage:
+            async def goto(self, *args, **kwargs):
+                return None
+
+            async def content(self):
+                return html_marker
+
+        pool = AsyncMock()
+        pool.acquire = AsyncMock(return_value=FakePage())
+        pool.release = AsyncMock()
+
+        pending = ["https://example.com/news/1"]
+
+        async def fake_next():
+            return pending.pop(0) if pending else None
+
+        scheduler = AsyncMock()
+        scheduler.next = fake_next
+        scheduler.has_next = AsyncMock(return_value=False)
+
+        spider = MagicMock()
+        spider.parse = AsyncMock(return_value=[])
+
+        strategy = AsyncMock()
+        strategy.extract = AsyncMock(return_value={"text": "extracted"})
+
+        runtime = self.pipeline_module.CrawlerRuntime(
+            scheduler=scheduler,
+            pool=pool,
+            spider=spider,
+            strategy=strategy,
+            base_prefix="https://example.com",
+            max_links=1,
+            include_pattern=None,
+            enable_human_behaviors=False,
+            human_behavior_settings=self.simulation_settings_module.HumanBehaviorSettings(),
+            concurrency=1,
+            content_filter=None,
+        )
+
+        await runtime.worker()
+
+        strategy.extract.assert_awaited_once()
+        args, kwargs = strategy.extract.call_args
+        assert args[0] == "https://example.com/news/1"
+        assert kwargs.get("html") == html_marker
+
         content_with_date = {
             "filedate": "2024-06-15",
             "url": "https://example.com/test",
