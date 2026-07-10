@@ -1,5 +1,5 @@
 # Use an official Python slim image as the base
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # Set environment variables
 # 1. Prevent Python from writing .pyc files
@@ -19,8 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy pyproject.toml first to leverage Docker cache for dependencies
-COPY pyproject.toml .
+# Copy the full framework source before installing, so setuptools'
+# package auto-discovery actually finds the onecrawler package
+COPY . .
 
 # Install the framework and its dependencies
 # We include [genai] extra by default for the Docker image
@@ -30,13 +31,10 @@ RUN pip install --no-cache-dir .[genai]
 # OneCrawler primarily uses Chromium
 RUN playwright install chromium --with-deps
 
-# Copy the rest of the framework code
-COPY . .
-
 # Optional: Set a non-root user for security
 # This is recommended for production crawlers
 RUN useradd -m onecrawler && chown -R onecrawler:onecrawler /app
 USER onecrawler
 
 # Default command: show help/version or run a script if provided
-CMD ["python", "-m", "onecrawler", "--help"]
+CMD ["python", "-m", "onecrawler"]

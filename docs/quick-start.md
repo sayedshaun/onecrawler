@@ -23,6 +23,34 @@ extraction or browser-backed scraping.
     Browser workflows are more flexible, but they cost more time, memory, and
     operational care.
 
+## Command-Line Interface
+
+For a quick one-off crawl without writing a script, use the built-in CLI. It
+wraps `Crawler` with the heuristic scraping strategy and prints one JSON
+object per extracted page to stdout as it's found:
+
+```bash
+python -m onecrawler crawl https://example.com --limit 20 --concurrency 5
+```
+
+```bash
+python -m onecrawler crawl --help
+```
+
+| Flag | Maps to `Settings` field | Default |
+|------|---------------------------|---------|
+| `--limit` | `link_extraction_limit` | `50` |
+| `--concurrency` | `concurrency` | `10` |
+| `--strategy {shallow,deep}` | `link_extraction_strategy` | `deep` |
+| `--format {markdown,json,xml,xmltei}` | `scraping_output_format` | `json` |
+| `--include PATTERN` (repeatable) | `include_link_patterns` | none |
+| `--exclude PATTERN` (repeatable) | `exclude_link_patterns` | none |
+
+!!! note "Library-first, CLI for the common case"
+    The CLI only covers heuristic-strategy crawling with the flags above.
+    Proxies, GenAI extraction, and human-behavior simulation need the Python
+    API — see the workflows below.
+
 ## Best First Workflow: Sitemap Then Scrape
 
 Use this pattern when the target site publishes a sitemap. It is the preferred
