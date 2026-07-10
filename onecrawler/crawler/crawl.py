@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from ..browser import GoogleChrome
 from ..settings.browser import BrowserSettings
 from ..settings.simulation import HumanBehaviorSettings
+from ..utils.progress import make_progress_bar
 from .base import BaseEngine
 from .link.helper import (
     human_delay,
@@ -42,6 +43,7 @@ class CrawlerRuntime:
         content_filter: Optional[Callable[[dict], bool]] = None,
         wait_until: Optional[str] = None,
         timeout: Optional[int] = None,
+        show_progress: bool = True,
         *args,
         **kwargs,
     ):
@@ -76,6 +78,7 @@ class CrawlerRuntime:
         self.streaming = streaming
         self.wait_until = wait_until or browser_settings.wait_until
         self.timeout = timeout or browser_settings.timeout
+        self.show_progress = show_progress
 
         self._active_workers = 0
         self._active_lock = asyncio.Lock()
@@ -238,7 +241,34 @@ class CrawlerRuntime:
             return []
 
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
+
+        pbar = make_progress_bar(
+            total=self.max_links,
+            desc="Crawling",
+            unit="page",
+            show_progress=self.show_progress,
+        )
+
+        async def monitor():
+            last = 0
+            while not all(task.done() for task in tasks):
+                async with self.lock:
+                    current = len(self.results)
+                if current > last:
+                    pbar.update(current - last)
+                    last = current
+                await asyncio.sleep(0.2)
+            async with self.lock:
+                current = len(self.results)
+            if current > last:
+                pbar.update(current - last)
+
+        monitor_task = asyncio.create_task(monitor())
+
         results = await asyncio.gather(*tasks, return_exceptions=True)
+        await monitor_task
+        pbar.close()
+
         for result in results:
             if isinstance(result, Exception):
                 logger.warning(
@@ -252,6 +282,13 @@ class CrawlerRuntime:
 
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
 
+        pbar = make_progress_bar(
+            total=self.max_links,
+            desc="Crawling",
+            unit="page",
+            show_progress=self.show_progress,
+        )
+
         try:
             while True:
                 try:
@@ -259,6 +296,7 @@ class CrawlerRuntime:
                         self.stream_queue.get(),
                         timeout=0.5,
                     )
+                    pbar.update(1)
                     yield item
 
                 except asyncio.TimeoutError:
@@ -279,6 +317,7 @@ class CrawlerRuntime:
                         logger.warning(
                             "Worker task failed: [%s] %s", type(result).__name__, result
                         )
+            pbar.close()
 
 
 class Crawler(BaseEngine):
@@ -370,6 +409,7 @@ class Crawler(BaseEngine):
             content_filter=content_filter,
             wait_until=self.settings.browser_settings.wait_until,
             timeout=self.settings.browser_settings.timeout,
+            show_progress=self.settings.show_progress,
         )
         return runtime, pool
 

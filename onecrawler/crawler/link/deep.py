@@ -1,12 +1,10 @@
 import asyncio
 import logging
-import sys
 from typing import AsyncGenerator, List, Optional, Set
-
-from tqdm import tqdm
 
 from ...settings.browser import BrowserSettings
 from ...settings.simulation import HumanBehaviorSettings
+from ...utils.progress import make_progress_bar
 from ..pool import BrowserPool
 from ..scheduler import BFScheduler
 from ..spider import LinkSpider
@@ -230,12 +228,11 @@ class BFSRuntime:
 
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
 
-        pbar = tqdm(
+        pbar = make_progress_bar(
             total=self.max_links,
             desc="Link Extracting",
             unit="link",
-            dynamic_ncols=True,
-            disable=(not self.show_progress or not sys.stderr.isatty()),
+            show_progress=self.show_progress,
         )
 
         try:

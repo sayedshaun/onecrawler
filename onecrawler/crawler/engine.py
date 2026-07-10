@@ -1,12 +1,10 @@
 import asyncio
-import sys
 from typing import Any, AsyncGenerator, List, Optional, Union
 from urllib.parse import urlparse
 
-from tqdm import tqdm
-
 from ..browser import GoogleChrome
 from ..settings.crawler import Settings
+from ..utils.progress import make_progress_bar
 from .base import BaseEngine
 from .link.deep import BFSRuntime
 from .link.shallow import extract_url_from_current_page
@@ -164,10 +162,11 @@ class Scraper(BaseEngine):
             True,
         )
 
-        with tqdm(
+        with make_progress_bar(
             total=len(tasks),
             desc="Scraping",
-            disable=(not show_progress or not sys.stderr.isatty()),
+            unit="url",
+            show_progress=show_progress,
         ) as pbar:
             for task in asyncio.as_completed(tasks):
                 try:
