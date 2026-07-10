@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/static/onecrawl_logo.svg" alt="Onecrawler" width="200"/>
+<img src="https://raw.githubusercontent.com/sayedshaun/onecrawler/main/docs/static/onecrawl_logo.svg" alt="Onecrawler" width="200"/>
 
 # Onecrawler
 
