@@ -37,4 +37,4 @@ RUN useradd -m onecrawler && chown -R onecrawler:onecrawler /app
 USER onecrawler
 
 # Default command: show help/version or run a script if provided
-CMD ["python", "-m", "onecrawler", "--help"]
+CMD ["python", "-m", "onecrawler"]

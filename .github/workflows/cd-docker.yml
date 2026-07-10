@@ -50,6 +50,11 @@ jobs:
           docker run --rm -w /tmp "$IMAGE_TAG" \
             python -c "import onecrawler, sys; sys.exit(0 if 'site-packages' in onecrawler.__file__ else 1)"
 
+      - name: Verify the image's default command runs
+        run: |
+          IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          docker run --rm "$IMAGE_TAG"
+
       - name: Build and Push
         uses: docker/build-push-action@v6
         with:
