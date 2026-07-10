@@ -102,6 +102,36 @@ class TestSitemapParser:
             "https://example.com/news.xml",
         ]
 
+    @pytest.mark.asyncio
+    async def test_is_allowed_single_flights_concurrent_robots_fetches(self):
+        """is_allowed() is fanned out over many records via asyncio.gather —
+        concurrent callers for the same robots.txt must share one fetch
+        instead of each firing a redundant request."""
+
+        class Client:
+            def __init__(self):
+                self.fetch_count = 0
+
+            async def get_text(self, url):
+                self.fetch_count += 1
+                await asyncio.sleep(0.01)
+                return "User-agent: *\nDisallow: /private/"
+
+        client = Client()
+        parser = self.sitemap_module.RobotsParser(client)
+
+        results = await asyncio.gather(
+            *(
+                parser.is_allowed(
+                    f"https://example.com/page/{i}", "https://example.com"
+                )
+                for i in range(50)
+            )
+        )
+
+        assert client.fetch_count == 1
+        assert all(results)
+
     def test_html_crawler_extracts_same_origin_links(self):
         html = """
         <a href="/a">A</a>

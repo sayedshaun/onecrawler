@@ -358,6 +358,7 @@ class RobotsParser:
         """Initializes RobotsParser."""
         self.client = client
         self._parser_cache: dict[str, Optional[RobotFileParser]] = {}
+        self._fetch_locks: dict[str, asyncio.Lock] = {}
 
     async def fetch_sitemaps(self, base_url: str) -> List[str]:
         """Extracts Sitemap: directives from robots.txt.
@@ -394,18 +395,24 @@ class RobotsParser:
         """
         robots_url = urljoin(base_url, "/robots.txt")
 
-        if robots_url in self._parser_cache:
-            rp = self._parser_cache[robots_url]
-        else:
-            text = await self.client.get_text(robots_url)
-            if not text:
-                rp = None
-            else:
-                rp = RobotFileParser()
-                rp.set_url(robots_url)
-                rp.parse(text.splitlines())
-            self._parser_cache[robots_url] = rp
+        if robots_url not in self._parser_cache:
+            # is_allowed() is typically fanned out across many records at
+            # once via asyncio.gather. Without this lock, every concurrent
+            # caller sees the cache miss before any of them populates it,
+            # and each fires its own redundant robots.txt fetch.
+            lock = self._fetch_locks.setdefault(robots_url, asyncio.Lock())
+            async with lock:
+                if robots_url not in self._parser_cache:
+                    text = await self.client.get_text(robots_url)
+                    if not text:
+                        rp = None
+                    else:
+                        rp = RobotFileParser()
+                        rp.set_url(robots_url)
+                        rp.parse(text.splitlines())
+                    self._parser_cache[robots_url] = rp
 
+        rp = self._parser_cache[robots_url]
         if rp is None:
             return True
         return rp.can_fetch("*", url)
