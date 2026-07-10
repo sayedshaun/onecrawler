@@ -6,6 +6,8 @@ hide:
 
 <div class="hero" markdown>
 
+<img src="static/onecrawl_logo.svg" alt="OneCrawler logo" class="hero-logo">
+
 # OneCrawler
 
 **An async Python framework for discovering URLs, extracting links, and scraping structured content.**
