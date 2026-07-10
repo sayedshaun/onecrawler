@@ -35,12 +35,14 @@ async def human_scroll(page: Page, max_scrolls: int = 10) -> None:
 
         for _ in range(max_scrolls):
 
-            await page.evaluate("""
+            await page.evaluate(
+                """
                 window.scrollTo(
                     0,
                     document.body.scrollHeight
                 )
-            """)
+            """
+            )
 
             await asyncio.sleep(1)
 
