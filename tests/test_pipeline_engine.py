@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -440,6 +441,65 @@ class TestPipeline:
         args, kwargs = strategy.extract.call_args
         assert args[0] == "https://example.com/news/1"
         assert kwargs.get("html") == html_marker
+
+    @pytest.mark.asyncio
+    async def test_run_never_exceeds_max_links_under_concurrency(self):
+        """Regression test: workers used to check the max_links cap only
+        AFTER unconditionally appending, so several concurrent workers could
+        all pass the cap simultaneously and overshoot it. A real (if tiny)
+        delay in extraction is required to force genuine task interleaving —
+        awaiting an already-resolved coroutine does not yield to sibling
+        tasks, so purely instant mocks would never exercise the race."""
+        max_links = 5
+        concurrency = 10
+        pending = [f"https://example.com/page-{i}" for i in range(30)]
+
+        async def fake_next():
+            return pending.pop(0) if pending else None
+
+        scheduler = AsyncMock()
+        scheduler.next = fake_next
+        scheduler.has_next = AsyncMock(side_effect=lambda: bool(pending))
+
+        class FakePage:
+            async def goto(self, *args, **kwargs):
+                return None
+
+            async def content(self):
+                return "<html><body>x</body></html>"
+
+        pool = AsyncMock()
+        pool.acquire = AsyncMock(return_value=FakePage())
+        pool.release = AsyncMock()
+
+        spider = MagicMock()
+        spider.parse = AsyncMock(return_value=[])
+
+        async def slow_extract(url, html=None):
+            await asyncio.sleep(0.01)
+            return {"text": "extracted"}
+
+        strategy = AsyncMock()
+        strategy.extract = AsyncMock(side_effect=slow_extract)
+
+        runtime = self.pipeline_module.CrawlerRuntime(
+            scheduler=scheduler,
+            pool=pool,
+            spider=spider,
+            strategy=strategy,
+            base_prefix="https://example.com",
+            max_links=max_links,
+            include_pattern=None,
+            enable_human_behaviors=False,
+            human_behavior_settings=self.simulation_settings_module.HumanBehaviorSettings(),
+            concurrency=concurrency,
+            content_filter=None,
+            show_progress=False,
+        )
+
+        results = await runtime.run()
+
+        assert len(results) == max_links
 
         content_with_date = {
             "filedate": "2024-06-15",

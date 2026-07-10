@@ -178,21 +178,25 @@ class CrawlerRuntime:
                             if self.content_filter is None or self.content_filter(
                                 content
                             ):
+                                appended = False
                                 async with self.lock:
-                                    self.results.append(url)
-                                    self.content.append(content)
+                                    if len(self.results) < self.max_links:
+                                        self.results.append(url)
+                                        self.content.append(content)
+                                        appended = True
                                     if len(self.results) >= self.max_links:
                                         self.stop_event.set()
 
-                                if self.streaming:
-                                    await self.stream_queue.put(content)
+                                if appended:
+                                    if self.streaming:
+                                        await self.stream_queue.put(content)
 
-                                logger.debug(
-                                    "Discovered %s/%s links; link=%s",
-                                    len(self.results),
-                                    self.max_links,
-                                    url,
-                                )
+                                    logger.debug(
+                                        "Discovered %s/%s links; link=%s",
+                                        len(self.results),
+                                        self.max_links,
+                                        url,
+                                    )
                             else:
                                 logger.debug("Content did not pass filter for %s", url)
                     except Exception as e:
