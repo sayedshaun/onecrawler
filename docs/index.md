@@ -32,11 +32,11 @@ from onecrawler.utils import writter
 async def main():
     settings = Settings(include_link_patterns=["/news/*"], concurrency=10)
 
-    async with UniversalSiteMap(settings) as sitemap:
-        urls = await sitemap.run("https://example.com")
+    sitemap = UniversalSiteMap(settings)
+    urls = await sitemap.run("https://example.com")
 
     async with Scraper(settings) as scraper:
-        results = await scraper.run(urls)
+        results = await scraper.run(urls)  # [{"url": ..., "result": ...}, ...]
 
     writter.dump_json(results, "output.json")
 ```

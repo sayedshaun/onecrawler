@@ -48,7 +48,8 @@ async def main():
     urls = await sitemap.run("https://example.com")
 
     async with Scraper(settings) as scraper:
-        records = await scraper.run(urls)
+
+        records = await scraper.run(urls)  # [{"url": ..., "result": ...}, ...]
 
     writter.dump_json(records, "output.json")
 
@@ -135,9 +136,9 @@ async def main():
     )
 
     async with Scraper(settings) as scraper:
-        result = await scraper.run("https://example.com/articles/story")
+        item = await scraper.run("https://example.com/articles/story")
 
-    print(result)
+    print(item["result"])  # an ArticleSummary instance
 
 
 if __name__ == "__main__":

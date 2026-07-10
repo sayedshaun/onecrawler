@@ -138,8 +138,14 @@ class Scraper(BaseEngine):
 
                     return None
 
-    async def _process(self, url: str) -> Optional[Any]:
-        """Processes a single URL."""
+    async def _process(self, url: str) -> Optional[dict]:
+        """Processes a single URL.
+
+        Wraps the extracted content with its source ``url`` so results stay
+        traceable regardless of the extraction strategy's return shape (a
+        dict, plain text, or a GenAI ``output_schema`` model instance) and
+        regardless of completion order in ``stream()``.
+        """
 
         async with self.semaphore:
 
@@ -149,7 +155,12 @@ class Scraper(BaseEngine):
                     timeout=self.timeout,
                 )
 
-            return await self._retry(task)
+            result = await self._retry(task)
+
+        if result is None:
+            return None
+
+        return {"url": url, "result": result}
 
     async def stream(self, link: Union[str, List[str]]) -> AsyncGenerator[Any, None]:
         """Streams extracted results as they complete, in completion order.
@@ -158,8 +169,9 @@ class Scraper(BaseEngine):
             link (Union[str, List[str]]): One URL or a list of URLs to scrape.
 
         Yields:
-            Any: The extracted content for a URL (shape depends on
-            ``settings.scraping_strategy``/``scraping_output_format``).
+            dict: ``{"url": str, "result": Any}``, where ``result``'s shape
+            depends on ``settings.scraping_strategy``/``scraping_output_format``
+            (a dict, plain text, or a GenAI ``output_schema`` model instance).
             URLs that fail extraction after retries are silently skipped.
         """
 
@@ -204,17 +216,17 @@ class Scraper(BaseEngine):
 
         self.logger.info("Streaming scrape completed")
 
-    async def run(self, link: Union[str, List[str]]) -> Union[Any, List[Any], None]:
+    async def run(self, link: Union[str, List[str]]) -> Union[dict, List[dict], None]:
         """Runs the scraper and collects all results.
 
         Args:
             link (Union[str, List[str]]): One URL or a list of URLs to scrape.
 
         Returns:
-            Union[Any, List[Any], None]: A list of extracted results when
-            ``link`` is a list (possibly shorter than the input if some URLs
-            failed extraction); a single extracted result (or ``None``) when
-            ``link`` is a single URL.
+            Union[dict, List[dict], None]: A list of ``{"url": str, "result":
+            Any}`` dicts when ``link`` is a list (possibly shorter than the
+            input if some URLs failed extraction); a single such dict (or
+            ``None``) when ``link`` is a single URL.
         """
 
         results = []

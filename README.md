@@ -35,7 +35,7 @@ async with LinkExtractor(settings) as link_engine:
     links = await link_engine.run("https://example.com")
 
 async with Scraper(settings) as scraper_engine:
-    records = await scraper_engine.run(links)
+    records = await scraper_engine.run(links)  # [{"url": ..., "result": ...}, ...]
 ```
 
 ---
@@ -164,7 +164,7 @@ async def main():
         links = await link_engine.run("https://www.example.com/")
 
     async with Scraper(settings) as scraper_engine:
-        results = await scraper_engine.run(links)
+        results = await scraper_engine.run(links)  # [{"url": ..., "result": ...}, ...]
 
     writter.dump_json(results, "output.json")
 
@@ -341,8 +341,9 @@ async def main():
     )
 
     async with Scraper(settings) as scraper:
-        result = await scraper.run("https://example.com/articles/story")
+        item = await scraper.run("https://example.com/articles/story")
 
+    result = item["result"]
     print(result.model_dump() if hasattr(result, "model_dump") else result)
 
 
