@@ -54,6 +54,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["onecrawler*"]
 exclude = ["tests*"]
 
 [tool.black]
