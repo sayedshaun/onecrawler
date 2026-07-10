@@ -4,7 +4,7 @@ Usage:
     python scripts/run_crawler.py --url <url> [--max-links N] [--concurrency N]
 
 Example:
-    python scripts/run_crawler.py --url https://quotes.toscrape.com --max-links 10 --concurrency 5
+    python scripts/run_crawler.py --url https://quotes.toscrape.com --max-links 100 --concurrency 5
 
 Requires a working Playwright/Chromium install (python -m playwright install
 chromium). Uses the heuristic strategy, so no API key is needed.
@@ -22,8 +22,8 @@ def parse_args():
     parser.add_argument(
         "--max-links",
         type=int,
-        default=10,
-        help="maximum number of links to extract (default: 10)",
+        default=100,
+        help="maximum number of links to extract (default: 100)",
     )
     parser.add_argument(
         "--concurrency",
