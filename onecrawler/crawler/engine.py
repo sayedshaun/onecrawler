@@ -253,8 +253,11 @@ class LinkExtractor(BaseEngine):
         async with LinkExtractor(settings) as engine:
             links = await engine.run("https://example.com")
             print(links)
+        ```
 
-        # Stream
+        Streaming:
+
+        ```python
         async with LinkExtractor(settings) as engine:
             async for link in engine.stream("https://example.com"):
                 print(link)
