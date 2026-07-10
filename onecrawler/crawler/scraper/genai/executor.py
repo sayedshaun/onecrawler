@@ -41,7 +41,7 @@ class GenAIStrategy:
 
                 self.graph = build_graph()
 
-    async def extract(self, url: str) -> Optional[Any]:
+    async def extract(self, url: str, html: Optional[str] = None) -> Optional[Any]:
         if self.graph is None:
             await self.initialize()
 
@@ -50,6 +50,7 @@ class GenAIStrategy:
             "llm": self.llm,
             "browser": self.browser,
             "schema": self.llm.schema,
+            "prefetched_html": html,
             "html": None,
             "prompt": None,
             "response": None,
@@ -58,3 +59,6 @@ class GenAIStrategy:
 
         result = await self.graph.ainvoke(state)
         return result.get("response") if isinstance(result, dict) else result
+
+    async def close(self) -> None:
+        await self.llm.close()

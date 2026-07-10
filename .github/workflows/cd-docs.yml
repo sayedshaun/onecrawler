@@ -26,7 +26,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install mkdocs-material mkdocs-minify-plugin
+          pip install mkdocs-material mkdocs-minify-plugin "mkdocstrings[python]" black
 
       - name: Build documentation
         run: mkdocs build

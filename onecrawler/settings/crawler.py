@@ -9,6 +9,12 @@ from .proxy import ProxySettings
 from .simulation import HumanBehaviorSettings
 from .sitemap import SitemapSettings
 
+_LINK_EXTRACTION_STRATEGIES = ("shallow", "deep")
+_SCRAPING_STRATEGIES = ("heuristic", "genai")
+_OUTPUT_FORMATS = ("markdown", "json", "xml", "xmltei")
+_PROXY_ROTATION_METHODS = ("round_robin", "random")
+_LOGGING_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
+
 
 @dataclass
 class Settings:
@@ -72,7 +78,6 @@ class Settings:
     enable_logging: bool = False
     logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
-    # Performance optimization flags
     enable_human_behaviors: bool = False
     human_behavior_settings: HumanBehaviorSettings = field(
         default_factory=HumanBehaviorSettings
@@ -80,6 +85,46 @@ class Settings:
 
     def __post_init__(self):
         """Validates settings after initialization."""
+        if self.link_extraction_strategy not in _LINK_EXTRACTION_STRATEGIES:
+            raise ValueError(
+                "link_extraction_strategy must be one of "
+                f"{_LINK_EXTRACTION_STRATEGIES}, got {self.link_extraction_strategy!r}"
+            )
+        if self.scraping_strategy not in _SCRAPING_STRATEGIES:
+            raise ValueError(
+                f"scraping_strategy must be one of {_SCRAPING_STRATEGIES}, "
+                f"got {self.scraping_strategy!r}"
+            )
+        if self.scraping_output_format not in _OUTPUT_FORMATS:
+            raise ValueError(
+                f"scraping_output_format must be one of {_OUTPUT_FORMATS}, "
+                f"got {self.scraping_output_format!r}"
+            )
+        if self.proxy_rotation_method not in _PROXY_ROTATION_METHODS:
+            raise ValueError(
+                "proxy_rotation_method must be one of "
+                f"{_PROXY_ROTATION_METHODS}, got {self.proxy_rotation_method!r}"
+            )
+        if self.logging_level not in _LOGGING_LEVELS:
+            raise ValueError(
+                f"logging_level must be one of {_LOGGING_LEVELS}, "
+                f"got {self.logging_level!r}"
+            )
+
+        if self.concurrency < 1:
+            raise ValueError(f"concurrency must be >= 1, got {self.concurrency}")
+        if self.max_retries < 1:
+            raise ValueError(f"max_retries must be >= 1, got {self.max_retries}")
+        if self.request_timeout <= 0:
+            raise ValueError(f"request_timeout must be > 0, got {self.request_timeout}")
+        if self.retry_delay < 0:
+            raise ValueError(f"retry_delay must be >= 0, got {self.retry_delay}")
+        if self.link_extraction_limit < 0:
+            raise ValueError(
+                "link_extraction_limit must be >= 0, got "
+                f"{self.link_extraction_limit}"
+            )
+
         if self.enable_logging:
             logging.getLogger("onecrawler").setLevel(self.logging_level)
             logging.getLogger("trafilatura").setLevel(logging.ERROR)

@@ -1,7 +1,9 @@
 import math
 import re
 from collections import Counter
-from typing import Callable
+from typing import Callable, Sequence
+
+from .base import CONTENT_TEXT_FIELDS, resolve_field
 
 
 def _tokenize(text: str):
@@ -27,16 +29,33 @@ def _cosine_sim(a: Counter, b: Counter) -> float:
     return dot / (mag_a * mag_b)
 
 
-def by_cosine_similarity(query: str, threshold: float = 0.25) -> Callable[[dict], bool]:
-    """
-    Compare query text vs document text using cosine similarity.
+def by_cosine_similarity(
+    query: str,
+    threshold: float = 0.25,
+    *,
+    fields: Sequence[str] = CONTENT_TEXT_FIELDS,
+) -> Callable[[dict], bool]:
+    """Compare query text vs document text using cosine similarity.
+
+    Scores against the first present field in `fields` (default: the body
+    ``text``, then ``content``, then ``title``) so the full document is
+    compared rather than a short title when both exist.
+
+    Args:
+        query (str): Text to compare each item's content against.
+        threshold (float): Minimum cosine similarity score (0-1) required to
+            pass.
+        fields (Sequence[str]): Content-dict keys to check, in priority order.
+
+    Returns:
+        Callable[[dict], bool]: A predicate accepting items scoring at least
+        ``threshold`` against ``query``.
     """
 
     query_vec = _vectorize(query)
 
     def _filter(item: dict) -> bool:
-        doc_text = item.get("content") or item.get("title") or item.get("text") or ""
-
+        doc_text = resolve_field(item, fields, filter_name="by_cosine_similarity")
         if not doc_text:
             return False
 

@@ -61,15 +61,16 @@ Statistics tracking for sitemap operations.
 from onecrawler import SitemapStats
 
 stats = SitemapStats()
-print(f"Discovered {stats.url_count} URLs")
+print(f"Discovered {stats.urls} URLs")
 ```
 
 #### Properties
 
-- `url_count`: Total URLs discovered
-- `sitemap_count`: Number of sitemaps processed
-- `error_count`: Number of errors encountered
-- `elapsed_time`: Total processing time
+- `urls`: Total URLs discovered
+- `sitemaps`: Number of sitemaps processed
+- `errors`: Number of errors encountered
+- `elapsed()`: Elapsed processing time in seconds
+- `rate()`: URLs discovered per second
 
 ## Usage Examples
 
@@ -97,7 +98,8 @@ if __name__ == "__main__":
 ### Advanced Configuration
 
 ```python
-from onecrawler import Settings, UniversalSiteMap, SitemapSettings
+from onecrawler import Settings, UniversalSiteMap
+from onecrawler.settings import SitemapSettings
 
 settings = Settings(
     sitemap=SitemapSettings(
@@ -143,7 +145,7 @@ Sitemap behavior is controlled through `Settings`:
 | `sitemap.max_depth` | Depth limit for HTML fallback | `3` |
 | `sitemap.max_pages` | Page limit for HTML fallback | `500` |
 | `sitemap.user_agent` | User agent for sitemap requests | Custom |
-| `sitemap.respect_robots` | Follow robots.txt rules | `True` |
+| `sitemap.respect_robots` | Reserved; not currently enforced by discovery | `True` |
 | `sitemap.deduplicate` | Remove duplicate URLs | `True` |
 
 ## Discovery Process

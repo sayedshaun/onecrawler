@@ -1,9 +1,9 @@
 import asyncio
-import gzip
 import logging
 import re
 import time
 import warnings
+import zlib
 from datetime import date
 from typing import List, Optional, Set, Tuple
 from urllib.parse import urljoin, urlparse
@@ -22,6 +22,38 @@ from .helper import (
     is_xml_url,
     normalize_url,
 )
+
+# Sitemaps are untrusted, potentially attacker-controlled XML — disable entity
+# resolution/DTD loading to prevent XXE (local file disclosure via external
+# entities), and never allow network access from within a parse.
+_SAFE_XML_PARSER_KWARGS = dict(
+    resolve_entities=False,
+    no_network=True,
+    dtd_validation=False,
+    load_dtd=False,
+    huge_tree=False,
+)
+
+# Cap decompressed sitemap size to guard against gzip decompression bombs.
+_MAX_SITEMAP_DECOMPRESSED_SIZE = 50 * 1024 * 1024  # 50 MB
+
+
+def _safe_gzip_decompress(
+    data: bytes, max_size: int = _MAX_SITEMAP_DECOMPRESSED_SIZE
+) -> bytes:
+    """Decompresses gzip data, aborting if the output would exceed max_size."""
+    decompressor = zlib.decompressobj(zlib.MAX_WBITS | 16)
+    output = decompressor.decompress(data, max_size)
+    if decompressor.unconsumed_tail:
+        raise ValueError(
+            f"Decompressed sitemap exceeds the {max_size}-byte safety limit"
+        )
+    output += decompressor.flush()
+    if len(output) > max_size:
+        raise ValueError(
+            f"Decompressed sitemap exceeds the {max_size}-byte safety limit"
+        )
+    return output
 
 
 class SitemapStats:
@@ -84,6 +116,7 @@ class SiteMap:
         self.stats = SitemapStats()
         self.timeout = settings.request_timeout
         self.filter_pattern = settings.include_link_patterns
+        self.follow_index = settings.sitemap.follow_index
         self.base_prefix = ""
 
     async def __aenter__(self):
@@ -119,7 +152,9 @@ class SiteMap:
             return
 
         try:
-            root = etree.fromstring(data)
+            root = etree.fromstring(
+                data, parser=etree.XMLParser(**_SAFE_XML_PARSER_KWARGS)
+            )
         except Exception:
             self.stats.errors += 1
             return
@@ -127,6 +162,8 @@ class SiteMap:
         tag = root.tag.lower()
 
         if "sitemapindex" in tag:
+            if not self.follow_index:
+                return
             tasks = []
             for sm in root:
                 loc = sm.find(".//{*}loc")
@@ -254,13 +291,12 @@ class HTTPClient:
 
                 if resp.status_code == 200:
                     data = resp.content
-                    # Handle gzip-compressed sitemaps
                     if (
                         url.endswith(".gz")
                         or resp.headers.get("Content-Encoding") == "gzip"
                     ):
                         try:
-                            data = gzip.decompress(data)
+                            data = _safe_gzip_decompress(data)
                         except Exception:
                             pass
                     return data
@@ -314,6 +350,7 @@ class RobotsParser:
     def __init__(self, client: HTTPClient):
         """Initializes RobotsParser."""
         self.client = client
+        self._parser_cache: dict[str, Optional[RobotFileParser]] = {}
 
     async def fetch_sitemaps(self, base_url: str) -> List[str]:
         """Extracts Sitemap: directives from robots.txt.
@@ -335,7 +372,7 @@ class RobotsParser:
             if line.lower().startswith("sitemap:"):
                 sm_url = line.split(":", 1)[1].strip()
                 if sm_url:
-                    sitemaps.append(sm_url)
+                    sitemaps.append(urljoin(base_url, sm_url))
         return sitemaps
 
     async def is_allowed(self, url: str, base_url: str) -> bool:
@@ -349,12 +386,21 @@ class RobotsParser:
             bool: True if allowed, False otherwise.
         """
         robots_url = urljoin(base_url, "/robots.txt")
-        text = await self.client.get_text(robots_url)
-        if not text:
+
+        if robots_url in self._parser_cache:
+            rp = self._parser_cache[robots_url]
+        else:
+            text = await self.client.get_text(robots_url)
+            if not text:
+                rp = None
+            else:
+                rp = RobotFileParser()
+                rp.set_url(robots_url)
+                rp.parse(text.splitlines())
+            self._parser_cache[robots_url] = rp
+
+        if rp is None:
             return True
-        rp = RobotFileParser()
-        rp.set_url(robots_url)
-        rp.parse(text.splitlines())
         return rp.can_fetch("*", url)
 
 
@@ -365,9 +411,10 @@ class SitemapParser:
         client (HTTPClient): The HTTP client to use for fetching.
     """
 
-    def __init__(self, client: HTTPClient, concurrency: int):
+    def __init__(self, client: HTTPClient, concurrency: int, follow_index: bool = True):
         """Initializes SitemapParser."""
         self.client = client
+        self.follow_index = follow_index
         self._visited_sitemaps: set[str] = set()
         self._semaphore = asyncio.Semaphore(concurrency)
 
@@ -386,23 +433,20 @@ class SitemapParser:
         all_records: list[URLRecord] = []
         all_sitemaps: list[str] = []
 
-        # Seed the queue
         queue: list[str] = [u for u in sitemap_urls if u not in self._visited_sitemaps]
 
         while queue:
-            # Deduplicate current batch against already-visited
             batch = []
             for url in queue:
                 if url not in self._visited_sitemaps:
                     batch.append(url)
 
-            queue = []  # Reset for next wave of children
+            queue = []
             if not batch:
                 break
 
             all_sitemaps.extend(batch)
 
-            # Fetch + parse this batch concurrently
             tasks = [self._parse_one(url) for url in batch]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -412,21 +456,15 @@ class SitemapParser:
                 records, child_sitemaps = result
                 all_records.extend(records)
 
-                # Only re-queue children that are XML sitemaps and not yet visited
-                for child_url in child_sitemaps:
-                    if (
-                        child_url not in self._visited_sitemaps
-                        and self._is_xml_sitemap_url(child_url)
-                    ):
-                        queue.append(child_url)
+                # child_sitemaps only ever contains <loc> entries pulled from
+                # <sitemap> elements inside a <sitemapindex> — they are sitemaps
+                # by schema regardless of URL extension, so re-queue all of them.
+                if self.follow_index:
+                    for child_url in child_sitemaps:
+                        if child_url not in self._visited_sitemaps:
+                            queue.append(child_url)
 
         return all_records, all_sitemaps
-
-    @staticmethod
-    def _is_xml_sitemap_url(url: str) -> bool:
-        """Checks if a URL refers to an XML sitemap."""
-        path = urlparse(url).path.lower()
-        return path.endswith(".xml") or path.endswith(".xml.gz")
 
     async def _parse_one(self, url: str) -> Tuple[List[URLRecord], List[str]]:
         """Parses a single sitemap URL."""
@@ -455,7 +493,9 @@ class SitemapParser:
         child_sitemaps: list[str] = []
 
         try:
-            parser = etree.XMLParser(recover=True, encoding="utf-8")
+            parser = etree.XMLParser(
+                recover=True, encoding="utf-8", **_SAFE_XML_PARSER_KWARGS
+            )
             root = etree.fromstring(data, parser=parser)
         except etree.XMLSyntaxError as e:
             logging.warning(f"XML parse error for {source}: {e}")
@@ -538,11 +578,13 @@ class HTMLCrawler:
         concurrency: int,
         max_crawl_pages: int,
         max_crawl_depth: int,
+        robots: Optional["RobotsParser"] = None,
     ):
         """Initializes HTMLCrawler."""
         self.client = client
         self.max_crawl_pages = max_crawl_pages
         self.max_crawl_depth = max_crawl_depth
+        self.robots = robots
         self._visited: set[str] = set()
         self._semaphore = asyncio.Semaphore(concurrency)
 
@@ -565,6 +607,9 @@ class HTMLCrawler:
             if norm in self._visited or depth > self.max_crawl_depth:
                 continue
             self._visited.add(norm)
+
+            if self.robots and not await self.robots.is_allowed(url, base_url):
+                continue
 
             async with self._semaphore:
                 text = await self.client.get_text(url)
@@ -652,14 +697,16 @@ class UniversalSiteMap:
             self.settings.create_proxy_pool(),
         ) as client:
             robots = RobotsParser(client)
-            sitemap_parser = SitemapParser(client, self.settings.concurrency)
+            sitemap_parser = SitemapParser(
+                client,
+                self.settings.concurrency,
+                follow_index=self.settings.sitemap.follow_index,
+            )
 
-            # STRATEGY 1: robots.txt
             sitemap_urls = await robots.fetch_sitemaps(base_url)
             if sitemap_urls:
                 strategies_used.append("robots.txt")
 
-            # STRATEGY 2: Common sitemap paths
             probe_tasks = [
                 self._probe_url(client, urljoin(base_url, path))
                 for path in COMMON_SITEMAP_PATHS
@@ -675,13 +722,11 @@ class UniversalSiteMap:
                 strategies_used.append("common_paths")
                 sitemap_urls.extend(new_common)
 
-            # STRATEGY 3: Parse all sitemaps
             if sitemap_urls:
                 strategies_used.append("sitemap_xml")
                 records, _ = await sitemap_parser.parse_all(sitemap_urls)
                 all_records.extend(records)
 
-            # STRATEGY 4: HTML crawl fallback
             if not all_records and self.settings.sitemap.html_fallback:
                 strategies_used.append("html_crawl")
                 crawler = HTMLCrawler(
@@ -689,14 +734,22 @@ class UniversalSiteMap:
                     self.settings.concurrency,
                     self.settings.sitemap.max_pages,
                     self.settings.sitemap.max_depth,
+                    robots=robots if self.settings.sitemap.respect_robots else None,
                 )
                 crawl_records = await crawler.crawl(base_url)
                 all_records.extend(crawl_records)
 
+            # Respect robots.txt for sitemap-sourced URLs too (the HTML crawl
+            # fallback above already gates each fetch as it happens).
+            if self.settings.sitemap.respect_robots and all_records:
+                allowed_flags = await asyncio.gather(
+                    *(robots.is_allowed(rec.url, base_url) for rec in all_records)
+                )
+                all_records = [rec for rec, ok in zip(all_records, allowed_flags) if ok]
+
         if self.settings.verbose:
             logging.info(f"Strategies used: {strategies_used}")
 
-        # Filter by lastmod date range
         start_date = self.settings.sitemap.start_date
         end_date = self.settings.sitemap.end_date
         strict_date_filter = self.settings.sitemap.strict_date_filter
@@ -715,10 +768,8 @@ class UniversalSiteMap:
                 filtered.append(rec)
             all_records = filtered
 
-        # Filter out XML URLs
         all_records = [r for r in all_records if not is_xml_url(r.url)]
 
-        # Section filter (include_patterns)
         if self.settings.include_link_patterns:
             all_records = [
                 r
@@ -728,7 +779,6 @@ class UniversalSiteMap:
                 )
             ]
 
-        # Deduplication
         if self.settings.sitemap.deduplicate:
             seen: set[str] = set()
             deduped: list[URLRecord] = []
@@ -739,7 +789,6 @@ class UniversalSiteMap:
                     deduped.append(rec)
             all_records = deduped
 
-        # Cap at max_urls
         if len(all_records) > self.settings.link_extraction_limit:
             all_records = all_records[: self.settings.link_extraction_limit]
 

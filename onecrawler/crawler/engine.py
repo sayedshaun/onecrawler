@@ -1,12 +1,10 @@
 import asyncio
-import sys
 from typing import Any, AsyncGenerator, List, Optional, Union
 from urllib.parse import urlparse
 
-from tqdm import tqdm
-
 from ..browser import GoogleChrome
 from ..settings.crawler import Settings
+from ..utils.progress import make_progress_bar
 from .base import BaseEngine
 from .link.deep import BFSRuntime
 from .link.shallow import extract_url_from_current_page
@@ -25,6 +23,13 @@ class Scraper(BaseEngine):
     - GenAI extraction
     - Concurrent scraping
     - Streaming results
+
+    Attributes:
+        settings (Settings): Configuration settings for scraping.
+        strategy (Optional[Any]): The content-extraction strategy in use
+            (``HeuristicStrategy`` or ``GenAIStrategy``); set on ``start()``.
+        browser (Optional[GoogleChrome]): The shared browser instance; set on
+            ``start()`` if ``settings.browser_settings`` is configured.
 
     Example:
         ```python
@@ -63,12 +68,10 @@ class Scraper(BaseEngine):
         """Starts the scraper engine."""
         self._closed = False
 
-        # Browser
         if self.settings.browser_settings:
             self.browser = GoogleChrome(settings=self.settings.browser_settings)
             await self.browser.start()
 
-        # Strategy
         if self.settings.scraping_strategy == "heuristic":
             self.strategy = HeuristicStrategy(
                 settings=self.settings,
@@ -104,6 +107,9 @@ class Scraper(BaseEngine):
 
     async def close(self):
         """Closes the scraper engine."""
+        if self.strategy:
+            await self.strategy.close()
+
         if self.browser:
             await self.browser.close()
 
@@ -132,8 +138,14 @@ class Scraper(BaseEngine):
 
                     return None
 
-    async def _process(self, url: str) -> Optional[Any]:
-        """Processes a single URL."""
+    async def _process(self, url: str) -> Optional[dict]:
+        """Processes a single URL.
+
+        Wraps the extracted content with its source ``url`` so results stay
+        traceable regardless of the extraction strategy's return shape (a
+        dict, plain text, or a GenAI ``output_schema`` model instance) and
+        regardless of completion order in ``stream()``.
+        """
 
         async with self.semaphore:
 
@@ -143,10 +155,25 @@ class Scraper(BaseEngine):
                     timeout=self.timeout,
                 )
 
-            return await self._retry(task)
+            result = await self._retry(task)
+
+        if result is None:
+            return None
+
+        return {"url": url, "result": result}
 
     async def stream(self, link: Union[str, List[str]]) -> AsyncGenerator[Any, None]:
-        """Streams extracted results as they complete."""
+        """Streams extracted results as they complete, in completion order.
+
+        Args:
+            link (Union[str, List[str]]): One URL or a list of URLs to scrape.
+
+        Yields:
+            dict: ``{"url": str, "result": Any}``, where ``result``'s shape
+            depends on ``settings.scraping_strategy``/``scraping_output_format``
+            (a dict, plain text, or a GenAI ``output_schema`` model instance).
+            URLs that fail extraction after retries are silently skipped.
+        """
 
         self._ensure_open()
         links = link if isinstance(link, list) else [link]
@@ -163,10 +190,11 @@ class Scraper(BaseEngine):
             True,
         )
 
-        with tqdm(
+        with make_progress_bar(
             total=len(tasks),
             desc="Scraping",
-            disable=(not show_progress or not sys.stderr.isatty()),
+            unit="url",
+            show_progress=show_progress,
         ) as pbar:
             for task in asyncio.as_completed(tasks):
                 try:
@@ -188,8 +216,18 @@ class Scraper(BaseEngine):
 
         self.logger.info("Streaming scrape completed")
 
-    async def run(self, link: Union[str, List[str]]) -> Union[Any, List[Any], None]:
-        """Runs the scraper and collects all results."""
+    async def run(self, link: Union[str, List[str]]) -> Union[dict, List[dict], None]:
+        """Runs the scraper and collects all results.
+
+        Args:
+            link (Union[str, List[str]]): One URL or a list of URLs to scrape.
+
+        Returns:
+            Union[dict, List[dict], None]: A list of ``{"url": str, "result":
+            Any}`` dicts when ``link`` is a list (possibly shorter than the
+            input if some URLs failed extraction); a single such dict (or
+            ``None``) when ``link`` is a single URL.
+        """
 
         results = []
         async for result in self.stream(link):
@@ -208,19 +246,18 @@ class LinkExtractor(BaseEngine):
 
     Example:
         ```python
-        from onecrawler.settings import Settings, LinkExtractionSettings
+        from onecrawler import Settings, LinkExtractor
 
-        settings = Settings(
-            link_extraction_settings=LinkExtractionSettings(
-                link_extraction_strategy="shallow",
-            )
-        )
+        settings = Settings(link_extraction_strategy="shallow")
 
         async with LinkExtractor(settings) as engine:
             links = await engine.run("https://example.com")
             print(links)
+        ```
 
-        # Stream
+        Streaming:
+
+        ```python
         async with LinkExtractor(settings) as engine:
             async for link in engine.stream("https://example.com"):
                 print(link)
@@ -232,7 +269,6 @@ class LinkExtractor(BaseEngine):
 
         self.settings = settings
 
-        # future-ready placeholders
         self.session = None
 
         self.logger.info("LinkExtractor initialized")

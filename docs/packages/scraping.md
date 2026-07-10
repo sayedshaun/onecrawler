@@ -22,7 +22,8 @@ Main scraping engine that supports both heuristic and GenAI content extraction s
 from onecrawler import Settings, Scraper
 
 async with Scraper(settings) as scraper:
-    data = await scraper.run("https://example.com/article")
+    item = await scraper.run("https://example.com/article")
+    print(item["url"], item["result"])
 ```
 
 #### Parameters
@@ -31,8 +32,12 @@ async with Scraper(settings) as scraper:
 
 #### Methods
 
-- `run(url: str) -> Any`: Extract content from the given URL
-- `run(urls: List[str]) -> List[Any]`: Extract content from multiple URLs
+- `run(url: str) -> dict`: Extract content from the given URL, returning
+  `{"url": str, "result": Any}` — `result`'s shape depends on
+  `scraping_strategy`/`scraping_output_format` (a dict, plain text, or a
+  GenAI `output_schema` model instance)
+- `run(urls: List[str]) -> List[dict]`: Extract content from multiple URLs,
+  returning one `{"url": str, "result": Any}` dict per successful extraction
 
 #### Strategies
 
@@ -40,8 +45,11 @@ async with Scraper(settings) as scraper:
 - **GenAI**: AI-powered extraction with structured output
 
 !!! note "Single URL vs list behavior"
-    `Scraper.run()` returns one item for a single URL and a list for multiple
-    URLs. Failed extractions are omitted from list results.
+    `Scraper.run()` returns one `{"url": ..., "result": ...}` dict for a
+    single URL and a list of them for multiple URLs. Failed extractions are
+    omitted from list results. The `url` key lets you trace a result back to
+    its source even though `stream()` completes in `asyncio.as_completed()`
+    order rather than input order.
 
 ### HeuristicStrategy
 
@@ -57,7 +65,7 @@ content = await strategy.extract(url)
 #### Features
 
 - **Fast extraction**: No model calls, deterministic results
-- **Multiple formats**: HTML, text, metadata extraction
+- **Multiple formats**: Markdown, JSON, XML, and XML-TEI output
 - **Language detection**: Automatic language identification
 - **Content cleaning**: Removes boilerplate and navigation
 
@@ -105,9 +113,9 @@ async def scrape_heuristic():
     )
     
     async with Scraper(settings) as scraper:
-        data = await scraper.run("https://example.com/article")
+        item = await scraper.run("https://example.com/article")
     
-    return data
+    return item["result"]
 
 if __name__ == "__main__":
     import asyncio
@@ -141,9 +149,9 @@ async def scrape_with_ai():
     )
     
     async with Scraper(settings) as scraper:
-        data = await scraper.run("https://example.com/article")
+        item = await scraper.run("https://example.com/article")
     
-    return data
+    return item["result"]  # an Article instance
 
 if __name__ == "__main__":
     import asyncio
@@ -171,14 +179,16 @@ async def scrape_multiple():
     )
     
     async with Scraper(settings) as scraper:
-        results = await scraper.run(urls)
+        results = await scraper.run(urls)  # [{"url": ..., "result": ...}, ...]
     
     return results
 ```
 
 !!! tip "Persist failed URLs"
     For large batches, save failed or empty URLs separately. Retrying only failures
-    is faster than repeating discovery and scraping the whole batch.
+    is faster than repeating discovery and scraping the whole batch. Since each
+    result carries its own `url`, you can find failures by diffing the input
+    list against `[r["url"] for r in results]`.
 
 ## Configuration
 
@@ -199,8 +209,8 @@ Scraping behavior is controlled through `Settings`:
 
 - **JSON**: Structured data with metadata
 - **Markdown**: Clean text formatting
-- **HTML**: Original HTML structure
-- **Text**: Plain text content
+- **XML**: Original TEI-agnostic XML structure
+- **XML-TEI**: TEI-conformant XML output
 
 ### GenAI Strategy
 
@@ -278,9 +288,9 @@ async def scrape_and_save():
     settings = Settings(scraping_strategy="heuristic")
     
     async with Scraper(settings) as scraper:
-        data = await scraper.run("https://example.com/article")
+        item = await scraper.run("https://example.com/article")
 
-    writter.dump_json(data, "output.json")
+    writter.dump_json(item, "output.json")  # includes both "url" and "result"
 ```
 
 ### Database Integration
@@ -296,8 +306,8 @@ async def scrape_to_database():
         results = await scraper.run(urls)
     
     # Save to database
-    for result in results:
-        await save_to_database(result)
+    for item in results:
+        await save_to_database(item["url"], item["result"])
 ```
 
 ## Troubleshooting

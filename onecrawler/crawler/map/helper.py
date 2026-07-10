@@ -78,7 +78,7 @@ def is_same_origin(url: str, base: str) -> bool:
     Returns:
         bool: True if they share the same origin, False otherwise.
     """
-    return urlparse(url).netloc == urlparse(base).netloc
+    return urlparse(url).netloc.lower() == urlparse(base).netloc.lower()
 
 
 def looks_like_sitemap(url: str) -> bool:

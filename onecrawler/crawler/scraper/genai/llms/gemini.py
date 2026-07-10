@@ -1,4 +1,3 @@
-import json
 from typing import Any, Optional, Type, TypeVar
 
 import httpx
@@ -18,15 +17,17 @@ class GeminiLLM(BaseLLM):
         timeout: float = 300.0,
         **generation_config: Any,
     ) -> None:
-        self.api_key = api_key
         self.model = model
         self.base_url = base_url.rstrip("/")
-        self.client = httpx.AsyncClient(timeout=timeout)
+        self.client = httpx.AsyncClient(
+            timeout=timeout,
+            headers={"x-goog-api-key": api_key},
+        )
 
         self.generation_config = generation_config
 
     def _url(self) -> str:
-        return f"{self.base_url}/models/{self.model}:generateContent?key={self.api_key}"
+        return f"{self.base_url}/models/{self.model}:generateContent"
 
     async def generate(self, prompt: str, schema: Optional[Type[T]] = None) -> T | str:
         payload: dict[str, Any] = {
@@ -56,9 +57,7 @@ class GeminiLLM(BaseLLM):
         )
 
         response.raise_for_status()
-
         data = response.json()
-
         content = data["candidates"][0]["content"]["parts"][0]["text"]
 
         if schema is None:

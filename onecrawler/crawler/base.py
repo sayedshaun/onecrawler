@@ -19,7 +19,6 @@ class BaseEngine(ABC):
         self._closed: bool = True
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    # ===== Context Manager =====
     async def __aenter__(self):
         """Starts the engine when entering the context.
 
@@ -50,7 +49,6 @@ class BaseEngine(ABC):
             self._closed = True
             self.logger.debug("Engine closed")
 
-    # ===== Lifecycle Hooks =====
     async def start(self):
         """Initializes engine resources.
 
@@ -67,7 +65,6 @@ class BaseEngine(ABC):
         """
         pass
 
-    # ===== Safety =====
     def _ensure_open(self):
         """Ensures that the engine is currently open.
 

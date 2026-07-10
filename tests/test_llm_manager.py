@@ -56,6 +56,7 @@ async def test_llm_manager_uses_custom_provider_and_forwards_schema(monkeypatch)
     assert manager.model.kwargs == {
         "api_key": "test-key",
         "model": "test-model",
+        "base_url": "https://api.openai.com/v1",
     }
     assert manager.model.calls == [("extract this", Output)]
     assert result == {"prompt": "extract this", "schema": Output}
@@ -86,3 +87,36 @@ def test_llm_manager_rejects_missing_api_key():
             model_provider="openai",
             model_name="test-model",
         )
+
+
+def test_llm_manager_openai_allows_missing_key_with_custom_base_url(monkeypatch):
+    monkeypatch.setattr(model_module, "OpenAILLM", FakeLLM)
+
+    manager = model_module.LLMManager(
+        schema=Output,
+        model_provider="openai",
+        model_name="local-model",
+        base_url="http://localhost:8080/v1",
+    )
+
+    assert manager.model.kwargs == {
+        "api_key": None,
+        "model": "local-model",
+        "base_url": "http://localhost:8080/v1",
+    }
+
+
+@pytest.mark.asyncio
+async def test_openai_llm_sends_auth_header_only_when_keyed():
+    # model.py's `from .llms import OpenAILLM` already loaded the real class.
+    OpenAILLM = model_module.OpenAILLM
+    keyed = OpenAILLM(api_key="sk-abc", base_url="http://x/v1")
+    keyless = OpenAILLM(base_url="http://localhost:8080/v1")
+    try:
+        keyed_headers = {k.lower() for k in keyed.client.headers}
+        keyless_headers = {k.lower() for k in keyless.client.headers}
+        assert "authorization" in keyed_headers
+        assert "authorization" not in keyless_headers
+    finally:
+        await keyed.close()
+        await keyless.close()

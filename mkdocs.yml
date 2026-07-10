@@ -40,13 +40,41 @@ theme:
     - search.share
     - content.code.annotate
     - content.code.copy
-  logo: static/onecrawl_logo.png
-  favicon: static/onecrawl_logo.png
+  logo: static/onecrawl_logo.svg
+  favicon: static/onecrawl_logo.svg
+
+# Extra assets
+extra_css:
+  - stylesheets/extra.css
+
+# Files that support other pages but should not be built as standalone pages.
+exclude_docs: |
+  includes/
 
 # Plugins
 plugins:
   - search:
       separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            docstring_section_style: table
+            heading_level: 3
+            members_order: source
+            filters: ["!^_"]
+            merge_init_into_class: true
+            separate_signature: true
+            show_signature_annotations: true
+            signature_crossrefs: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            show_source: true
   - minify:
       minify_html: true
 
@@ -86,6 +114,8 @@ markdown_extensions:
   - pymdownx.mark
   - pymdownx.smartsymbols
   - pymdownx.snippets:
+      base_path:
+        - docs
       auto_append:
         - includes/mkdocs.md
   - pymdownx.superfences:
@@ -133,4 +163,4 @@ extra:
 
 
 # Copyright
-copyright: Copyright &copy; 2026 sayedshaun
+copyright: Copyright &copy; 2026 Sayed Shaun

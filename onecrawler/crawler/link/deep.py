@@ -1,12 +1,10 @@
 import asyncio
 import logging
-import sys
 from typing import AsyncGenerator, List, Optional, Set
-
-from tqdm import tqdm
 
 from ...settings.browser import BrowserSettings
 from ...settings.simulation import HumanBehaviorSettings
+from ...utils.progress import make_progress_bar
 from ..pool import BrowserPool
 from ..scheduler import BFScheduler
 from ..spider import LinkSpider
@@ -86,7 +84,10 @@ class BFSRuntime:
 
             async with self._active_lock:
                 if url is None:
-                    if self._active_workers == 0:
+                    if (
+                        self._active_workers == 0
+                        and not await self.scheduler.has_next()
+                    ):
                         self.stop_event.set()
                         return
                 else:
@@ -96,7 +97,13 @@ class BFSRuntime:
                 await asyncio.sleep(0.05)
                 continue
 
-            page = await self.pool.acquire()
+            try:
+                page = await self.pool.acquire()
+            except Exception as e:
+                logger.warning("Failed to acquire page for %s: %s", url, e)
+                async with self._active_lock:
+                    self._active_workers -= 1
+                continue
 
             try:
                 try:
@@ -186,6 +193,12 @@ class BFSRuntime:
                     if self.stop_event.is_set():
                         break
 
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.warning(
+                    "Worker error processing %s: [%s] %s", url, type(e).__name__, e
+                )
             finally:
                 await self.pool.release(page)
                 async with self._active_lock:
@@ -201,39 +214,13 @@ class BFSRuntime:
             return []
 
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
-        await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, Exception):
+                logger.warning(
+                    "Worker task failed: [%s] %s", type(result).__name__, result
+                )
         return self.results
-
-    # async def stream(self) -> AsyncGenerator[str, None]:
-    #     """Starts the workers and yields discovered URLs as they are found.
-
-    #     Yields:
-    #         str: Discovered absolute URL.
-    #     """
-    #     if self.max_links <= 0:
-    #         return
-
-    #     tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
-
-    #     try:
-    #         while True:
-    #             try:
-    #                 item = await asyncio.wait_for(
-    #                     self.stream_queue.get(),
-    #                     timeout=0.5,
-    #                 )
-    #                 yield item
-
-    #             except asyncio.TimeoutError:
-    #                 if all(task.done() for task in tasks) and self.stream_queue.empty():
-    #                     break
-
-    #     finally:
-    #         self.stop_event.set()
-    #         for task in tasks:
-    #             if not task.done():
-    #                 task.cancel()
-    #         await asyncio.gather(*tasks, return_exceptions=True)
 
     async def stream(self) -> AsyncGenerator[str, None]:
         if self.max_links <= 0:
@@ -241,12 +228,11 @@ class BFSRuntime:
 
         tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
 
-        pbar = tqdm(
+        pbar = make_progress_bar(
             total=self.max_links,
             desc="Link Extracting",
             unit="link",
-            dynamic_ncols=True,
-            disable=(not self.show_progress or not sys.stderr.isatty()),
+            show_progress=self.show_progress,
         )
 
         try:
@@ -269,5 +255,12 @@ class BFSRuntime:
                 if not t.done():
                     t.cancel()
 
-            await asyncio.gather(*tasks, return_exceptions=True)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for result in results:
+                if isinstance(result, Exception) and not isinstance(
+                    result, asyncio.CancelledError
+                ):
+                    logger.warning(
+                        "Worker task failed: [%s] %s", type(result).__name__, result
+                    )
             pbar.close()

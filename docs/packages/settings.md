@@ -56,7 +56,7 @@ settings = Settings(
 | `sitemap.max_depth` | `int` | `3` | Depth limit for HTML fallback |
 | `sitemap.max_pages` | `int` | `500` | Page limit for HTML fallback |
 | `sitemap.user_agent` | `str` | Custom | User agent for sitemap requests |
-| `sitemap.respect_robots` | `bool` | `True` | Follow robots.txt rules |
+| `sitemap.respect_robots` | `bool` | `True` | Enforced by `UniversalSiteMap`: filters sitemap URLs and gates HTML fallback via `robots.txt` (the lower-level `SiteMap` class does not enforce it) |
 | `sitemap.deduplicate` | `bool` | `True` | Remove duplicate URLs |
 
 #### Browser Settings
@@ -111,6 +111,7 @@ genai = GenerativeAISettings(
 | `api_key` | `str` | Conditional | API key for OpenAI/Google |
 | `output_schema` | `BaseModel` | Conditional | Pydantic model for structured output |
 | `base_url` | `str` | Optional | Custom endpoint URL (required for Ollama) |
+| `timeout` | `float` | Optional | Per-provider request timeout override in seconds (provider default when unset) |
 | `provider_kwargs` | `dict[str, Any]` | No | Provider-specific keyword arguments |
 
 ### BrowserSettings
@@ -137,7 +138,7 @@ browser_settings = BrowserSettings(
 |---------|------|---------|-------------|
 | `viewport` | `dict` | `{"width": 1366, "height": 768}` | Browser viewport size |
 | `locale` | `str` | `"en-US"` | Browser locale |
-| `timezone_id` | `str` | `"UTC"` | Timezone identifier |
+| `timezone_id` | `str` | `"Asia/Dhaka"` | Timezone identifier |
 | `user_agent` | `str` | Default | Custom user agent |
 | `storage_state` | `str` | `None` | Path to browser storage state |
 
@@ -183,11 +184,11 @@ human_settings = HumanBehaviorSettings(
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `min_delay` | `float` | `0.5` | Minimum delay between actions |
-| `max_delay` | `float` | `2.0` | Maximum delay between actions |
-| `max_scrolls` | `int` | `20` | Maximum scroll actions |
-| `min_mouse_moves` | `int` | `2` | Minimum mouse movements |
-| `max_mouse_moves` | `int` | `8` | Maximum mouse movements |
+| `min_delay` | `float` | `0.3` | Minimum delay between actions |
+| `max_delay` | `float` | `1.2` | Maximum delay between actions |
+| `max_scrolls` | `int` | `50` | Maximum scroll actions |
+| `min_mouse_moves` | `int` | `5` | Minimum mouse movements |
+| `max_mouse_moves` | `int` | `15` | Maximum mouse movements |
 
 !!! note "Simulation trades speed for coverage"
     Human behavior settings can reveal lazy-loaded links, but each delay and scroll

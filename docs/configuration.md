@@ -32,9 +32,9 @@ settings = Settings(
 | `link_extraction_strategy` | `"deep"` | Browser link discovery mode: `deep` or `shallow` |
 | `link_extraction_limit` | `50` | Hard cap on collected links |
 | `include_link_patterns` | `None` | Allow-list URL paths such as `["/news/*"]` |
-| `exclude_link_patterns` | `None` | Reserved for exclusion-style filtering |
+| `exclude_link_patterns` | `None` | Deny-list URL paths such as `["/admin/*"]` |
 | `scraping_strategy` | `"heuristic"` | `heuristic` or `genai` extraction |
-| `scraping_output_format` | `"json"` | `markdown`, `json`, `csv`, `html`, `python`, `txt`, `xml`, or `xmltei` |
+| `scraping_output_format` | `"json"` | `markdown`, `json`, `xml`, or `xmltei` |
 | `concurrency` | `10` | Number of async workers |
 | `max_retries` | `2` | Retry attempts for transient failures |
 | `request_timeout` | `10` | Per-request timeout in seconds |
@@ -51,7 +51,7 @@ settings = Settings(
 | `sitemap.max_depth` | `3` | Depth limit for HTML fallback |
 | `sitemap.max_pages` | `500` | Page cap for HTML fallback |
 | `sitemap.user_agent` | OneCrawler UA | User agent for sitemap HTTP requests |
-| `sitemap.respect_robots` | `True` | Intended robots.txt behavior |
+| `sitemap.respect_robots` | `True` | Enforce `robots.txt` during `UniversalSiteMap` discovery (filters URLs and gates HTML fallback) |
 | `sitemap.deduplicate` | `True` | Normalize and remove duplicate sitemap URLs |
 
 Best practice: keep `sitemap.html_fallback=True` during exploration, then turn it
@@ -245,6 +245,7 @@ genai=GenerativeAISettings(
 | `api_key` | `str` | Conditional | `None` | API key for OpenAI/Google, optional for Ollama |
 | `output_schema` | `BaseModel` | Conditional | `None` | Pydantic model for structured output |
 | `base_url` | `str` | Optional | `None` | Custom endpoint URL (required for Ollama) |
+| `timeout` | `float` | No | `None` | Per-provider request timeout override (seconds); uses the provider default when unset |
 | `provider_kwargs` | `dict[str, Any]` | No | `None` | Provider-specific keyword arguments |
 
 ### Usage Tips
@@ -335,7 +336,7 @@ f = AND(by_date(start="2024-01-01"), NOT(by_files(["pdf"])))
 
 !!! note "Filters run post-extraction"
     Content must be extracted before filters can evaluate it. Date filters read
-    the `filedate` or `date` field; pages without a parseable date are excluded.
+    the `date` or `filedate` field; pages without a parseable date are excluded.
 
 ### Human Behavior Settings
 

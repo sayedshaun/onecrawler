@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import random
-from fnmatch import fnmatch
+from fnmatch import fnmatchcase
 from typing import List
 from urllib.parse import urlparse
 
@@ -136,5 +136,5 @@ def wildcard_link_match(
 
     if include_pattern:
         path = urlparse(link).path
-        return any(fnmatch(path, pattern) for pattern in include_pattern)
+        return any(fnmatchcase(path, pattern) for pattern in include_pattern)
     return True

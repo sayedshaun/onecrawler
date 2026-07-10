@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/sayedshaun/onecrawler/refs/heads/main/docs/static/onecrawl_logo.png" alt="Onecrawler" width="180"/>
+<img src="docs/static/onecrawl_logo.svg" alt="Onecrawler" width="200"/>
 
 # Onecrawler
 
@@ -35,7 +35,7 @@ async with LinkExtractor(settings) as link_engine:
     links = await link_engine.run("https://example.com")
 
 async with Scraper(settings) as scraper_engine:
-    records = await scraper_engine.run(links)
+    records = await scraper_engine.run(links)  # [{"url": ..., "result": ...}, ...]
 ```
 
 ---
@@ -51,7 +51,7 @@ async with Scraper(settings) as scraper_engine:
 | **Async performance** | Tunable concurrency, retries, timeouts, and crawl limits |
 | **Content extraction** | Heuristic extraction with `trafilatura` for fast article-like content |
 | **GenAI extraction** | Optional model-assisted extraction for strongly typed Pydantic outputs |
-| **Output formats** | `markdown`, `json`, `txt`, `xml`, `xmltei` |
+| **Output formats** | `markdown`, `json`, `xml`, `xmltei` |
 | **Proxy support** | Single proxy or rotating proxy pools for browser and sitemap workflows |
 | **Browser controls** | Viewport, user agent, locale, timezone, storage state, and runtime settings |
 
@@ -164,7 +164,7 @@ async def main():
         links = await link_engine.run("https://www.example.com/")
 
     async with Scraper(settings) as scraper_engine:
-        results = await scraper_engine.run(links)
+        results = await scraper_engine.run(links)  # [{"url": ..., "result": ...}, ...]
 
     writter.dump_json(results, "output.json")
 
@@ -299,7 +299,7 @@ async with Crawler(settings) as engine:
 > Filters run after content extraction, so they work with any scraping strategy. Use `by_cosine_similarity` for topic-focused crawls and `by_date` to keep results fresh.
 
 > [!NOTE]
-> `by_date` reads the `filedate` or `date` field from extracted content. Pages without a parseable date are excluded when a date filter is active.
+> `by_date` reads the `date` or `filedate` field from extracted content. Pages without a parseable date are excluded when a date filter is active.
 
 ---
 
@@ -341,8 +341,9 @@ async def main():
     )
 
     async with Scraper(settings) as scraper:
-        result = await scraper.run("https://example.com/articles/story")
+        item = await scraper.run("https://example.com/articles/story")
 
+    result = item["result"]
     print(result.model_dump() if hasattr(result, "model_dump") else result)
 
 
@@ -364,9 +365,12 @@ if __name__ == "__main__":
 
 | Provider | Requires | Models |
 | --- | --- | --- |
-| **OpenAI** | `api_key` | GPT-4o, GPT-4o-mini, etc. |
+| **OpenAI** | `api_key` (optional with a custom `base_url`) | GPT-4o, GPT-4o-mini, or any OpenAI-compatible server |
 | **Google** | `api_key` | Gemini models |
 | **Ollama** | `base_url` (no key needed) | Any locally hosted model |
+
+> [!NOTE]
+> Set `base_url` on the `openai` provider to target any OpenAI-compatible server (llama.cpp, vLLM, LM Studio, LocalAI, …). `api_key` is optional for those keyless endpoints — it is only required for the real `api.openai.com` default.
 
 ### Ollama Example
 
@@ -404,14 +408,14 @@ settings = Settings(
             password="pass",
         ),
     ],
-    proxy_rotation="round_robin",
+    proxy_rotation_method="round_robin",
 )
 ```
 
-Use `proxy=ProxySettings(...)` for a single proxy, or `proxies=[...]` with `proxy_rotation` for a pool.
+Use `proxy=ProxySettings(...)` for a single proxy, or `proxies=[...]` with `proxy_rotation_method` for a pool.
 
 > [!TIP]
-> `round_robin` rotation distributes requests evenly across your proxy pool. For rate-limited targets, pair this with a modest `concurrency` value and a `request_delay` to avoid triggering bans.
+> `round_robin` rotation distributes requests evenly across your proxy pool. For rate-limited targets, pair this with a modest `concurrency` value and a `retry_delay` to avoid triggering bans.
 
 ---
 

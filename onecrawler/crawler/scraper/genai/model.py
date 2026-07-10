@@ -47,7 +47,7 @@ class ModelManager:
             return OllamaLLM(
                 model=self.model_name,
                 base_url=self.base_url or "http://localhost:11434",
-                timeout=self.timeout,
+                **self._timeout_kwargs(),
                 **self._filter_kwargs("ollama"),
             )
 
@@ -61,20 +61,35 @@ class ModelManager:
                 base_url=(
                     self.base_url or "https://generativelanguage.googleapis.com/v1beta"
                 ),
+                **self._timeout_kwargs(),
                 **self._filter_kwargs("gemini"),
             )
 
         if provider == "openai":
-            if not self.api_key:
-                raise ValueError("api_key is required for OpenAI")
+            # A custom base_url means an OpenAI-compatible server (llama.cpp,
+            # vLLM, LM Studio, ...), which is typically keyless. Only require a
+            # key when targeting the real api.openai.com default.
+            if not self.api_key and not self.base_url:
+                raise ValueError(
+                    "api_key is required for OpenAI. Set base_url to use a "
+                    "keyless OpenAI-compatible server (e.g. llama.cpp, vLLM)."
+                )
 
             return OpenAILLM(
                 api_key=self.api_key,
                 model=self.model_name,
+                base_url=self.base_url or "https://api.openai.com/v1",
+                **self._timeout_kwargs(),
                 **self._filter_kwargs("openai"),
             )
 
         raise ValueError(f"Unsupported provider: {self.model_provider}")
+
+    def _timeout_kwargs(self) -> dict[str, Any]:
+        # Only override each provider's own default timeout when the caller
+        # actually configured one — passing timeout=None would otherwise
+        # disable httpx's timeout entirely instead of falling back to it.
+        return {"timeout": self.timeout} if self.timeout is not None else {}
 
     def _filter_kwargs(self, provider: str) -> dict[str, Any]:
         if not self.strict:

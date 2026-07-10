@@ -46,7 +46,7 @@ Install the GenAI extra when you use model-assisted extraction.
 pip install "onecrawler[genai]"
 ```
 
-This installs the optional LangChain and LangGraph dependencies used by the GenAI
+This installs the optional LangGraph and markdownify dependencies used by the GenAI
 components.
 
 !!! tip "Install GenAI extras only when needed"

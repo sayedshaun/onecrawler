@@ -14,6 +14,14 @@ async def fetch_html_node(state: AgentState) -> AgentState:
     url = state["url"]
     page = None
 
+    # Reuse HTML the caller already fetched (the combined Crawler passes the
+    # page it loaded), avoiding a second navigation. Survives retries too,
+    # since retry_node clears `html` but not `prefetched_html`.
+    prefetched = state.get("prefetched_html")
+    if prefetched is not None:
+        state["html"] = prefetched
+        return state
+
     if browser is None:
         logger.warning("fetch_html_node: browser is missing")
         state["html"] = None
