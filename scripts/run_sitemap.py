@@ -48,7 +48,9 @@ async def main():
         enable_logging=True,
     )
 
-    print(f"Discovering URLs from {url}  (max_links={max_links}, concurrency={concurrency})")
+    print(
+        f"Discovering URLs from {url}  (max_links={max_links}, concurrency={concurrency})"
+    )
 
     sitemap = UniversalSiteMap(settings)
     urls = await sitemap.run(url)

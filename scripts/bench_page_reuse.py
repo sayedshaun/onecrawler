@@ -87,11 +87,17 @@ def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("url", help="URL to crawl")
     parser.add_argument(
-        "max_links", nargs="?", type=int, default=15,
+        "max_links",
+        nargs="?",
+        type=int,
+        default=15,
         help="maximum number of links to extract (default: 15)",
     )
     parser.add_argument(
-        "concurrency", nargs="?", type=int, default=5,
+        "concurrency",
+        nargs="?",
+        type=int,
+        default=5,
         help="number of concurrent workers/pages (default: 5)",
     )
     return parser.parse_args()
@@ -124,13 +130,16 @@ async def main():
     o_pages, o_time, o_nav = optimized
     print("\n[comparison]")
     if o_nav:
-        print(f"  navigations   : {l_nav} -> {o_nav}  "
-              f"({l_nav / o_nav:.2f}x fewer)")
+        print(f"  navigations   : {l_nav} -> {o_nav}  " f"({l_nav / o_nav:.2f}x fewer)")
     if o_time:
-        print(f"  wall-clock    : {l_time:.2f}s -> {o_time:.2f}s  "
-              f"({l_time / o_time:.2f}x faster)")
-    print("\nNote: navigation counts are the reliable metric; wall-clock is "
-          "network-dependent, so re-run a few times for a stable figure.")
+        print(
+            f"  wall-clock    : {l_time:.2f}s -> {o_time:.2f}s  "
+            f"({l_time / o_time:.2f}x faster)"
+        )
+    print(
+        "\nNote: navigation counts are the reliable metric; wall-clock is "
+        "network-dependent, so re-run a few times for a stable figure."
+    )
 
 
 if __name__ == "__main__":
