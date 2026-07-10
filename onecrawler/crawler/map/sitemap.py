@@ -37,6 +37,13 @@ _SAFE_XML_PARSER_KWARGS = dict(
 # Cap decompressed sitemap size to guard against gzip decompression bombs.
 _MAX_SITEMAP_DECOMPRESSED_SIZE = 50 * 1024 * 1024  # 50 MB
 
+# When no post-parse filter can drop records unpredictably (robots.txt,
+# date range, include patterns), parse_all() can stop early once it has
+# collected this many times the requested limit, instead of always walking
+# the full sitemap tree. Covers the modest shrinkage from deduplication and
+# the is_xml_url/empty-record filters that always run.
+_SITEMAP_LIMIT_OVERFETCH_FACTOR = 3
+
 
 def _safe_gzip_decompress(
     data: bytes, max_size: int = _MAX_SITEMAP_DECOMPRESSED_SIZE
@@ -419,12 +426,18 @@ class SitemapParser:
         self._semaphore = asyncio.Semaphore(concurrency)
 
     async def parse_all(
-        self, sitemap_urls: List[str]
+        self, sitemap_urls: List[str], target_count: Optional[int] = None
     ) -> Tuple[List[URLRecord], List[str]]:
         """Iteratively parses sitemaps, following nested index links.
 
         Args:
             sitemap_urls (List[str]): Initial sitemap URLs to parse.
+            target_count (Optional[int]): If set, stop traversing once at least
+                this many records have been collected, instead of following
+                every nested sitemap index to exhaustion. Callers are
+                responsible for padding this with enough of a margin to
+                survive any post-parse filtering they'll apply — this method
+                does no filtering of its own.
 
         Returns:
             Tuple[List[URLRecord], List[str]]: A tuple containing all discovered
@@ -447,22 +460,46 @@ class SitemapParser:
 
             all_sitemaps.extend(batch)
 
-            tasks = [self._parse_one(url) for url in batch]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+            pending = {asyncio.ensure_future(self._parse_one(url)) for url in batch}
+            target_reached = False
 
-            for result in results:
-                if isinstance(result, Exception):
-                    continue
-                records, child_sitemaps = result
-                all_records.extend(records)
+            # A sitemap index can fan out to many siblings in a single batch
+            # (e.g. one file per day for years). Check the running total as
+            # each fetch completes rather than waiting for asyncio.gather to
+            # finish the whole batch, so a small target_count can cut a wide
+            # batch short too, not just a deep chain of nested indexes.
+            while pending:
+                done, pending = await asyncio.wait(
+                    pending, return_when=asyncio.FIRST_COMPLETED
+                )
 
-                # child_sitemaps only ever contains <loc> entries pulled from
-                # <sitemap> elements inside a <sitemapindex> — they are sitemaps
-                # by schema regardless of URL extension, so re-queue all of them.
-                if self.follow_index:
-                    for child_url in child_sitemaps:
-                        if child_url not in self._visited_sitemaps:
-                            queue.append(child_url)
+                for task in done:
+                    try:
+                        records, child_sitemaps = task.result()
+                    except Exception:
+                        continue
+                    all_records.extend(records)
+
+                    # child_sitemaps only ever contains <loc> entries pulled
+                    # from <sitemap> elements inside a <sitemapindex> — they
+                    # are sitemaps by schema regardless of URL extension, so
+                    # re-queue all of them.
+                    if self.follow_index:
+                        for child_url in child_sitemaps:
+                            if child_url not in self._visited_sitemaps:
+                                queue.append(child_url)
+
+                if target_count is not None and len(all_records) >= target_count:
+                    target_reached = True
+                    break
+
+            if pending:
+                for task in pending:
+                    task.cancel()
+                await asyncio.gather(*pending, return_exceptions=True)
+
+            if target_reached:
+                break
 
         return all_records, all_sitemaps
 
@@ -724,7 +761,31 @@ class UniversalSiteMap:
 
             if sitemap_urls:
                 strategies_used.append("sitemap_xml")
-                records, _ = await sitemap_parser.parse_all(sitemap_urls)
+
+                # Only let parse_all() stop early when no downstream filter
+                # can unpredictably drop a large fraction of records — those
+                # filters run after this point and could otherwise leave us
+                # under the requested limit despite more URLs being available.
+                # robots.txt disallow rules are excluded from this check: they
+                # typically remove a small, roughly uniform slice of a site's
+                # URL space (unlike a narrow date range or include pattern,
+                # which can trivially drop the vast majority of records), so
+                # the overfetch margin below is expected to absorb them too.
+                filters_may_shrink_results = (
+                    self.settings.sitemap.start_date is not None
+                    or self.settings.sitemap.end_date is not None
+                    or bool(self.settings.include_link_patterns)
+                )
+                target_count = (
+                    None
+                    if filters_may_shrink_results
+                    else self.settings.link_extraction_limit
+                    * _SITEMAP_LIMIT_OVERFETCH_FACTOR
+                )
+
+                records, _ = await sitemap_parser.parse_all(
+                    sitemap_urls, target_count=target_count
+                )
                 all_records.extend(records)
 
             if not all_records and self.settings.sitemap.html_fallback:

@@ -1,3 +1,4 @@
+import asyncio
 import importlib.util
 
 import pytest
@@ -173,6 +174,136 @@ class TestSitemapParser:
             "http": "http://user:pass@proxy-2.example:8080",
             "https": "http://user:pass@proxy-2.example:8080",
         }
+
+
+class TestSitemapParserEarlyExit:
+    @classmethod
+    def setup_class(cls):
+        cls.sitemap_module = load_sitemap_module()
+
+    def _make_client(self, leaf_record_count=20, big_index_children=500):
+        """A root sitemapindex fanning out into a small leaf urlset (fast) and
+        a huge nested sub-index (slow, only worth fetching if more records are
+        still needed)."""
+        sitemap_module = self.sitemap_module
+
+        leaf_urls = "\n".join(
+            f"<url><loc>https://example.com/leaf/{i}</loc></url>"
+            for i in range(leaf_record_count)
+        )
+        big_children = "\n".join(
+            f"<sitemap><loc>https://example.com/big/{i}.xml</loc></sitemap>"
+            for i in range(big_index_children)
+        )
+        pages = {
+            "https://example.com/root.xml": f"""
+                <sitemapindex>
+                  <sitemap><loc>https://example.com/leaf.xml</loc></sitemap>
+                  <sitemap><loc>https://example.com/big.xml</loc></sitemap>
+                </sitemapindex>
+            """.encode(),
+            "https://example.com/leaf.xml": f"""
+                <urlset>{leaf_urls}</urlset>
+            """.encode(),
+            "https://example.com/big.xml": f"""
+                <sitemapindex>{big_children}</sitemapindex>
+            """.encode(),
+        }
+        for i in range(big_index_children):
+            pages[f"https://example.com/big/{i}.xml"] = (
+                b"<urlset><url><loc>https://example.com/big-leaf/"
+                + str(i).encode()
+                + b"</loc></url></urlset>"
+            )
+
+        class Client:
+            def __init__(self):
+                self.fetched = []
+
+            async def get(self, url):
+                self.fetched.append(url)
+                return pages.get(url)
+
+        return sitemap_module, Client()
+
+    @pytest.mark.asyncio
+    async def test_target_count_stops_before_the_expensive_subtree(self):
+        sitemap_module, client = self._make_client()
+        parser = sitemap_module.SitemapParser(client, concurrency=10)
+
+        records, _ = await parser.parse_all(
+            ["https://example.com/root.xml"], target_count=10
+        )
+
+        assert len(records) >= 10
+        # Only root + its two direct children should ever be fetched — the
+        # 500 sitemaps nested under big.xml must never be reached.
+        assert set(client.fetched) == {
+            "https://example.com/root.xml",
+            "https://example.com/leaf.xml",
+            "https://example.com/big.xml",
+        }
+
+    @pytest.mark.asyncio
+    async def test_no_target_count_walks_the_full_tree(self):
+        sitemap_module, client = self._make_client()
+        parser = sitemap_module.SitemapParser(client, concurrency=10)
+
+        records, _ = await parser.parse_all(["https://example.com/root.xml"])
+
+        assert len(records) == 20 + 500
+        assert len(client.fetched) == 1 + 2 + 500
+
+    @pytest.mark.asyncio
+    async def test_target_count_stops_mid_batch_via_cancellation(self):
+        """A wide, single-level sitemap index (e.g. one file per day for
+        years, all siblings in the same BFS batch) must also be cut short —
+        not just a deep chain of nested indexes."""
+        sitemap_module = self.sitemap_module
+        n_leaves = 50
+        records_per_leaf = 5
+
+        pages = {}
+        delays = {"https://example.com/root.xml": 0}
+        for i in range(n_leaves):
+            url = f"https://example.com/day/{i}.xml"
+            delays[url] = i * 0.001
+            urls_xml = "".join(
+                f"<url><loc>https://example.com/article/{i}-{j}</loc></url>"
+                for j in range(records_per_leaf)
+            )
+            pages[url] = f"<urlset>{urls_xml}</urlset>".encode()
+
+        root_children = "".join(
+            f"<sitemap><loc>https://example.com/day/{i}.xml</loc></sitemap>"
+            for i in range(n_leaves)
+        )
+        pages["https://example.com/root.xml"] = (
+            f"<sitemapindex>{root_children}</sitemapindex>".encode()
+        )
+
+        class Client:
+            def __init__(self):
+                self.fetched = []
+
+            async def get(self, url):
+                await asyncio.sleep(delays.get(url, 0))
+                self.fetched.append(url)
+                return pages.get(url)
+
+        client = Client()
+        parser = sitemap_module.SitemapParser(client, concurrency=5)
+
+        records, _ = await parser.parse_all(
+            ["https://example.com/root.xml"], target_count=10
+        )
+
+        assert len(records) >= 10
+        # All 50 day-files are siblings in one batch. Without mid-batch
+        # cancellation every single one gets fetched before the target is
+        # even checked; with it, only the handful of fastest completions
+        # (needed to reach target_count) should ever be fetched.
+        assert len(client.fetched) < n_leaves
 
 
 class TestLastmodParsing:
