@@ -1,5 +1,5 @@
 # Use an official Python slim image as the base
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # Set environment variables
 # 1. Prevent Python from writing .pyc files
