@@ -1,4 +1,3 @@
-import json
 from typing import Any, Optional, Type, TypeVar
 
 import httpx
@@ -28,9 +27,6 @@ class GeminiLLM(BaseLLM):
         self.generation_config = generation_config
 
     def _url(self) -> str:
-        # Key is sent via the x-goog-api-key header (not the URL) so it
-        # never ends up in logs, proxies, or exception messages that
-        # include the request URL.
         return f"{self.base_url}/models/{self.model}:generateContent"
 
     async def generate(self, prompt: str, schema: Optional[Type[T]] = None) -> T | str:
@@ -61,9 +57,7 @@ class GeminiLLM(BaseLLM):
         )
 
         response.raise_for_status()
-
         data = response.json()
-
         content = data["candidates"][0]["content"]["parts"][0]["text"]
 
         if schema is None:
