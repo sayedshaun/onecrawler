@@ -40,6 +40,13 @@ urls = await sitemap.run("https://example.com")
 
 Lower-level sitemap parser for direct sitemap URL processing.
 
+!!! warning "Deprecated"
+    `SiteMap` will be removed in a future major version. It only walks raw
+    sitemap XML — it doesn't discover sitemaps via robots.txt or common
+    paths, doesn't enforce `respect_robots`, and has no HTML-crawl fallback
+    or date/pattern filtering. Use `UniversalSiteMap` instead, which covers
+    everything `SiteMap` does plus those.
+
 ```python
 from onecrawler import Settings, SiteMap
 
@@ -122,6 +129,9 @@ sitemap = UniversalSiteMap(settings)
     `link_extraction_limit` and `include_link_patterns`.
 
 ### Direct Sitemap Parsing
+
+!!! warning "Deprecated — use UniversalSiteMap"
+    See the note under [SiteMap](#sitemap) above.
 
 ```python
 from onecrawler import Settings, SiteMap

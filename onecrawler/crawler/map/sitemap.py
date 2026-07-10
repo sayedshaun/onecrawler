@@ -101,6 +101,14 @@ class SitemapStats:
 class SiteMap:
     """Base sitemap parser for individual site crawling.
 
+    Deprecated:
+        Use ``UniversalSiteMap`` instead. ``SiteMap`` only walks the raw
+        sitemap XML tree — it doesn't discover sitemaps via robots.txt or
+        common paths, doesn't respect robots.txt, and has no HTML-crawl
+        fallback or date/pattern filtering. ``UniversalSiteMap`` covers
+        everything this class does plus those, so this class will be removed
+        in a future major version.
+
     Attributes:
         semaphore (asyncio.Semaphore): Concurrency control.
         visited_sitemaps (Set[str]): Track visited sitemap URLs.
@@ -117,6 +125,12 @@ class SiteMap:
         Args:
             settings (Settings): The configuration object.
         """
+        warnings.warn(
+            "SiteMap is deprecated and will be removed in a future major "
+            "version; use UniversalSiteMap instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.settings = settings
         self.visited_sitemaps: Set[str] = set()
         self.urls: Set[str] = set()
