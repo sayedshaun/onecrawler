@@ -5,7 +5,7 @@ import time
 import warnings
 import zlib
 from datetime import date
-from typing import List, Optional, Set, Tuple
+from typing import Callable, List, Optional, Set, Tuple
 from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
 
@@ -14,6 +14,7 @@ from lxml import etree
 
 from ...proxy.pool import ProxyPool
 from ...settings.crawler import Settings
+from ...utils.progress import make_progress_bar
 from ..link.helper import wildcard_link_match
 from .helper import (
     COMMON_SITEMAP_PATHS,
@@ -447,7 +448,10 @@ class SitemapParser:
         self._semaphore = asyncio.Semaphore(concurrency)
 
     async def parse_all(
-        self, sitemap_urls: List[str], target_count: Optional[int] = None
+        self,
+        sitemap_urls: List[str],
+        target_count: Optional[int] = None,
+        on_records: Optional[Callable[[int], None]] = None,
     ) -> Tuple[List[URLRecord], List[str]]:
         """Iteratively parses sitemaps, following nested index links.
 
@@ -459,6 +463,9 @@ class SitemapParser:
                 responsible for padding this with enough of a margin to
                 survive any post-parse filtering they'll apply — this method
                 does no filtering of its own.
+            on_records (Optional[Callable[[int], None]]): Called with the
+                number of new records each time a sitemap fetch completes,
+                e.g. to drive a progress bar.
 
         Returns:
             Tuple[List[URLRecord], List[str]]: A tuple containing all discovered
@@ -500,6 +507,8 @@ class SitemapParser:
                     except Exception:
                         continue
                     all_records.extend(records)
+                    if records and on_records is not None:
+                        on_records(len(records))
 
                     # child_sitemaps only ever contains <loc> entries pulled
                     # from <sitemap> elements inside a <sitemapindex> — they
@@ -646,11 +655,15 @@ class HTMLCrawler:
         self._visited: set[str] = set()
         self._semaphore = asyncio.Semaphore(concurrency)
 
-    async def crawl(self, base_url: str) -> List[URLRecord]:
+    async def crawl(
+        self, base_url: str, on_record: Optional[Callable[[], None]] = None
+    ) -> List[URLRecord]:
         """Crawls a site starting from base_url to find internal links.
 
         Args:
             base_url (str): The starting URL.
+            on_record (Optional[Callable[[], None]]): Called once per page
+                successfully crawled, e.g. to drive a progress bar.
 
         Returns:
             List[URLRecord]: A list of discovered internal URLs.
@@ -675,6 +688,8 @@ class HTMLCrawler:
                 continue
 
             records.append(URLRecord(url=url, source="html_crawl"))
+            if on_record is not None:
+                on_record()
             links = self._extract_links(text, url, base_url)
             for link in links:
                 if normalize_url(link) not in self._visited:
@@ -746,88 +761,105 @@ class UniversalSiteMap:
         strategies_used: list[str] = []
         all_records: list[URLRecord] = []
 
-        async with HTTPClient(
-            self.settings.concurrency,
-            self.settings.request_timeout,
-            self.settings.sitemap.user_agent,
-            self.settings.max_retries,
-            self.settings.retry_delay,
-            self.settings.create_proxy_pool(),
-        ) as client:
-            robots = RobotsParser(client)
-            sitemap_parser = SitemapParser(
-                client,
+        pbar = make_progress_bar(
+            total=self.settings.link_extraction_limit,
+            desc="Sitemap Discovery",
+            unit="url",
+            show_progress=self.settings.show_progress,
+        )
+
+        def _bump(n: int = 1) -> None:
+            remaining = pbar.total - pbar.n
+            if remaining > 0:
+                pbar.update(min(n, remaining))
+
+        try:
+            async with HTTPClient(
                 self.settings.concurrency,
-                follow_index=self.settings.sitemap.follow_index,
-            )
-
-            sitemap_urls = await robots.fetch_sitemaps(base_url)
-            if sitemap_urls:
-                strategies_used.append("robots.txt")
-
-            probe_tasks = [
-                self._probe_url(client, urljoin(base_url, path))
-                for path in COMMON_SITEMAP_PATHS
-            ]
-            probe_results = await asyncio.gather(*probe_tasks)
-            found_common = [
-                urljoin(base_url, path)
-                for path, ok in zip(COMMON_SITEMAP_PATHS, probe_results)
-                if ok
-            ]
-            new_common = [u for u in found_common if u not in sitemap_urls]
-            if new_common:
-                strategies_used.append("common_paths")
-                sitemap_urls.extend(new_common)
-
-            if sitemap_urls:
-                strategies_used.append("sitemap_xml")
-
-                # Only let parse_all() stop early when no downstream filter
-                # can unpredictably drop a large fraction of records — those
-                # filters run after this point and could otherwise leave us
-                # under the requested limit despite more URLs being available.
-                # robots.txt disallow rules are excluded from this check: they
-                # typically remove a small, roughly uniform slice of a site's
-                # URL space (unlike a narrow date range or include pattern,
-                # which can trivially drop the vast majority of records), so
-                # the overfetch margin below is expected to absorb them too.
-                filters_may_shrink_results = (
-                    self.settings.sitemap.start_date is not None
-                    or self.settings.sitemap.end_date is not None
-                    or bool(self.settings.include_link_patterns)
-                )
-                target_count = (
-                    None
-                    if filters_may_shrink_results
-                    else self.settings.link_extraction_limit
-                    * _SITEMAP_LIMIT_OVERFETCH_FACTOR
-                )
-
-                records, _ = await sitemap_parser.parse_all(
-                    sitemap_urls, target_count=target_count
-                )
-                all_records.extend(records)
-
-            if not all_records and self.settings.sitemap.html_fallback:
-                strategies_used.append("html_crawl")
-                crawler = HTMLCrawler(
+                self.settings.request_timeout,
+                self.settings.sitemap.user_agent,
+                self.settings.max_retries,
+                self.settings.retry_delay,
+                self.settings.create_proxy_pool(),
+            ) as client:
+                robots = RobotsParser(client)
+                sitemap_parser = SitemapParser(
                     client,
                     self.settings.concurrency,
-                    self.settings.sitemap.max_pages,
-                    self.settings.sitemap.max_depth,
-                    robots=robots if self.settings.sitemap.respect_robots else None,
+                    follow_index=self.settings.sitemap.follow_index,
                 )
-                crawl_records = await crawler.crawl(base_url)
-                all_records.extend(crawl_records)
 
-            # Respect robots.txt for sitemap-sourced URLs too (the HTML crawl
-            # fallback above already gates each fetch as it happens).
-            if self.settings.sitemap.respect_robots and all_records:
-                allowed_flags = await asyncio.gather(
-                    *(robots.is_allowed(rec.url, base_url) for rec in all_records)
-                )
-                all_records = [rec for rec, ok in zip(all_records, allowed_flags) if ok]
+                sitemap_urls = await robots.fetch_sitemaps(base_url)
+                if sitemap_urls:
+                    strategies_used.append("robots.txt")
+
+                probe_tasks = [
+                    self._probe_url(client, urljoin(base_url, path))
+                    for path in COMMON_SITEMAP_PATHS
+                ]
+                probe_results = await asyncio.gather(*probe_tasks)
+                found_common = [
+                    urljoin(base_url, path)
+                    for path, ok in zip(COMMON_SITEMAP_PATHS, probe_results)
+                    if ok
+                ]
+                new_common = [u for u in found_common if u not in sitemap_urls]
+                if new_common:
+                    strategies_used.append("common_paths")
+                    sitemap_urls.extend(new_common)
+
+                if sitemap_urls:
+                    strategies_used.append("sitemap_xml")
+
+                    # Only let parse_all() stop early when no downstream filter
+                    # can unpredictably drop a large fraction of records — those
+                    # filters run after this point and could otherwise leave us
+                    # under the requested limit despite more URLs being available.
+                    # robots.txt disallow rules are excluded from this check: they
+                    # typically remove a small, roughly uniform slice of a site's
+                    # URL space (unlike a narrow date range or include pattern,
+                    # which can trivially drop the vast majority of records), so
+                    # the overfetch margin below is expected to absorb them too.
+                    filters_may_shrink_results = (
+                        self.settings.sitemap.start_date is not None
+                        or self.settings.sitemap.end_date is not None
+                        or bool(self.settings.include_link_patterns)
+                    )
+                    target_count = (
+                        None
+                        if filters_may_shrink_results
+                        else self.settings.link_extraction_limit
+                        * _SITEMAP_LIMIT_OVERFETCH_FACTOR
+                    )
+
+                    records, _ = await sitemap_parser.parse_all(
+                        sitemap_urls, target_count=target_count, on_records=_bump
+                    )
+                    all_records.extend(records)
+
+                if not all_records and self.settings.sitemap.html_fallback:
+                    strategies_used.append("html_crawl")
+                    crawler = HTMLCrawler(
+                        client,
+                        self.settings.concurrency,
+                        self.settings.sitemap.max_pages,
+                        self.settings.sitemap.max_depth,
+                        robots=robots if self.settings.sitemap.respect_robots else None,
+                    )
+                    crawl_records = await crawler.crawl(base_url, on_record=_bump)
+                    all_records.extend(crawl_records)
+
+                # Respect robots.txt for sitemap-sourced URLs too (the HTML crawl
+                # fallback above already gates each fetch as it happens).
+                if self.settings.sitemap.respect_robots and all_records:
+                    allowed_flags = await asyncio.gather(
+                        *(robots.is_allowed(rec.url, base_url) for rec in all_records)
+                    )
+                    all_records = [
+                        rec for rec, ok in zip(all_records, allowed_flags) if ok
+                    ]
+        finally:
+            pbar.close()
 
         if self.settings.verbose:
             logging.info(f"Strategies used: {strategies_used}")
