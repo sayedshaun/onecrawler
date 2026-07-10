@@ -13,7 +13,7 @@
 [![Imports: isort](https://img.shields.io/badge/imports-isort-1674b1.svg)](https://pycqa.github.io/isort/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-[Installation](#installation) · [Quick Start](#quick-start) · [Documentation](https://sayedshaun.github.io/onecrawler/)
+[Installation](#installation) · [Quick Start](#quick-start) · [CLI](#command-line-interface) · [Documentation](https://sayedshaun.github.io/onecrawler/)
 
 </div>
 
@@ -121,6 +121,23 @@ docker run -it --rm -v $(pwd):/app onecrawler python your_script.py
 ```
 > [!NOTE]
 > The script must be located at the root of the mounted volume.
+
+### Run the Built-in CLI with Docker
+```bash
+docker run --rm onecrawler python -m onecrawler crawl https://example.com --limit 20
+```
+
+---
+
+## Command-Line Interface
+
+For a quick one-off crawl without writing a script:
+
+```bash
+python -m onecrawler crawl https://example.com --limit 20 --concurrency 5
+```
+
+Each extracted page is printed to stdout as a JSON line. Run `python -m onecrawler crawl --help` for the full flag list (`--strategy`, `--format`, `--include`, `--exclude`). The CLI covers heuristic-strategy crawling only — proxies, GenAI extraction, and human-behavior simulation need the Python API below.
 
 ---
 
