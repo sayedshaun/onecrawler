@@ -36,6 +36,17 @@ def dump_json(
     ensure_ascii: bool = False,
     encoding: str = "utf-8",
 ) -> None:
+    """Write ``data`` to ``filename`` as a single JSON document.
+
+    Args:
+        data (Any): The object to serialize. Dataclasses/Pydantic models,
+            ``Path``, ``date``/``datetime``, and ``set``/``frozenset`` values
+            nested inside it are converted automatically.
+        filename (str | Path): Destination file path; overwritten if it exists.
+        indent (int): Number of spaces used to pretty-print the output.
+        ensure_ascii (bool): If True, escape all non-ASCII characters.
+        encoding (str): Text encoding used to open ``filename``.
+    """
     path = Path(filename)
 
     with path.open("w", encoding=encoding) as f:
@@ -54,6 +65,15 @@ def dump_jsonl(
     ensure_ascii: bool = False,
     encoding: str = "utf-8",
 ) -> None:
+    """Write ``data`` to ``filename`` as JSON Lines (one JSON object per line).
+
+    Args:
+        data (Any): A list of objects to serialize, one per line. A
+            non-list value is wrapped in a single-item list.
+        filename (str | Path): Destination file path; overwritten if it exists.
+        ensure_ascii (bool): If True, escape all non-ASCII characters.
+        encoding (str): Text encoding used to open ``filename``.
+    """
     path = Path(filename)
 
     if not isinstance(data, list):
@@ -76,6 +96,13 @@ def dump_txt(
     filename: str | Path,
     encoding: str = "utf-8",
 ) -> None:
+    """Write ``text`` to ``filename`` as plain text.
+
+    Args:
+        text (str): The text content to write.
+        filename (str | Path): Destination file path; overwritten if it exists.
+        encoding (str): Text encoding used to open ``filename``.
+    """
     Path(filename).write_text(text, encoding=encoding)
 
 
@@ -84,6 +111,18 @@ def dump_csv(
     filename: str | Path,
     encoding: str = "utf-8",
 ) -> None:
+    """Write ``rows`` to ``filename`` as CSV.
+
+    The column order follows each key's first appearance across ``rows``, so
+    rows with different key sets still produce one consistent header; missing
+    values in a given row are written as empty cells. Non-dict rows (e.g.
+    dataclasses/Pydantic models) are serialized the same way as `dump_json`.
+
+    Args:
+        rows (list[dict]): The rows to write. A no-op if empty.
+        filename (str | Path): Destination file path; overwritten if it exists.
+        encoding (str): Text encoding used to open ``filename``.
+    """
     if not rows:
         return
 

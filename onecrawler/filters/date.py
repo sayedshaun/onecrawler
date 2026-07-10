@@ -16,6 +16,17 @@ def by_date(
     then ``filedate``). Note ``filedate`` is the extraction/download date, so
     ``date`` is checked first to filter by publication rather than crawl time.
     Items with no parseable date are excluded.
+
+    Args:
+        start (Optional[str]): Inclusive lower bound, as ``YYYY-MM-DD``.
+            No lower bound if omitted.
+        end (Optional[str]): Inclusive upper bound, as ``YYYY-MM-DD``.
+            No upper bound if omitted.
+        fields (Sequence[str]): Content-dict keys to check, in priority order.
+
+    Returns:
+        Callable[[dict], bool]: A predicate accepting items whose resolved
+        date falls within ``[start, end]``.
     """
 
     start_dt = datetime.datetime.strptime(start, "%Y-%m-%d") if start else None

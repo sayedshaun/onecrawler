@@ -24,6 +24,13 @@ class Scraper(BaseEngine):
     - Concurrent scraping
     - Streaming results
 
+    Attributes:
+        settings (Settings): Configuration settings for scraping.
+        strategy (Optional[Any]): The content-extraction strategy in use
+            (``HeuristicStrategy`` or ``GenAIStrategy``); set on ``start()``.
+        browser (Optional[GoogleChrome]): The shared browser instance; set on
+            ``start()`` if ``settings.browser_settings`` is configured.
+
     Example:
         ```python
         from onecrawler import Settings, Scraper
@@ -145,7 +152,16 @@ class Scraper(BaseEngine):
             return await self._retry(task)
 
     async def stream(self, link: Union[str, List[str]]) -> AsyncGenerator[Any, None]:
-        """Streams extracted results as they complete."""
+        """Streams extracted results as they complete, in completion order.
+
+        Args:
+            link (Union[str, List[str]]): One URL or a list of URLs to scrape.
+
+        Yields:
+            Any: The extracted content for a URL (shape depends on
+            ``settings.scraping_strategy``/``scraping_output_format``).
+            URLs that fail extraction after retries are silently skipped.
+        """
 
         self._ensure_open()
         links = link if isinstance(link, list) else [link]
@@ -189,7 +205,17 @@ class Scraper(BaseEngine):
         self.logger.info("Streaming scrape completed")
 
     async def run(self, link: Union[str, List[str]]) -> Union[Any, List[Any], None]:
-        """Runs the scraper and collects all results."""
+        """Runs the scraper and collects all results.
+
+        Args:
+            link (Union[str, List[str]]): One URL or a list of URLs to scrape.
+
+        Returns:
+            Union[Any, List[Any], None]: A list of extracted results when
+            ``link`` is a list (possibly shorter than the input if some URLs
+            failed extraction); a single extracted result (or ``None``) when
+            ``link`` is a single URL.
+        """
 
         results = []
         async for result in self.stream(link):
@@ -208,13 +234,9 @@ class LinkExtractor(BaseEngine):
 
     Example:
         ```python
-        from onecrawler.settings import Settings, LinkExtractionSettings
+        from onecrawler import Settings, LinkExtractor
 
-        settings = Settings(
-            link_extraction_settings=LinkExtractionSettings(
-                link_extraction_strategy="shallow",
-            )
-        )
+        settings = Settings(link_extraction_strategy="shallow")
 
         async with LinkExtractor(settings) as engine:
             links = await engine.run("https://example.com")

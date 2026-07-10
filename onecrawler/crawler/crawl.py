@@ -325,9 +325,38 @@ class Crawler(BaseEngine):
 
     Supports optional proxy configuration via ``Settings.proxy`` for
     anonymised crawling. Acts as the primary crawler entry-point.
+
+    Attributes:
+        settings (Settings): Configuration for the crawl.
+        strategy (Optional[Any]): The content-extraction strategy in use
+            (``HeuristicStrategy`` or ``GenAIStrategy``); set on ``start()``.
+        browser (Optional[GoogleChrome]): The shared browser instance; set on
+            ``start()``.
+
+    Example:
+        ```python
+        from onecrawler import Crawler, Settings
+
+        async with Crawler(Settings()) as crawler:
+            results = await crawler.run("https://example.com")
+            print(results)
+        ```
+
+        Streaming:
+
+        ```python
+        async with Crawler(Settings()) as crawler:
+            async for result in crawler.stream("https://example.com"):
+                print(result)
+        ```
     """
 
     def __init__(self, settings):
+        """Initializes the crawler with the given settings.
+
+        Args:
+            settings (Settings): Configuration for the crawl.
+        """
         super().__init__()
         self.settings = settings
         self.strategy = None
@@ -336,6 +365,13 @@ class Crawler(BaseEngine):
         self.logger.info("Crawler initialized")
 
     async def start(self):
+        """Starts the browser and initializes the configured scraping strategy.
+
+        Raises:
+            ValueError: If ``scraping_strategy`` is ``"genai"`` but
+                ``settings.genai`` is not configured, or an unknown strategy
+                is requested.
+        """
         self._closed = False
 
         scraping_strategy = getattr(self.settings, "scraping_strategy", "heuristic")
@@ -373,6 +409,7 @@ class Crawler(BaseEngine):
         self.strategy = strategy
 
     async def close(self):
+        """Closes the scraping strategy and the browser."""
         if self.strategy:
             await self.strategy.close()
 
@@ -414,6 +451,18 @@ class Crawler(BaseEngine):
         return runtime, pool
 
     async def run(self, url: str, filters=None) -> list[dict]:
+        """Crawls ``url`` and collects all extracted content.
+
+        Args:
+            url (str): The starting URL; the crawl stays within its origin.
+            filters (Optional[Callable[[dict], bool]]): Predicate applied to
+                each extracted content dict post-extraction, pre-collection;
+                items failing it are dropped. See ``onecrawler.filters``.
+
+        Returns:
+            list[dict]: Extracted content dicts, each including its source
+            ``url``.
+        """
         self._ensure_open()
         runtime, pool = await self._create_runtime(url, content_filter=filters)
         try:
@@ -422,6 +471,17 @@ class Crawler(BaseEngine):
             await pool.close()
 
     async def stream(self, url: str, filters=None) -> AsyncGenerator[dict, None]:
+        """Crawls ``url``, yielding extracted content dicts as they arrive.
+
+        Args:
+            url (str): The starting URL; the crawl stays within its origin.
+            filters (Optional[Callable[[dict], bool]]): Predicate applied to
+                each extracted content dict post-extraction, pre-yield; items
+                failing it are dropped. See ``onecrawler.filters``.
+
+        Yields:
+            dict: An extracted content dict, including its source ``url``.
+        """
         self._ensure_open()
         runtime, pool = await self._create_runtime(
             url, streaming=True, content_filter=filters

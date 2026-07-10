@@ -12,6 +12,14 @@ def by_keywords(
 
     Reads the item's ``field`` (default ``text``); items missing that field
     are dropped.
+
+    Args:
+        keywords (Iterable[str]): Keywords to match; matching is case-insensitive.
+        field (str): Content-dict key to search.
+
+    Returns:
+        Callable[[dict], bool]: A predicate accepting items containing at
+        least one keyword.
     """
 
     keywords = [k.lower() for k in keywords]

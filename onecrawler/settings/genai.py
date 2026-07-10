@@ -21,6 +21,8 @@ class GenerativeAISettings:
         base_url (Optional[str]): Base URL for Ollama, an OpenAI-compatible
             server, or any custom endpoint.
         provider_kwargs (Optional[dict[str, Any]]): Provider-specific keyword arguments.
+        timeout (Optional[float]): Per-request timeout in seconds for the
+            provider's API call. ``None`` uses the provider client's own default.
     """
 
     provider: Literal["google", "openai", "ollama"]

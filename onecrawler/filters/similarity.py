@@ -40,6 +40,16 @@ def by_cosine_similarity(
     Scores against the first present field in `fields` (default: the body
     ``text``, then ``content``, then ``title``) so the full document is
     compared rather than a short title when both exist.
+
+    Args:
+        query (str): Text to compare each item's content against.
+        threshold (float): Minimum cosine similarity score (0-1) required to
+            pass.
+        fields (Sequence[str]): Content-dict keys to check, in priority order.
+
+    Returns:
+        Callable[[dict], bool]: A predicate accepting items scoring at least
+        ``threshold`` against ``query``.
     """
 
     query_vec = _vectorize(query)

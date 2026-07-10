@@ -15,7 +15,17 @@ def by_extension(
     *,
     field: str = CONTENT_URL_FIELD,
 ) -> Callable[[dict], bool]:
-    """Filter by the file extension of the item's URL (``field``)."""
+    """Filter by the file extension of the item's URL (``field``).
+
+    Args:
+        extensions (Iterable[str]): Extensions to allow, with or without a
+            leading dot (e.g. ``"pdf"`` or ``".pdf"``); matching is case-insensitive.
+        field (str): Content-dict key holding the URL to check.
+
+    Returns:
+        Callable[[dict], bool]: A predicate accepting items whose URL ends
+        with one of ``extensions``.
+    """
 
     allowed = {
         ext.lower() if ext.startswith(".") else f".{ext.lower()}" for ext in extensions
@@ -36,8 +46,17 @@ def by_files(
     *,
     field: str = CONTENT_URL_FIELD,
 ) -> Callable[[dict], bool]:
-    """
-    Filter by logical file types: pdf, docx, image, etc.
+    """Filter by logical file types: pdf, docx, image, etc.
+
+    Args:
+        types (Iterable[str]): Logical type names from ``FILE_TYPE_MAP``
+            (``"pdf"``, ``"docx"``, ``"image"``, ``"text"``), or a raw
+            extension (with or without a leading dot) for anything else.
+        field (str): Content-dict key holding the URL to check.
+
+    Returns:
+        Callable[[dict], bool]: A predicate accepting items whose URL matches
+        one of the resolved extensions.
     """
 
     allowed_exts = set()
