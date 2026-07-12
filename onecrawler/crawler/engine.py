@@ -69,7 +69,10 @@ class Scraper(BaseEngine):
         self._closed = False
 
         if self.settings.browser_settings:
-            self.browser = GoogleChrome(settings=self.settings.browser_settings)
+            self.browser = GoogleChrome(
+                settings=self.settings.browser_settings,
+                proxy_pool=self.settings.create_proxy_pool(),
+            )
             await self.browser.start()
 
         if self.settings.scraping_strategy == "heuristic":
@@ -276,7 +279,10 @@ class LinkExtractor(BaseEngine):
     async def start(self):
         """Starts the engine and initializes the browser."""
         self._closed = False
-        self.browser = GoogleChrome(self.settings.browser_settings)
+        self.browser = GoogleChrome(
+            self.settings.browser_settings,
+            proxy_pool=self.settings.create_proxy_pool(),
+        )
         await self.browser.start()
 
     async def close(self):

@@ -98,6 +98,29 @@ class TestDeepCrawler:
         assert not browser.closed
         assert all(page.closed for page in browser.created)
 
+    async def test_browser_pool_cleans_up_pages_when_initialization_fails(self):
+        class Browser:
+            def __init__(self):
+                self.calls = 0
+                self.created = []
+
+            async def new_page(self):
+                self.calls += 1
+                if self.calls == 2:
+                    raise RuntimeError("page creation failed")
+                page = FakePage()
+                self.created.append(page)
+                return page
+
+        browser = Browser()
+        pool = deep_module.BrowserPool(browser, 2)
+
+        with pytest.raises(RuntimeError, match="page creation failed"):
+            await pool.init()
+
+        assert pool._closed
+        assert all(page.closed for page in browser.created)
+
     async def test_runtime_collects_links_until_limit(self):
         class Pool:
             def __init__(self):

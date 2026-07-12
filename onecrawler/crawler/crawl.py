@@ -16,7 +16,7 @@ from .link.helper import (
     wildcard_link_match,
 )
 from .navigation import goto
-from .pool import BrowserPool
+from .pool import BrowserPool, BrowserPoolExhausted
 from .scheduler import BFScheduler
 from .scraper.genai.executor import GenAIStrategy
 from .scraper.heuristic.script import HeuristicStrategy
@@ -84,6 +84,7 @@ class CrawlerRuntime:
         self._active_lock = asyncio.Lock()
 
         self.content_filter = content_filter
+        self._fatal_error: Optional[BaseException] = None
 
     def _same_origin(self, link: str) -> bool:
         parsed = urlparse(link)
@@ -112,6 +113,15 @@ class CrawlerRuntime:
 
             try:
                 page = await self.pool.acquire()
+            except BrowserPoolExhausted as e:
+                logger.error(
+                    "Browser pool permanently exhausted; aborting crawl: %s", e
+                )
+                self._fatal_error = e
+                self.stop_event.set()
+                async with self._active_lock:
+                    self._active_workers -= 1
+                raise
             except Exception as e:
                 logger.warning("Failed to acquire page for %s: %s", url, e)
                 async with self._active_lock:
@@ -163,8 +173,6 @@ class CrawlerRuntime:
 
                 if should_extract:
                     try:
-                        # Reuse the page this worker already loaded instead of
-                        # letting the strategy navigate to the URL a second time.
                         html = await page.content()
                         content = await self.strategy.extract(url, html=html)
                         if content is None:
@@ -278,6 +286,10 @@ class CrawlerRuntime:
                 logger.warning(
                     "Worker task failed: [%s] %s", type(result).__name__, result
                 )
+
+        if self._fatal_error is not None:
+            raise self._fatal_error
+
         return self.content
 
     async def stream(self) -> AsyncGenerator[dict, None]:
@@ -322,6 +334,9 @@ class CrawlerRuntime:
                             "Worker task failed: [%s] %s", type(result).__name__, result
                         )
             pbar.close()
+
+            if self._fatal_error is not None:
+                raise self._fatal_error
 
 
 class Crawler(BaseEngine):
@@ -388,7 +403,10 @@ class Crawler(BaseEngine):
         elif scraping_strategy != "heuristic":
             raise ValueError(f"Unknown strategy: {scraping_strategy}")
 
-        self.browser = GoogleChrome(self.settings.browser_settings)
+        self.browser = GoogleChrome(
+            self.settings.browser_settings,
+            proxy_pool=self.settings.create_proxy_pool(),
+        )
         await self.browser.start()
 
         if scraping_strategy == "heuristic":

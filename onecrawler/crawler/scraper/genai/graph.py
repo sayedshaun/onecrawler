@@ -201,13 +201,20 @@ async def structured_output_node(state: AgentState) -> AgentState:
 
 
 def retry_router(state: AgentState) -> str:
+    """Routes to success/retry/failed.
+
+    ``max_retries`` is the total number of attempts (matching
+    ``Scraper._retry``'s semantics), not the number of retries on top of the
+    first attempt, so the check is against ``max_retries - 1`` (the first
+    attempt already happened before this router ever runs).
+    """
     max_retries = state["max_retries"]
     if state.get("response") is not None:
         return "success"
 
     attempts = state.get("attempts", 0)
 
-    if attempts >= max_retries:
+    if attempts >= max_retries - 1:
         return "failed"
 
     return "retry"
