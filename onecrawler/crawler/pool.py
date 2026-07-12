@@ -28,6 +28,7 @@ class BrowserPool:
         self.size = size
         self.pages = asyncio.Queue(maxsize=size)
         self._closed = False
+        self._replenish_tasks: set = set()
 
     async def init(self):
         for _ in range(self.size):
@@ -44,28 +45,17 @@ class BrowserPool:
         if self._closed:
             return
 
-        fresh_page = None
-        max_attempts = 3
-        for attempt in range(max_attempts):
-            try:
-                fresh_page = await self.browser.new_page()
-                break
-            except Exception as e:
-                logger.warning(
-                    "Failed to replenish browser pool slot (attempt %s/%s): %s",
-                    attempt + 1,
-                    max_attempts,
-                    e,
-                )
-                if attempt < max_attempts - 1:
-                    await asyncio.sleep(2**attempt)
-
-        if fresh_page is None:
-            logger.error(
-                "Giving up replenishing browser pool slot after %s attempts; "
-                "pool capacity is now reduced by one",
-                max_attempts,
+        try:
+            fresh_page = await self.browser.new_page()
+        except Exception as e:
+            logger.warning(
+                "Failed to replenish browser pool slot, retrying in the "
+                "background until it recovers: %s",
+                e,
             )
+            task = asyncio.create_task(self._replenish_until_success())
+            self._replenish_tasks.add(task)
+            task.add_done_callback(self._replenish_tasks.discard)
             return
 
         if self._closed:
@@ -75,8 +65,41 @@ class BrowserPool:
 
         await self.pages.put(fresh_page)
 
+    async def _replenish_until_success(self) -> None:
+        """Keeps retrying to create a replacement page for a lost slot.
+
+        Never gives up: a slot must always eventually be restored, or a
+        permanently empty pool leaves workers blocked forever in
+        ``acquire()``. Backoff is capped so a persistently broken
+        browser/proxy doesn't spin tightly, but retries continue for as long
+        as the pool is open.
+        """
+        delay = 1
+        while not self._closed:
+            try:
+                fresh_page = await self.browser.new_page()
+            except Exception as e:
+                logger.warning("Still failed to replenish browser pool slot: %s", e)
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, 30)
+                continue
+
+            if self._closed:
+                with suppress(Exception):
+                    await fresh_page.close()
+                return
+
+            await self.pages.put(fresh_page)
+            return
+
     async def close(self):
         self._closed = True
+
+        for task in list(self._replenish_tasks):
+            task.cancel()
+        if self._replenish_tasks:
+            await asyncio.gather(*self._replenish_tasks, return_exceptions=True)
+
         while not self.pages.empty():
             page = await self.pages.get()
             with suppress(Exception):
