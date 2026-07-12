@@ -107,13 +107,20 @@ class GoogleChrome:
                 env=self.settings.env,
             )
 
-            default_proxy = self.settings.proxy
-            if self.proxy_pool and self.proxy_pool.proxies:
-                default_proxy = self.proxy_pool.next()
+            if self._rotates_proxies():
+                # Every page gets its own dedicated, proxy-bound context (see
+                # new_page()), so a shared default context here would never
+                # be used — just an idle context/proxy connection held open
+                # for nothing, and a wasted pick off the rotation.
+                self.context = None
+            else:
+                default_proxy = self.settings.proxy
+                if self.proxy_pool and self.proxy_pool.proxies:
+                    default_proxy = self.proxy_pool.next()
 
-            self.context = await self.browser.new_context(
-                **self._context_kwargs(default_proxy)
-            )
+                self.context = await self.browser.new_context(
+                    **self._context_kwargs(default_proxy)
+                )
 
             self._started = True
             self._closed = False
@@ -136,15 +143,17 @@ class GoogleChrome:
         if not self._started:
             await self.start()
 
+        rotates = self._rotates_proxies()
+
         async with self._lifecycle_lock:
-            if not self._started or self.context is None:
+            if not self._started or (not rotates and self.context is None):
                 raise RuntimeError("Browser context is not available")
 
             browser = self.browser
             shared_context = self.context
 
         dedicated_context = None
-        if self._rotates_proxies():
+        if rotates:
             proxy = self.proxy_pool.next()
             dedicated_context = await browser.new_context(**self._context_kwargs(proxy))
             try:
