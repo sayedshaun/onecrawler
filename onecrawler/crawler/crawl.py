@@ -388,7 +388,10 @@ class Crawler(BaseEngine):
         elif scraping_strategy != "heuristic":
             raise ValueError(f"Unknown strategy: {scraping_strategy}")
 
-        self.browser = GoogleChrome(self.settings.browser_settings)
+        self.browser = GoogleChrome(
+            self.settings.browser_settings,
+            proxy_pool=self.settings.create_proxy_pool(),
+        )
         await self.browser.start()
 
         if scraping_strategy == "heuristic":
