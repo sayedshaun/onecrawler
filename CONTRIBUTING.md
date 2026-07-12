@@ -61,6 +61,9 @@ Your commit message should be prefixed with one of the following types:
 
 **Example**: `feat: add support for recursive sitemap discovery`
 
+Keep messages concise and polished: a short, clear summary line, with any
+further explanation (the *why*, not the *what*) in the body if needed.
+
 ## Pull Request Process
 
 1.  Create a new branch for your feature or fix.
