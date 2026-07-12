@@ -51,9 +51,13 @@ class BrowserPool:
         self._last_error: Optional[Exception] = None
 
     async def init(self):
-        for _ in range(self.size):
-            page = await self.browser.new_page()
-            await self.pages.put(page)
+        try:
+            for _ in range(self.size):
+                page = await self.browser.new_page()
+                await self.pages.put(page)
+        except Exception:
+            await self.close()
+            raise
 
     async def acquire(self):
         get_task = asyncio.ensure_future(self.pages.get())
