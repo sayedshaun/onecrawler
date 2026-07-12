@@ -132,9 +132,8 @@ class Settings:
         if self.proxy and self.proxies:
             raise ValueError("Use either proxy or proxies, not both")
 
-        proxy_pool = self.create_proxy_pool()
-        if not self.browser_settings.proxy:
-            self.browser_settings.proxy = proxy_pool.next()
+        if self.proxy and not self.browser_settings.proxy:
+            self.browser_settings.proxy = self.proxy
 
         if self.scraping_strategy == "genai":
             if self.scraping_output_format != "json":
