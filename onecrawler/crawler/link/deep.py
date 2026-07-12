@@ -5,7 +5,7 @@ from typing import AsyncGenerator, List, Optional, Set
 from ...settings.browser import BrowserSettings
 from ...settings.simulation import HumanBehaviorSettings
 from ...utils.progress import make_progress_bar
-from ..pool import BrowserPool
+from ..pool import BrowserPool, BrowserPoolExhausted
 from ..scheduler import BFScheduler
 from ..spider import LinkSpider
 from .helper import human_delay, human_mouse_move, human_scroll, wildcard_link_match
@@ -72,6 +72,7 @@ class BFSRuntime:
         self._active_lock: asyncio.Lock = asyncio.Lock()
         self.stream_queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1000)
         self.streaming: bool = streaming
+        self._fatal_error: Optional[BaseException] = None
 
     async def worker(self):
         """A worker task that processes URLs and discovers new links.
@@ -99,6 +100,15 @@ class BFSRuntime:
 
             try:
                 page = await self.pool.acquire()
+            except BrowserPoolExhausted as e:
+                logger.error(
+                    "Browser pool permanently exhausted; aborting crawl: %s", e
+                )
+                self._fatal_error = e
+                self.stop_event.set()
+                async with self._active_lock:
+                    self._active_workers -= 1
+                raise
             except Exception as e:
                 logger.warning("Failed to acquire page for %s: %s", url, e)
                 async with self._active_lock:
@@ -220,6 +230,10 @@ class BFSRuntime:
                 logger.warning(
                     "Worker task failed: [%s] %s", type(result).__name__, result
                 )
+
+        if self._fatal_error is not None:
+            raise self._fatal_error
+
         return self.results
 
     async def stream(self) -> AsyncGenerator[str, None]:
@@ -264,3 +278,6 @@ class BFSRuntime:
                         "Worker task failed: [%s] %s", type(result).__name__, result
                     )
             pbar.close()
+
+            if self._fatal_error is not None:
+                raise self._fatal_error
