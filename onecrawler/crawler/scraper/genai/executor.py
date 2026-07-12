@@ -8,11 +8,6 @@ if TYPE_CHECKING:
 
 
 class GenAIStrategy:
-    # extract() already retries internally via the graph's retry_node/
-    # retry_router, so callers (e.g. Scraper) should not wrap it in another
-    # retry loop on top.
-    retries_internally = True
-
     def __init__(
         self,
         provider: str,
