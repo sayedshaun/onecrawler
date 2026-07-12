@@ -139,7 +139,10 @@ class TestPipeline:
             await engine.start()
 
             # Verify browser was created and started
-            mock_chrome.assert_called_once_with(self.mock_browser_settings)
+            mock_chrome.assert_called_once_with(
+                self.mock_browser_settings,
+                proxy_pool=self.mock_settings.create_proxy_pool(),
+            )
             mock_chrome_instance.start.assert_called_once()
 
             # Verify strategy was created with correct parameters
@@ -171,7 +174,10 @@ class TestPipeline:
 
             await engine.start()
 
-            mock_chrome.assert_called_once_with(self.mock_browser_settings)
+            mock_chrome.assert_called_once_with(
+                self.mock_browser_settings,
+                proxy_pool=self.mock_settings.create_proxy_pool(),
+            )
             mock_chrome_instance.start.assert_called_once()
             mock_strategy.assert_called_once_with(
                 provider=self.mock_settings.genai.provider,
