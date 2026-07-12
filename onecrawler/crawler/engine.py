@@ -158,7 +158,16 @@ class Scraper(BaseEngine):
                     timeout=self.timeout,
                 )
 
-            result = await self._retry(task)
+            if getattr(self.strategy, "retries_internally", False):
+                try:
+                    result = await task()
+                except asyncio.CancelledError:
+                    raise
+                except Exception as e:
+                    self.logger.warning(f"Final failure [{type(e).__name__}]: {e}")
+                    result = None
+            else:
+                result = await self._retry(task)
 
         if result is None:
             return None
