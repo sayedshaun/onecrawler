@@ -135,7 +135,12 @@ class GoogleChrome:
         if self.proxy_pool and len(self.proxy_pool.proxies) > 1:
             proxy = self.proxy_pool.next()
             dedicated_context = await browser.new_context(**self._context_kwargs(proxy))
-            page = await dedicated_context.new_page()
+            try:
+                page = await dedicated_context.new_page()
+            except Exception:
+                with suppress(Exception):
+                    await dedicated_context.close()
+                raise
         else:
             page = await shared_context.new_page()
 
