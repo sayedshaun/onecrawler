@@ -44,10 +44,28 @@ class BrowserPool:
         if self._closed:
             return
 
-        try:
-            fresh_page = await self.browser.new_page()
-        except Exception as e:
-            logger.warning("Failed to replenish browser pool slot: %s", e)
+        fresh_page = None
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                fresh_page = await self.browser.new_page()
+                break
+            except Exception as e:
+                logger.warning(
+                    "Failed to replenish browser pool slot (attempt %s/%s): %s",
+                    attempt + 1,
+                    max_attempts,
+                    e,
+                )
+                if attempt < max_attempts - 1:
+                    await asyncio.sleep(2**attempt)
+
+        if fresh_page is None:
+            logger.error(
+                "Giving up replenishing browser pool slot after %s attempts; "
+                "pool capacity is now reduced by one",
+                max_attempts,
+            )
             return
 
         if self._closed:
