@@ -9,11 +9,6 @@ from playwright.async_api import async_playwright
 from .settings.browser import BrowserSettings
 
 if TYPE_CHECKING:
-    # Only used for type hints. Importing these for real at module load time
-    # creates a circular import: settings/crawler.py imports ProxyPool from
-    # onecrawler.proxy.pool at runtime (to build a ProxyPool from Settings),
-    # and onecrawler.proxy.pool importing settings.proxy here would re-enter
-    # the still-initializing settings package before ProxyPool is defined.
     from .proxy.pool import ProxyPool
     from .settings.proxy import ProxySettings
 
