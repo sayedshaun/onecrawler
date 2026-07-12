@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from contextlib import suppress
 from typing import TYPE_CHECKING, Optional
@@ -39,7 +41,7 @@ class GoogleChrome:
     """
 
     def __init__(
-        self, settings: BrowserSettings, proxy_pool: Optional["ProxyPool"] = None
+        self, settings: BrowserSettings, proxy_pool: Optional[ProxyPool] = None
     ):
         """Initializes the GoogleChrome wrapper.
 
@@ -61,7 +63,7 @@ class GoogleChrome:
         sharing the default one (i.e. more than one proxy is configured)."""
         return bool(self.proxy_pool and len(self.proxy_pool.proxies) > 1)
 
-    def _context_kwargs(self, proxy: Optional["ProxySettings"]) -> dict:
+    def _context_kwargs(self, proxy: Optional[ProxySettings]) -> dict:
         """Builds the ``browser.new_context()`` kwargs for the given proxy."""
         return dict(
             viewport=self.settings.viewport,
@@ -108,10 +110,6 @@ class GoogleChrome:
             )
 
             if self._rotates_proxies():
-                # Every page gets its own dedicated, proxy-bound context (see
-                # new_page()), so a shared default context here would never
-                # be used — just an idle context/proxy connection held open
-                # for nothing, and a wasted pick off the rotation.
                 self.context = None
             else:
                 default_proxy = self.settings.proxy
