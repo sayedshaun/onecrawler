@@ -1,12 +1,19 @@
 import asyncio
 from contextlib import suppress
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from playwright.async_api import async_playwright
 
-from .proxy.pool import ProxyPool
 from .settings.browser import BrowserSettings
-from .settings.proxy import ProxySettings
+
+if TYPE_CHECKING:
+    # Only used for type hints. Importing these for real at module load time
+    # creates a circular import: settings/crawler.py imports ProxyPool from
+    # onecrawler.proxy.pool at runtime (to build a ProxyPool from Settings),
+    # and onecrawler.proxy.pool importing settings.proxy here would re-enter
+    # the still-initializing settings package before ProxyPool is defined.
+    from .proxy.pool import ProxyPool
+    from .settings.proxy import ProxySettings
 
 
 class GoogleChrome:
@@ -32,7 +39,7 @@ class GoogleChrome:
     """
 
     def __init__(
-        self, settings: BrowserSettings, proxy_pool: Optional[ProxyPool] = None
+        self, settings: BrowserSettings, proxy_pool: Optional["ProxyPool"] = None
     ):
         """Initializes the GoogleChrome wrapper.
 
@@ -49,7 +56,12 @@ class GoogleChrome:
         self._closed = False
         self._lifecycle_lock = asyncio.Lock()
 
-    def _context_kwargs(self, proxy: Optional[ProxySettings]) -> dict:
+    def _rotates_proxies(self) -> bool:
+        """Whether new_page() creates a dedicated per-page context instead of
+        sharing the default one (i.e. more than one proxy is configured)."""
+        return bool(self.proxy_pool and len(self.proxy_pool.proxies) > 1)
+
+    def _context_kwargs(self, proxy: Optional["ProxySettings"]) -> dict:
         """Builds the ``browser.new_context()`` kwargs for the given proxy."""
         return dict(
             viewport=self.settings.viewport,
@@ -132,7 +144,7 @@ class GoogleChrome:
             shared_context = self.context
 
         dedicated_context = None
-        if self.proxy_pool and len(self.proxy_pool.proxies) > 1:
+        if self._rotates_proxies():
             proxy = self.proxy_pool.next()
             dedicated_context = await browser.new_context(**self._context_kwargs(proxy))
             try:
