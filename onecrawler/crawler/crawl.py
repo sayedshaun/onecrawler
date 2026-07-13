@@ -26,6 +26,24 @@ logger = logging.getLogger(__name__)
 
 
 class CrawlerRuntime:
+    """Runs one breadth-first crawl of a single site to completion.
+
+    A ``CrawlerRuntime`` is a short-lived, single-use worker pool: it owns a
+    :class:`BFScheduler` (the URL queue), a :class:`BrowserPool` (pages to
+    navigate with), a :class:`LinkSpider` (link discovery), and a scraping
+    strategy (content extraction). ``concurrency`` workers pull URLs from
+    the scheduler, navigate to each, extract its content, and feed newly
+    discovered same-origin links back into the scheduler — until either
+    ``max_links`` pages have been collected or the site runs out of links.
+
+    Call :meth:`run` to crawl to completion and get back a list of
+    extracted content dicts, or :meth:`stream` to get an async generator
+    that yields each content dict as soon as it's extracted.
+
+    A single instance is meant to be used for exactly one crawl; create a
+    new ``CrawlerRuntime`` (via ``Crawler._create_runtime``) per crawl.
+    """
+
     def __init__(
         self,
         scheduler: BFScheduler,
@@ -58,9 +76,6 @@ class CrawlerRuntime:
         self.strategy = strategy
 
         self.base_prefix = base_prefix
-        parsed = urlparse(base_prefix)
-        self.base_scheme = parsed.scheme
-        self.base_netloc = parsed.netloc.lower()
         self.max_links = max_links
         self.include_pattern = include_pattern
         self.exclude_pattern = exclude_pattern
@@ -85,158 +100,184 @@ class CrawlerRuntime:
 
         self.content_filter = content_filter
         self._fatal_error: Optional[BaseException] = None
+        self._link_allowed_cache: dict = {}
 
-    def _same_origin(self, link: str) -> bool:
-        parsed = urlparse(link)
-        return (
-            parsed.scheme == self.base_scheme
-            and parsed.netloc.lower() == self.base_netloc
+    async def _next_url(self) -> Optional[str]:
+        """Pulls the next URL from the scheduler, tracking active-worker count.
+
+        Returns None if there is currently no URL to process (which may or
+        may not mean the crawl is finished).
+        """
+        url = await self.scheduler.next()
+        async with self._active_lock:
+            if url is None:
+                if self._active_workers == 0 and not await self.scheduler.has_next():
+                    self.stop_event.set()
+            else:
+                self._active_workers += 1
+        return url
+
+    async def _release_worker_slot(self):
+        async with self._active_lock:
+            self._active_workers -= 1
+
+    async def _acquire_page(self, url: str):
+        """Acquires a page from the pool, or returns None if this attempt
+        should be skipped. Raises if the pool is permanently exhausted."""
+        try:
+            return await self.pool.acquire()
+        except BrowserPoolExhausted as e:
+            logger.error("Browser pool permanently exhausted; aborting crawl: %s", e)
+            self._fatal_error = e
+            self.stop_event.set()
+            raise
+        except Exception as e:
+            logger.warning("Failed to acquire page for %s: %s", url, e)
+            return None
+
+    async def _simulate_human_behavior_before_parse(self, page):
+        await human_delay(
+            self.human_behavior_settings.min_delay,
+            self.human_behavior_settings.max_delay,
         )
+        await human_scroll(page, max_scrolls=self.human_behavior_settings.max_scrolls)
+
+    async def _simulate_human_behavior_after_parse(self, page):
+        s = self.human_behavior_settings
+        await human_mouse_move(
+            page,
+            min_mouse_moves=s.min_mouse_moves,
+            max_mouse_moves=s.max_mouse_moves,
+            mouse_width=s.mouse_width,
+            mouse_height=s.mouse_height,
+            min_mouse_steps=s.min_mouse_steps,
+            max_mouse_steps=s.max_mouse_steps,
+            min_mouse_sleep=s.min_mouse_sleep,
+            max_mouse_sleep=s.max_mouse_sleep,
+        )
+
+    async def _claim_for_extraction(self, url: str) -> bool:
+        """Atomically checks whether url still needs extracting, and if so
+        marks it as claimed so no other worker duplicates the work."""
+        async with self.lock:
+            should_extract = (
+                not self.stop_event.is_set() and url not in self.results_set
+            )
+            if should_extract:
+                self.results_set.add(url)
+        return should_extract
+
+    async def _record_content(self, url: str, content: dict) -> bool:
+        """Stores extracted content if under max_links. Returns True if it
+        was appended (and thus should be streamed/logged)."""
+        async with self.lock:
+            appended = len(self.results) < self.max_links
+            if appended:
+                self.results.append(url)
+                self.content.append(content)
+            if len(self.results) >= self.max_links:
+                self.stop_event.set()
+        return appended
+
+    async def _extract_and_store(self, url: str, page):
+        if not await self._claim_for_extraction(url):
+            return
+
+        try:
+            html = await page.content()
+            content = await self.strategy.extract(url, html=html)
+        except Exception as e:
+            logger.warning("Error extracting content for %s: %s", url, e)
+            return
+
+        if content is None:
+            logger.debug("Content extraction returned None for %s", url)
+            return
+
+        if isinstance(content, dict):
+            content["url"] = url
+        else:
+            content = {"text": content, "url": url}
+
+        if self.content_filter is not None and not self.content_filter(content):
+            logger.debug("Content did not pass filter for %s", url)
+            return
+
+        if not await self._record_content(url, content):
+            return
+
+        if self.streaming:
+            await self.stream_queue.put(content)
+        logger.debug(
+            "Discovered %s/%s links; link=%s", len(self.results), self.max_links, url
+        )
+
+    def _link_allowed(self, link: str) -> bool:
+        cached = self._link_allowed_cache.get(link)
+        if cached is not None:
+            return cached
+
+        allowed = self._compute_link_allowed(link)
+        self._link_allowed_cache[link] = allowed
+        return allowed
+
+    def _compute_link_allowed(self, link: str) -> bool:
+        # LinkSpider.parse() already restricts links to the same origin
+        # before they ever reach here, so no origin check is needed.
+        if self.include_pattern and not wildcard_link_match(
+            link, self.base_prefix, self.include_pattern
+        ):
+            return False
+        if self.exclude_pattern and wildcard_link_match(
+            link, self.base_prefix, self.exclude_pattern
+        ):
+            return False
+        return True
+
+    async def _schedule_links(self, links):
+        for link in links:
+            if self.stop_event.is_set():
+                break
+            if not self._link_allowed(link):
+                continue
+            await self.scheduler.add(link)
+
+    async def _process_url(self, url: str, page):
+        try:
+            await goto(page, url, wait_until=self.wait_until, timeout=self.timeout)
+        except Exception as e:
+            logger.warning("Failed to load %s: %s", url, e)
+            return
+
+        if self.enable_human_behaviors:
+            await self._simulate_human_behavior_before_parse(page)
+
+        links = await self.spider.parse(page)
+
+        if self.enable_human_behaviors:
+            await self._simulate_human_behavior_after_parse(page)
+
+        await self._extract_and_store(url, page)
+        await self._schedule_links(links)
 
     async def worker(self):
         while not self.stop_event.is_set():
-            url = await self.scheduler.next()
-
-            async with self._active_lock:
-                if url is None:
-                    if (
-                        self._active_workers == 0
-                        and not await self.scheduler.has_next()
-                    ):
-                        self.stop_event.set()
-                else:
-                    self._active_workers += 1
-
+            url = await self._next_url()
             if url is None:
                 await asyncio.sleep(0.05)
                 continue
 
             try:
-                page = await self.pool.acquire()
-            except BrowserPoolExhausted as e:
-                logger.error(
-                    "Browser pool permanently exhausted; aborting crawl: %s", e
-                )
-                self._fatal_error = e
-                self.stop_event.set()
-                async with self._active_lock:
-                    self._active_workers -= 1
+                page = await self._acquire_page(url)
+            except BrowserPoolExhausted:
+                await self._release_worker_slot()
                 raise
-            except Exception as e:
-                logger.warning("Failed to acquire page for %s: %s", url, e)
-                async with self._active_lock:
-                    self._active_workers -= 1
+            if page is None:
+                await self._release_worker_slot()
                 continue
 
             try:
-                try:
-                    await goto(
-                        page,
-                        url,
-                        wait_until=self.wait_until,
-                        timeout=self.timeout,
-                    )
-                except Exception as e:
-                    logger.warning("Failed to load %s: %s", url, e)
-                    continue
-
-                if self.enable_human_behaviors:
-                    await human_delay(
-                        self.human_behavior_settings.min_delay,
-                        self.human_behavior_settings.max_delay,
-                    )
-                    await human_scroll(
-                        page, max_scrolls=self.human_behavior_settings.max_scrolls
-                    )
-
-                links = await self.spider.parse(page)
-
-                if self.enable_human_behaviors:
-                    await human_mouse_move(
-                        page,
-                        min_mouse_moves=self.human_behavior_settings.min_mouse_moves,
-                        max_mouse_moves=self.human_behavior_settings.max_mouse_moves,
-                        mouse_width=self.human_behavior_settings.mouse_width,
-                        mouse_height=self.human_behavior_settings.mouse_height,
-                        min_mouse_steps=self.human_behavior_settings.min_mouse_steps,
-                        max_mouse_steps=self.human_behavior_settings.max_mouse_steps,
-                        min_mouse_sleep=self.human_behavior_settings.min_mouse_sleep,
-                        max_mouse_sleep=self.human_behavior_settings.max_mouse_sleep,
-                    )
-
-                async with self.lock:
-                    should_extract = (
-                        not self.stop_event.is_set() and url not in self.results_set
-                    )
-                    if should_extract:
-                        self.results_set.add(url)
-
-                if should_extract:
-                    try:
-                        html = await page.content()
-                        content = await self.strategy.extract(url, html=html)
-                        if content is None:
-                            logger.debug("Content extraction returned None for %s", url)
-                        else:
-                            if isinstance(content, dict):
-                                content["url"] = url
-                            else:
-                                content = {"text": content, "url": url}
-
-                            if self.content_filter is None or self.content_filter(
-                                content
-                            ):
-                                appended = False
-                                async with self.lock:
-                                    if len(self.results) < self.max_links:
-                                        self.results.append(url)
-                                        self.content.append(content)
-                                        appended = True
-                                    if len(self.results) >= self.max_links:
-                                        self.stop_event.set()
-
-                                if appended:
-                                    if self.streaming:
-                                        await self.stream_queue.put(content)
-
-                                    logger.debug(
-                                        "Discovered %s/%s links; link=%s",
-                                        len(self.results),
-                                        self.max_links,
-                                        url,
-                                    )
-                            else:
-                                logger.debug("Content did not pass filter for %s", url)
-                    except Exception as e:
-                        logger.warning("Error extracting content for %s: %s", url, e)
-
-                for link in links:
-                    if self.stop_event.is_set():
-                        break
-
-                    if not self._same_origin(link):
-                        continue
-
-                    if self.include_pattern:
-                        if not wildcard_link_match(
-                            link,
-                            self.base_prefix,
-                            self.include_pattern,
-                        ):
-                            continue
-
-                    if self.exclude_pattern:
-                        if wildcard_link_match(
-                            link,
-                            self.base_prefix,
-                            self.exclude_pattern,
-                        ):
-                            continue
-
-                    async with self.lock:
-                        if link not in self.results_set:
-                            await self.scheduler.add(link)
-
+                await self._process_url(url, page)
             except asyncio.CancelledError:
                 raise
             except Exception as e:
@@ -245,21 +286,25 @@ class CrawlerRuntime:
                 )
             finally:
                 await self.pool.release(page)
-                async with self._active_lock:
-                    self._active_workers -= 1
+                await self._release_worker_slot()
 
-    async def run(self) -> list:
-        if self.max_links <= 0:
-            return []
+    def _spawn_workers(self) -> list:
+        return [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
 
-        tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
-
-        pbar = make_progress_bar(
+    def _make_progress_bar(self):
+        return make_progress_bar(
             total=self.max_links,
             desc="Crawling",
             unit="page",
             show_progress=self.show_progress,
         )
+
+    async def run(self) -> list:
+        if self.max_links <= 0:
+            return []
+
+        tasks = self._spawn_workers()
+        pbar = self._make_progress_bar()
 
         async def monitor():
             last = 0
@@ -296,14 +341,8 @@ class CrawlerRuntime:
         if self.max_links <= 0:
             return
 
-        tasks = [asyncio.create_task(self.worker()) for _ in range(self.concurrency)]
-
-        pbar = make_progress_bar(
-            total=self.max_links,
-            desc="Crawling",
-            unit="page",
-            show_progress=self.show_progress,
-        )
+        tasks = self._spawn_workers()
+        pbar = self._make_progress_bar()
 
         try:
             while True:
