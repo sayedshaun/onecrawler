@@ -4,6 +4,7 @@ from typing import Any, Optional, Type
 
 from pydantic import BaseModel
 
+from ....settings.genai import GenAIProvider
 from .llms import GeminiLLM, OllamaLLM, OpenAILLM
 from .llms.base import BaseLLM
 
@@ -43,7 +44,7 @@ class ModelManager:
     def _build_model(self) -> BaseLLM:
         provider = self.model_provider
 
-        if provider == "ollama":
+        if provider == GenAIProvider.OLLAMA:
             return OllamaLLM(
                 model=self.model_name,
                 base_url=self.base_url or "http://localhost:11434",
@@ -51,7 +52,7 @@ class ModelManager:
                 **self._filter_kwargs("ollama"),
             )
 
-        if provider in {"gemini", "google"}:
+        if provider in {"gemini", GenAIProvider.GOOGLE}:
             if not self.api_key:
                 raise ValueError("api_key is required for Gemini")
 
@@ -65,7 +66,7 @@ class ModelManager:
                 **self._filter_kwargs("gemini"),
             )
 
-        if provider == "openai":
+        if provider == GenAIProvider.OPENAI:
             # A custom base_url means an OpenAI-compatible server (llama.cpp,
             # vLLM, LM Studio, ...), which is typically keyless. Only require a
             # key when targeting the real api.openai.com default.
