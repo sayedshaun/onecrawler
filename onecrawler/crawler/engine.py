@@ -3,7 +3,7 @@ from typing import Any, AsyncGenerator, List, Optional, Union
 from urllib.parse import urlparse
 
 from ..browser import GoogleChrome
-from ..settings.crawler import Settings
+from ..settings.crawler import LinkExtractionStrategy, ScrapingStrategy, Settings
 from ..utils.progress import make_progress_bar
 from .base import BaseEngine
 from .link.deep import BFSRuntime
@@ -75,13 +75,13 @@ class Scraper(BaseEngine):
             )
             await self.browser.start()
 
-        if self.settings.scraping_strategy == "heuristic":
+        if self.settings.scraping_strategy == ScrapingStrategy.HEURISTIC:
             self.strategy = HeuristicStrategy(
                 settings=self.settings,
                 browser=self.browser,
             )
 
-        elif self.settings.scraping_strategy == "genai":
+        elif self.settings.scraping_strategy == ScrapingStrategy.GENAI:
             if not self.settings.genai:
                 raise ValueError("GenAI settings are required for GenAI strategy")
 
@@ -312,7 +312,7 @@ class LinkExtractor(BaseEngine):
             strategy,
         )
 
-        if strategy == "shallow":
+        if strategy == LinkExtractionStrategy.SHALLOW:
             return await extract_url_from_current_page(
                 url=url,
                 browser=self.browser,
@@ -321,7 +321,7 @@ class LinkExtractor(BaseEngine):
                 max_links=self.settings.link_extraction_limit,
             )
 
-        if strategy != "deep":
+        if strategy != LinkExtractionStrategy.DEEP:
             raise ValueError(f"Unknown strategy: {strategy}")
 
         results = []
@@ -347,7 +347,9 @@ class LinkExtractor(BaseEngine):
 
         strategy = self.settings.link_extraction_strategy
 
-        assert strategy != "shallow", "Shallow link extraction does not support stream"
+        assert (
+            strategy != LinkExtractionStrategy.SHALLOW
+        ), "Shallow link extraction does not support stream"
 
         self.logger.info(
             "Running link extraction stream on %s with strategy: %s",
@@ -355,7 +357,7 @@ class LinkExtractor(BaseEngine):
             strategy,
         )
 
-        if strategy != "deep":
+        if strategy != LinkExtractionStrategy.DEEP:
             raise ValueError(f"Unknown strategy: {strategy}")
 
         parsed = urlparse(url)
