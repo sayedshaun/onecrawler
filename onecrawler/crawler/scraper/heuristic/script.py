@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 import trafilatura
 
+from ....settings.crawler import OutputFormat
 from ...navigation import goto
 
 
@@ -47,7 +48,7 @@ class HeuristicStrategy:
         if not extracted:
             return None
 
-        if self.settings.scraping_output_format == "json":
+        if self.settings.scraping_output_format == OutputFormat.JSON:
             try:
                 return json.loads(extracted)
             except Exception as e:

@@ -1,7 +1,21 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Literal, Optional, Type
 
 from pydantic import BaseModel
+
+
+class GenAIProvider(str, Enum):
+    """AI service provider for GenAI-based content extraction.
+
+    Subclasses ``str``, so it's interchangeable with the plain string
+    values (``"google"``, ``"openai"``, ``"ollama"``) this has always
+    accepted.
+    """
+
+    GOOGLE = "google"
+    OPENAI = "openai"
+    OLLAMA = "ollama"
 
 
 @dataclass
