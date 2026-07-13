@@ -1,6 +1,19 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import Dict, Optional
 from urllib.parse import quote, urlsplit, urlunsplit
+
+
+class ProxyRotationMethod(str, Enum):
+    """Strategy for picking the next proxy from a :class:`ProxyPool`.
+
+    Subclasses ``str``, so it's interchangeable with the plain string
+    values (``"round_robin"``, ``"random"``) accepted everywhere this has
+    always been configured.
+    """
+
+    ROUND_ROBIN = "round_robin"
+    RANDOM = "random"
 
 
 @dataclass
