@@ -2,7 +2,7 @@ import random
 from itertools import cycle
 from typing import List, Literal, Optional
 
-from ..settings.proxy import ProxySettings
+from ..settings.proxy import ProxyRotationMethod, ProxySettings
 
 
 class ProxyPool:
@@ -31,7 +31,10 @@ class ProxyPool:
         self.strategy = strategy
         self._cycle = cycle(self.proxies)
 
-        if self.strategy not in ("round_robin", "random"):
+        if self.strategy not in (
+            ProxyRotationMethod.ROUND_ROBIN,
+            ProxyRotationMethod.RANDOM,
+        ):
             raise ValueError("proxy_rotation must be 'round_robin' or 'random'")
 
     def next(self) -> Optional[ProxySettings]:
@@ -43,7 +46,7 @@ class ProxyPool:
         if not self.proxies:
             return None
 
-        if self.strategy == "random":
+        if self.strategy == ProxyRotationMethod.RANDOM:
             return random.choice(self.proxies)
 
         return next(self._cycle)
