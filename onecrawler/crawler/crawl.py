@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 
 from ..browser import GoogleChrome
 from ..settings.browser import BrowserSettings
+from ..settings.crawler import ScrapingStrategy
 from ..settings.simulation import HumanBehaviorSettings
 from ..utils.progress import make_progress_bar
 from .base import BaseEngine
@@ -432,14 +433,16 @@ class Crawler(BaseEngine):
         """
         self._closed = False
 
-        scraping_strategy = getattr(self.settings, "scraping_strategy", "heuristic")
+        scraping_strategy = getattr(
+            self.settings, "scraping_strategy", ScrapingStrategy.HEURISTIC
+        )
         if not isinstance(scraping_strategy, str):
-            scraping_strategy = "heuristic"
+            scraping_strategy = ScrapingStrategy.HEURISTIC
 
-        if scraping_strategy == "genai":
+        if scraping_strategy == ScrapingStrategy.GENAI:
             if not getattr(self.settings, "genai", None):
                 raise ValueError("GenAI settings is required for GenAI strategy")
-        elif scraping_strategy != "heuristic":
+        elif scraping_strategy != ScrapingStrategy.HEURISTIC:
             raise ValueError(f"Unknown strategy: {scraping_strategy}")
 
         self.browser = GoogleChrome(
@@ -448,7 +451,7 @@ class Crawler(BaseEngine):
         )
         await self.browser.start()
 
-        if scraping_strategy == "heuristic":
+        if scraping_strategy == ScrapingStrategy.HEURISTIC:
             strategy = HeuristicStrategy(
                 settings=self.settings,
                 browser=self.browser,
