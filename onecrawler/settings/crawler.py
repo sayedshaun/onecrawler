@@ -1,18 +1,60 @@
 import logging
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import List, Literal, Optional
 
 from ..proxy.pool import ProxyPool
 from .browser import BrowserSettings
 from .genai import GenerativeAISettings
-from .proxy import ProxySettings
+from .proxy import ProxyRotationMethod, ProxySettings
 from .simulation import HumanBehaviorSettings
 from .sitemap import SitemapSettings
 
-_LINK_EXTRACTION_STRATEGIES = ("shallow", "deep")
-_SCRAPING_STRATEGIES = ("heuristic", "genai")
-_OUTPUT_FORMATS = ("markdown", "json", "xml", "xmltei")
-_PROXY_ROTATION_METHODS = ("round_robin", "random")
+
+class ScrapingStrategy(str, Enum):
+    """Content-extraction strategy used by a crawl.
+
+    Subclasses ``str``, so it's interchangeable with the plain string
+    values (``"heuristic"``, ``"genai"``) that ``Settings.scraping_strategy``
+    has always accepted — existing code passing raw strings keeps working
+    unchanged, while internal code can compare against named members
+    instead of repeating string literals.
+    """
+
+    HEURISTIC = "heuristic"
+    GENAI = "genai"
+
+
+class LinkExtractionStrategy(str, Enum):
+    """Strategy for finding links on a page.
+
+    Subclasses ``str``, so it's interchangeable with the plain string
+    values (``"shallow"``, ``"deep"``) this has always accepted.
+    """
+
+    SHALLOW = "shallow"
+    DEEP = "deep"
+
+
+class OutputFormat(str, Enum):
+    """Output format for scraped content.
+
+    Subclasses ``str``, so it's interchangeable with the plain string
+    values (``"markdown"``, ``"json"``, ``"xml"``, ``"xmltei"``) this has
+    always accepted, and passes straight through to ``trafilatura``'s own
+    ``output_format`` argument, which expects these same string values.
+    """
+
+    MARKDOWN = "markdown"
+    JSON = "json"
+    XML = "xml"
+    XMLTEI = "xmltei"
+
+
+_LINK_EXTRACTION_STRATEGIES = tuple(s.value for s in LinkExtractionStrategy)
+_SCRAPING_STRATEGIES = tuple(s.value for s in ScrapingStrategy)
+_OUTPUT_FORMATS = tuple(s.value for s in OutputFormat)
+_PROXY_ROTATION_METHODS = tuple(s.value for s in ProxyRotationMethod)
 _LOGGING_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
 
 
@@ -135,8 +177,8 @@ class Settings:
         if self.proxy and not self.browser_settings.proxy:
             self.browser_settings.proxy = self.proxy
 
-        if self.scraping_strategy == "genai":
-            if self.scraping_output_format != "json":
+        if self.scraping_strategy == ScrapingStrategy.GENAI:
+            if self.scraping_output_format != OutputFormat.JSON:
                 raise ValueError("GenAI only supports JSON output")
 
             if not self.genai:
