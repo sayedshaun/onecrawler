@@ -14,12 +14,19 @@ class OllamaLLM(BaseLLM):
         model: str,
         base_url: str = "http://localhost:11434",
         timeout: float = 300.0,
+        think: bool = False,
         **options: Any,
     ) -> None:
         self.model = model
         self.base_url = base_url.rstrip("/")
         self.client = httpx.AsyncClient(timeout=timeout)
 
+        # Thinking models (qwen3, deepseek-r1, ...) return an EMPTY response for
+        # structured output (format=schema) when thinking is on, and emit a huge
+        # reasoning trace on free-form calls. Both break this pipeline, so we
+        # disable thinking by default; pass provider_kwargs={"think": True} to
+        # re-enable it. Non-thinking models accept the flag harmlessly.
+        self.think = think
         self.options = options
 
     def _url(self, path: str) -> str:
@@ -30,6 +37,7 @@ class OllamaLLM(BaseLLM):
             "model": self.model,
             "prompt": prompt,
             "stream": False,
+            "think": self.think,
         }
 
         if self.options:

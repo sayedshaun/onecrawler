@@ -37,6 +37,11 @@ class GenerativeAISettings:
         provider_kwargs (Optional[dict[str, Any]]): Provider-specific keyword arguments.
         timeout (Optional[float]): Per-request timeout in seconds for the
             provider's API call. ``None`` uses the provider client's own default.
+        think (bool): Ollama only. Whether to let a thinking model (qwen3,
+            deepseek-r1, ...) emit its reasoning trace. Defaults to ``False``
+            because thinking breaks structured output on Ollama (it returns an
+            empty response) and makes free-form calls very slow. Ignored by the
+            OpenAI and Gemini providers.
     """
 
     provider: Literal["google", "openai", "ollama"]
@@ -46,3 +51,4 @@ class GenerativeAISettings:
     base_url: Optional[str] = None
     provider_kwargs: Optional[dict[str, Any]] = None
     timeout: Optional[float] = None
+    think: bool = False

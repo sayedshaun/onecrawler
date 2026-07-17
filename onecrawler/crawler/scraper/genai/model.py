@@ -27,6 +27,7 @@ class ModelManager:
         base_url: Optional[str] = None,
         provider_kwargs: Optional[dict[str, Any]] = None,
         timeout: Optional[float] = None,
+        think: bool = False,
         strict: bool = True,
     ) -> None:
         self.schema = schema
@@ -35,6 +36,7 @@ class ModelManager:
         self.api_key = api_key
         self.base_url = base_url
         self.timeout = timeout
+        self.think = think
         self.strict = strict
 
         self.provider_kwargs = provider_kwargs or {}
@@ -48,6 +50,7 @@ class ModelManager:
             return OllamaLLM(
                 model=self.model_name,
                 base_url=self.base_url or "http://localhost:11434",
+                think=self.think,
                 **self._timeout_kwargs(),
                 **self._filter_kwargs("ollama"),
             )
