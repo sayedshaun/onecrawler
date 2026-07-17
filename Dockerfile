@@ -19,11 +19,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the full framework source before installing, so setuptools'
+# Copy the full library source before installing, so setuptools'
 # package auto-discovery actually finds the onecrawler package
 COPY . .
 
-# Install the framework and its dependencies
+# Install onecrawler and its dependencies
 RUN pip install --no-cache-dir .
 
 # Install Playwright browsers and their specific system dependencies
