@@ -1,6 +1,6 @@
 """Benchmark 'heuristic' (trafilatura) vs 'markdownify' extraction, live.
 
-Discovers a shared URL set once via UniversalSiteMap (falling back to a
+Discovers a shared URL set once via SiteMap (falling back to a
 shallow LinkExtractor if sitemap discovery finds nothing), then scrapes the
 SAME pages with both strategies so the comparison is apples-to-apples, and
 reports:
@@ -32,7 +32,7 @@ import asyncio
 import statistics
 import time
 
-from onecrawler import LinkExtractor, Scraper, Settings, UniversalSiteMap
+from onecrawler import LinkExtractor, Scraper, Settings, SiteMap
 
 DEFAULT_URL = "https://quotes.toscrape.com"
 
@@ -75,7 +75,7 @@ async def discover_urls(url, limit, concurrency):
         logging_level=None,
     )
 
-    sitemap = UniversalSiteMap(settings)
+    sitemap = SiteMap(settings)
     urls = await sitemap.run(url)
     if urls:
         return urls[:limit], "sitemap"

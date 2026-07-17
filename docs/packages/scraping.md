@@ -57,16 +57,15 @@ async with Scraper(settings) as scraper:
     its source even though `stream()` completes in `asyncio.as_completed()`
     order rather than input order.
 
-### HeuristicStrategy
+### Heuristic strategy
 
-Rule-based content extraction using the trafilatura library.
+Rule-based content extraction using the trafilatura library. Select it with
+`Settings(scraping_strategy="heuristic")` — see [Heuristic Scraping](#heuristic-scraping)
+below.
 
-```python
-from onecrawler.crawler.scraper.heuristic.script import HeuristicStrategy
-
-strategy = HeuristicStrategy(settings, browser=browser)
-content = await strategy.extract(url)
-```
+!!! note "No direct class import"
+    `HeuristicStrategy` is an internal implementation detail with no public
+    import path or stability guarantee. Always go through `Scraper`.
 
 #### Features
 
@@ -75,17 +74,14 @@ content = await strategy.extract(url)
 - **Language detection**: Automatic language identification
 - **Content cleaning**: Removes boilerplate and navigation
 
-### MarkdownifyStrategy
+### Markdownify strategy
 
 Whole-page HTML-to-Markdown conversion using `html-to-markdown`, with no content
-extraction.
+extraction. Select it with `Settings(scraping_strategy="markdownify")`.
 
-```python
-from onecrawler.crawler.scraper.markdown.script import MarkdownifyStrategy
-
-strategy = MarkdownifyStrategy(settings, browser=browser)
-content = await strategy.extract(url)
-```
+!!! note "No direct class import"
+    `MarkdownifyStrategy` is an internal implementation detail with no public
+    import path or stability guarantee. Always go through `Scraper`.
 
 #### Features
 
@@ -97,28 +93,15 @@ content = await strategy.extract(url)
   `["nav", "footer", ".cookie-banner"]`) to strip known chrome before
   conversion, at no LLM cost
 
-### LLMStrategy
+### GenAI strategy
 
-AI-powered content extraction using language models.
+AI-powered content extraction using language models. Select it with
+`Settings(scraping_strategy="genai", genai=LLMSettings(...))` — see
+[GenAI Scraping](#genai-scraping) below.
 
-```python
-from onecrawler.crawler.scraper.genai.executor import LLMStrategy
-
-strategy = LLMStrategy(
-    provider=genai_settings.provider,
-    model_name=genai_settings.model_name,
-    max_retries=2,
-    api_key=genai_settings.api_key,
-    base_url=genai_settings.base_url,
-    output_schema=genai_settings.output_schema,
-    provider_kwargs=genai_settings.provider_kwargs,
-    timeout=genai_settings.timeout,
-    think=genai_settings.think,
-    exclude_selectors=settings.exclude_selectors,
-    browser=browser,
-)
-content = await strategy.extract(url)
-```
+!!! note "No direct class import"
+    `LLMStrategy` is an internal implementation detail with no public import
+    path or stability guarantee. Always go through `Scraper`.
 
 #### Features
 

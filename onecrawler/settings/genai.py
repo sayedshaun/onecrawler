@@ -5,7 +5,7 @@ from typing import Any, Literal, Optional, Type
 from pydantic import BaseModel
 
 
-class GenAIProvider(str, Enum):
+class LLMProvider(str, Enum):
     """AI service provider for GenAI-based content extraction.
 
     Subclasses ``str``, so it's interchangeable with the plain string values

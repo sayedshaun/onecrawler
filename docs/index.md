@@ -25,14 +25,14 @@ hide:
 </div>
 
 ```python
-from onecrawler import Settings, UniversalSiteMap, Scraper
+from onecrawler import Settings, SiteMap, Scraper
 from onecrawler.utils import writter
 
 
 async def main():
     settings = Settings(include_link_patterns=["/news/*"], concurrency=10)
 
-    sitemap = UniversalSiteMap(settings)
+    sitemap = SiteMap(settings)
     urls = await sitemap.run("https://example.com")
 
     async with Scraper(settings) as scraper:
@@ -114,7 +114,7 @@ few focused async engines, so production scripts stay readable.
 
 | Goal | Recommended feature | Why |
 | --- | --- | --- |
-| Collect most public URLs quickly | `UniversalSiteMap` | Uses `robots.txt`, common sitemap paths, nested sitemap indexes, and optional HTML fallback |
+| Collect most public URLs quickly | `SiteMap` | Uses `robots.txt`, common sitemap paths, nested sitemap indexes, and optional HTML fallback |
 | Inspect one listing page | shallow link extraction | Lower crawl cost and easier to reason about |
 | Explore a site section recursively | deep link extraction | Follows internal links until your settings limit |
 | Extract readable article text | heuristic scraping | Fast, deterministic, and does not require model calls |

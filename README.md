@@ -62,7 +62,7 @@ async with Scraper(settings) as scraper_engine:
 
 | Need | Use | Why |
 | --- | --- | --- |
-| Fast URL discovery from a public site | `UniversalSiteMap` | Simplest, fastest, and least expensive way to collect URLs |
+| Fast URL discovery from a public site | `SiteMap` | Simplest, fastest, and least expensive way to collect URLs |
 | Links from one listing page | Shallow `LinkExtractor` | Reads direct same-site links from the page |
 | Recursive discovery through navigation | Deep `LinkExtractor` | Follows internal links until your configured limit |
 | Bulk article or page text extraction | Heuristic `Scraper` | Deterministic and avoids model cost |
@@ -437,7 +437,7 @@ Use `proxies=[ProxySettings(...)]` for a single proxy (a one-element list), or a
 > Split URL discovery and scraping into separate pipeline steps. Collecting all URLs first gives you a checkpoint to resume from if scraping fails partway through — without re-running discovery.
 
 > [!TIP]
-> Start with `UniversalSiteMap` before reaching for browser extraction. Sitemap-based discovery is faster, cheaper, and more complete on well-maintained sites. Fall back to `LinkExtractor` only when sitemaps are missing or stale.
+> Start with `SiteMap` before reaching for browser extraction. Sitemap-based discovery is faster, cheaper, and more complete on well-maintained sites. Fall back to `LinkExtractor` only when sitemaps are missing or stale.
 
 > [!TIP]
 > Use heuristic scraping (`scraping_strategy="heuristic"`) for bulk content extraction. Reserve GenAI extraction for cases where you genuinely need structured, schema-shaped output — it adds latency and cost at scale.

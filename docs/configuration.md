@@ -51,7 +51,7 @@ settings = Settings(
 | `sitemap.max_depth` | `3` | Depth limit for HTML fallback |
 | `sitemap.max_pages` | `500` | Page cap for HTML fallback |
 | `sitemap.user_agent` | OneCrawler UA | User agent for sitemap HTTP requests |
-| `sitemap.respect_robots` | `True` | Enforce `robots.txt` during `UniversalSiteMap` discovery (filters URLs and gates HTML fallback) |
+| `sitemap.respect_robots` | `True` | Enforce `robots.txt` during `SiteMap` discovery (filters URLs and gates HTML fallback) |
 | `sitemap.deduplicate` | `True` | Normalize and remove duplicate sitemap URLs |
 
 Best practice: keep `sitemap.html_fallback=True` during exploration, then turn it

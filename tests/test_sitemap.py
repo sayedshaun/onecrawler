@@ -152,13 +152,11 @@ class TestSitemapParser:
 
     def test_universal_sitemap_normalizes_base_url(self):
         assert (
-            self.sitemap_module.UniversalSiteMap._normalize_base("example.com/path")
+            self.sitemap_module.SiteMap._normalize_base("example.com/path")
             == "https://example.com"
         )
         assert (
-            self.sitemap_module.UniversalSiteMap._normalize_base(
-                "http://example.com/path"
-            )
+            self.sitemap_module.SiteMap._normalize_base("http://example.com/path")
             == "http://example.com"
         )
 
@@ -344,7 +342,7 @@ class TestLastmodParsing:
         cls.sitemap_module = load_sitemap_module()
 
     def _parse(self, value):
-        return self.sitemap_module.UniversalSiteMap._parse_lastmod(value)
+        return self.sitemap_module.SiteMap._parse_lastmod(value)
 
     def test_none_returns_none(self):
         assert self._parse(None) is None
@@ -404,7 +402,7 @@ class TestDateRangeFilter:
     def _filter(
         self, records, start_date=None, end_date=None, strict_date_filter=False
     ):
-        parse = self.sitemap_module.UniversalSiteMap._parse_lastmod
+        parse = self.sitemap_module.SiteMap._parse_lastmod
         filtered = []
         for rec in records:
             lm = parse(rec.lastmod)
