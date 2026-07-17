@@ -17,8 +17,7 @@ refining crawl results. Filters are passed to `Crawler.run()` or
 ```python
 import asyncio
 from onecrawler import Crawler, Settings
-from onecrawler.filters import by_date, by_keywords
-from onecrawler.filters.chain import AND
+from onecrawler.filters import AND, by_date, by_keywords
 
 
 async def main():
@@ -169,12 +168,11 @@ dependencies or embeddings required.
 
 ## Composing Filters
 
-Import `AND`, `OR`, and `NOT` from `onecrawler.filters.chain` to combine
-individual filters into complex logic.
+Import `AND`, `OR`, and `NOT` from `onecrawler.filters` to combine individual
+filters into complex logic.
 
 ```python
-from onecrawler.filters import by_date, by_keywords, by_files
-from onecrawler.filters.chain import AND, OR, NOT
+from onecrawler.filters import AND, OR, NOT, by_date, by_keywords, by_files
 ```
 
 ### AND
@@ -209,6 +207,15 @@ Invert a single filter:
 # Exclude PDFs
 f = NOT(by_files(["pdf"]))
 ```
+
+!!! warning "NOT on a field-dependent filter includes items missing that field"
+    Built-in filters like `by_keywords` and `by_date` are fail-closed: they
+    return `False` both when an item doesn't match *and* when the item is
+    missing the field they check (e.g. no `text` or `date` key). `NOT` can't
+    distinguish those two cases, so `NOT(by_keywords(["python"]))` will
+    *include* items that have no `text` field at all, not just items whose
+    text didn't contain `"python"`. If that distinction matters, add an
+    explicit field-presence check alongside `NOT`.
 
 ### Nested Composition
 
@@ -262,7 +269,7 @@ async with Crawler(settings) as engine:
 For advanced use, you can work with `FilterChain` directly:
 
 ```python
-from onecrawler.filters.base import FilterChain
+from onecrawler.filters import FilterChain
 
 chain = FilterChain(
     by_date(start="2025-01-01"),

@@ -234,8 +234,7 @@ Filter crawled results by date, keywords, file type, or semantic similarity. Fil
 ```python
 import asyncio
 from onecrawler import Crawler, Settings
-from onecrawler.filters import by_date, by_keywords
-from onecrawler.filters.chain import AND
+from onecrawler.filters import AND, by_date, by_keywords
 
 
 async def main():
@@ -275,11 +274,10 @@ if __name__ == "__main__":
 
 ### Composing Filters
 
-Use `AND`, `OR`, and `NOT` from `onecrawler.filters.chain` to combine filters:
+Use `AND`, `OR`, and `NOT` from `onecrawler.filters` to combine filters:
 
 ```python
-from onecrawler.filters import by_date, by_keywords, by_files
-from onecrawler.filters.chain import AND, OR, NOT
+from onecrawler.filters import AND, OR, NOT, by_date, by_keywords, by_files
 
 # Pages from 2025 that mention "python" but are not PDFs
 f = AND(
