@@ -861,8 +861,7 @@ class UniversalSiteMap:
         finally:
             pbar.close()
 
-        if self.settings.verbose:
-            logging.info(f"Strategies used: {strategies_used}")
+        logging.info(f"Strategies used: {strategies_used}")
 
         start_date = self.settings.sitemap.start_date
         end_date = self.settings.sitemap.end_date
