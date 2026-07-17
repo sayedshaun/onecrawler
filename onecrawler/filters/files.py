@@ -26,7 +26,6 @@ def by_extension(
         Callable[[dict], bool]: A predicate accepting items whose URL ends
         with one of ``extensions``.
     """
-
     allowed = {
         ext.lower() if ext.startswith(".") else f".{ext.lower()}" for ext in extensions
     }
@@ -58,7 +57,6 @@ def by_files(
         Callable[[dict], bool]: A predicate accepting items whose URL matches
         one of the resolved extensions.
     """
-
     allowed_exts = set()
 
     for t in types:

@@ -24,8 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY . .
 
 # Install the framework and its dependencies
-# We include [genai] extra by default for the Docker image
-RUN pip install --no-cache-dir .[genai]
+RUN pip install --no-cache-dir .
 
 # Install Playwright browsers and their specific system dependencies
 # OneCrawler primarily uses Chromium

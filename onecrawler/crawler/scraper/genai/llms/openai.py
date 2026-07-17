@@ -35,12 +35,12 @@ class OpenAILLM(BaseLLM):
         """Recursively normalizes a Pydantic JSON schema for OpenAI's strict mode.
 
         OpenAI's strict structured-output mode requires every object to set
-        "additionalProperties": false and list *every* property in "required".
-        Pydantic v2 only lists fields without a default in "required" and never
-        sets "additionalProperties" — so any schema with an optional/defaulted
-        field (which onecrawler's own GenAI prompt encourages, e.g. "use null if
-        missing") is rejected by the API unless normalized here. Fields that were
-        originally optional are made nullable so omission is still representable.
+        "additionalProperties": false and list *every* property in "required". Pydantic
+        v2 only lists fields without a default in "required" and never sets
+        "additionalProperties" — so any schema with an optional/defaulted field (which
+        onecrawler's own GenAI prompt encourages, e.g. "use null if missing") is
+        rejected by the API unless normalized here. Fields that were originally optional
+        are made nullable so omission is still representable.
         """
         schema = dict(schema)
 

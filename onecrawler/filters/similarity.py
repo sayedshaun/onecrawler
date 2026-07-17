@@ -51,7 +51,6 @@ def by_cosine_similarity(
         Callable[[dict], bool]: A predicate accepting items scoring at least
         ``threshold`` against ``query``.
     """
-
     query_vec = _vectorize(query)
 
     def _filter(item: dict) -> bool:

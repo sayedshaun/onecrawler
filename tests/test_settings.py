@@ -20,7 +20,7 @@ class TestCrawlerSettings:
             crawler_module.Settings(scraping_strategy="genai")
 
     def test_genai_strategy_requires_json_output(self):
-        settings = genai_module.GenerativeAISettings(
+        settings = genai_module.LLMSettings(
             provider="openai",
             model_name="test-model",
             api_key="test-key",
@@ -34,7 +34,7 @@ class TestCrawlerSettings:
             )
 
     def test_valid_genai_settings_are_accepted(self):
-        genai_settings = genai_module.GenerativeAISettings(
+        genai_settings = genai_module.LLMSettings(
             provider="google",
             model_name="gemini-test",
             api_key="test-key",
@@ -65,12 +65,13 @@ class TestCrawlerSettings:
         assert not hasattr(settings, "end_date")
         assert not hasattr(settings, "strict_date_filter")
 
-    def test_single_proxy_is_attached_to_browser_settings(self):
+    def test_single_proxy_via_one_element_list(self):
         proxy = browser_module.ProxySettings(server="http://proxy.example:8080")
 
-        settings = crawler_module.Settings(proxy=proxy)
+        settings = crawler_module.Settings(proxies=[proxy])
+        pool = settings.create_proxy_pool()
 
-        assert settings.browser_settings.proxy == proxy
+        assert pool.next() == proxy
 
     def test_multiple_proxies_use_round_robin_pool(self):
         first = browser_module.ProxySettings(server="http://proxy-1.example:8080")
@@ -82,9 +83,3 @@ class TestCrawlerSettings:
         assert pool.next() == first
         assert pool.next() == second
         assert pool.next() == first
-
-    def test_proxy_and_proxies_are_mutually_exclusive(self):
-        proxy = browser_module.ProxySettings(server="http://proxy.example:8080")
-
-        with pytest.raises(ValueError, match="either proxy or proxies"):
-            crawler_module.Settings(proxy=proxy, proxies=[proxy])

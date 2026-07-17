@@ -29,6 +29,7 @@ def _make_settings():
     settings.scraping_output_format = "markdown"
     settings.browser_settings.wait_until = "load"
     settings.browser_settings.timeout = 30000
+    settings.browser_settings.settle_delay = 0
     return settings
 
 

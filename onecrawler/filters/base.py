@@ -14,9 +14,9 @@ def resolve_field(
 ) -> Optional[str]:
     """Returns the first truthy value among `fields`, or None.
 
-    Logs at debug level when none of the expected fields are present, so a
-    filter that silently drops every item (e.g. a date filter run against a
-    content format that carries no date) is diagnosable rather than mysterious.
+    Logs at debug level when none of the expected fields are present, so a filter that
+    silently drops every item (e.g. a date filter run against a content format that
+    carries no date) is diagnosable rather than mysterious.
     """
     for field in fields:
         value = item.get(field)

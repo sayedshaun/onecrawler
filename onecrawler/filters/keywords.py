@@ -21,7 +21,6 @@ def by_keywords(
         Callable[[dict], bool]: A predicate accepting items containing at
         least one keyword.
     """
-
     keywords = [k.lower() for k in keywords]
 
     def _filter(item: dict) -> bool:

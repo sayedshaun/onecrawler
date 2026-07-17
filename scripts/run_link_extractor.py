@@ -1,10 +1,14 @@
 """Manually exercise the real LinkExtractor class against a live URL.
 
+Defaults to https://quotes.toscrape.com, a free site built for scraping
+practice, so you only need to pass --limit/--concurrency. Pass --url to
+target a different site.
+
 Usage:
-    python scripts/run_link_extractor.py --url <url> [--max-links N] [--concurrency N] [--strategy shallow|deep]
+    python scripts/run_link_extractor.py [--url <url>] [--limit N] [--concurrency N] [--strategy shallow|deep]
 
 Example:
-    python scripts/run_link_extractor.py --url https://quotes.toscrape.com --max-links 100 --concurrency 5
+    python scripts/run_link_extractor.py --limit 100 --concurrency 5
 
 Requires a working Playwright/Chromium install (python -m playwright install
 chromium).
@@ -15,12 +19,18 @@ import asyncio
 
 from onecrawler import LinkExtractor, Settings
 
+DEFAULT_URL = "https://quotes.toscrape.com"
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--url", required=True, help="URL to extract links from")
     parser.add_argument(
-        "--max-links",
+        "--url",
+        default=DEFAULT_URL,
+        help=f"URL to extract links from (default: {DEFAULT_URL})",
+    )
+    parser.add_argument(
+        "--limit",
         type=int,
         default=100,
         help="maximum number of links to extract (default: 100)",
@@ -42,19 +52,19 @@ def parse_args():
 
 async def main():
     args = parse_args()
-    url, max_links, concurrency = args.url, args.max_links, args.concurrency
+    url, limit, concurrency = args.url, args.limit, args.concurrency
 
     settings = Settings(
         link_extraction_strategy=args.strategy,
-        link_extraction_limit=max_links,
+        link_extraction_limit=limit,
         concurrency=concurrency,
         show_progress=True,
-        enable_logging=True,
+        logging_level="INFO",
     )
 
     print(
         f"Extracting links from {url}  (strategy={args.strategy}, "
-        f"max_links={max_links}, concurrency={concurrency})"
+        f"limit={limit}, concurrency={concurrency})"
     )
 
     async with LinkExtractor(settings) as extractor:

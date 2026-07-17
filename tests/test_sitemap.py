@@ -87,11 +87,12 @@ class TestSitemapParser:
     async def test_robots_parser_extracts_sitemap_directives(self):
         class Client:
             async def get_text(self, url):
-                return """
+                robots_txt = """
                 User-agent: *
                 Sitemap: https://example.com/sitemap.xml
                 Sitemap: https://example.com/news.xml
                 """
+                return robots_txt
 
         parser = self.sitemap_module.RobotsParser(Client())
 
@@ -104,9 +105,9 @@ class TestSitemapParser:
 
     @pytest.mark.asyncio
     async def test_is_allowed_single_flights_concurrent_robots_fetches(self):
-        """is_allowed() is fanned out over many records via asyncio.gather —
-        concurrent callers for the same robots.txt must share one fetch
-        instead of each firing a redundant request."""
+        """is_allowed() is fanned out over many records via asyncio.gather — concurrent
+        callers for the same robots.txt must share one fetch instead of each firing a
+        redundant request."""
 
         class Client:
             def __init__(self):
@@ -212,9 +213,9 @@ class TestSitemapParserEarlyExit:
         cls.sitemap_module = load_sitemap_module()
 
     def _make_client(self, leaf_record_count=20, big_index_children=500):
-        """A root sitemapindex fanning out into a small leaf urlset (fast) and
-        a huge nested sub-index (slow, only worth fetching if more records are
-        still needed)."""
+        """A root sitemapindex fanning out into a small leaf urlset (fast) and a huge
+        nested sub-index (slow, only worth fetching if more records are still
+        needed)."""
         sitemap_module = self.sitemap_module
 
         leaf_urls = "\n".join(
@@ -225,13 +226,14 @@ class TestSitemapParserEarlyExit:
             f"<sitemap><loc>https://example.com/big/{i}.xml</loc></sitemap>"
             for i in range(big_index_children)
         )
+        root_xml = """
+            <sitemapindex>
+              <sitemap><loc>https://example.com/leaf.xml</loc></sitemap>
+              <sitemap><loc>https://example.com/big.xml</loc></sitemap>
+            </sitemapindex>
+        """.encode()
         pages = {
-            "https://example.com/root.xml": f"""
-                <sitemapindex>
-                  <sitemap><loc>https://example.com/leaf.xml</loc></sitemap>
-                  <sitemap><loc>https://example.com/big.xml</loc></sitemap>
-                </sitemapindex>
-            """.encode(),
+            "https://example.com/root.xml": root_xml,
             "https://example.com/leaf.xml": f"""
                 <urlset>{leaf_urls}</urlset>
             """.encode(),
@@ -286,9 +288,9 @@ class TestSitemapParserEarlyExit:
 
     @pytest.mark.asyncio
     async def test_target_count_stops_mid_batch_via_cancellation(self):
-        """A wide, single-level sitemap index (e.g. one file per day for
-        years, all siblings in the same BFS batch) must also be cut short —
-        not just a deep chain of nested indexes."""
+        """A wide, single-level sitemap index (e.g. one file per day for years, all
+        siblings in the same BFS batch) must also be cut short — not just a deep chain
+        of nested indexes."""
         sitemap_module = self.sitemap_module
         n_leaves = 50
         records_per_leaf = 5
@@ -471,9 +473,12 @@ class TestDateRangeFilter:
         assert urls == ["https://example.com/mid"]
 
     def test_strict_filter_no_dates_still_returns_all(self):
-        """strict_date_filter=True always drops no-lastmod URLs when active,
-        even without a date range. The run() guard (start_date/end_date) is
-        what prevents the filter block from running when no dates are given."""
+        """strict_date_filter=True always drops no-lastmod URLs when active, even
+        without a date range.
+
+        The run() guard (start_date/end_date) is what prevents the filter block from
+        running when no dates are given.
+        """
         records = self._make_records()
         result = self._filter(records, strict_date_filter=True)
         # Helper always runs the block; strict=True drops the no-date record

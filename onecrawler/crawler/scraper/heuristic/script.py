@@ -66,6 +66,7 @@ class HeuristicStrategy:
                     url,
                     wait_until=self.settings.browser_settings.wait_until,
                     timeout=self.settings.browser_settings.timeout,
+                    settle_delay=self.settings.browser_settings.settle_delay,
                 )
                 return await page.content()
             finally:

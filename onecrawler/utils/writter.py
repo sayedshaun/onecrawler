@@ -7,7 +7,6 @@ from typing import Any
 
 def _serialize(obj: Any) -> Any:
     """Convert unsupported objects into serializable Python objects."""
-
     if hasattr(obj, "model_dump"):
         return obj.model_dump()
 

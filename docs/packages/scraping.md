@@ -4,8 +4,9 @@ title: Scraping Engine
 
 # Scraping Engine Package
 
-The scraping package provides content extraction engines for scraping web pages with
-both heuristic and AI-powered approaches.
+The scraping package provides content extraction engines for scraping web pages:
+deterministic heuristic extraction, whole-page Markdown conversion, and AI-powered
+structured extraction.
 
 !!! tip "Start with heuristic extraction"
     Use the heuristic strategy for bulk article, blog, documentation, or catalog
@@ -16,7 +17,7 @@ both heuristic and AI-powered approaches.
 
 ### Scraper
 
-Main scraping engine that supports both heuristic and GenAI content extraction strategies.
+Main scraping engine that supports heuristic, markdownify, and GenAI content extraction strategies.
 
 ```python
 from onecrawler import Settings, Scraper
@@ -41,7 +42,12 @@ async with Scraper(settings) as scraper:
 
 #### Strategies
 
-- **Heuristic**: Fast, rule-based extraction using trafilatura
+- **Heuristic**: Fast, rule-based extraction using trafilatura; isolates
+  article-like content and strips boilerplate, but can return little or
+  nothing on non-article pages (e-commerce, dashboards, listings)
+- **Markdownify**: Faithful whole-page HTML-to-Markdown conversion with no
+  content extraction; never returns `None` for a rendered page, so it's the
+  fallback for pages heuristic extraction can't handle
 - **GenAI**: AI-powered extraction with structured output
 
 !!! note "Single URL vs list behavior"
@@ -69,14 +75,36 @@ content = await strategy.extract(url)
 - **Language detection**: Automatic language identification
 - **Content cleaning**: Removes boilerplate and navigation
 
-### GenAIStrategy
+### MarkdownifyStrategy
+
+Whole-page HTML-to-Markdown conversion using `html-to-markdown`, with no content
+extraction.
+
+```python
+from onecrawler.crawler.scraper.markdown.script import MarkdownifyStrategy
+
+strategy = MarkdownifyStrategy(settings, browser=browser)
+content = await strategy.extract(url)
+```
+
+#### Features
+
+- **Never empty**: Converts the whole rendered page, so it works on pages
+  heuristic extraction returns little or nothing for
+- **Faithful conversion**: Keeps navigation, footers, and other page chrome —
+  no boilerplate removal and no extracted metadata
+- **Deterministic filtering**: Set `settings.exclude_selectors` (e.g.
+  `["nav", "footer", ".cookie-banner"]`) to strip known chrome before
+  conversion, at no LLM cost
+
+### LLMStrategy
 
 AI-powered content extraction using language models.
 
 ```python
-from onecrawler.crawler.scraper.genai.executor import GenAIStrategy
+from onecrawler.crawler.scraper.genai.executor import LLMStrategy
 
-strategy = GenAIStrategy(
+strategy = LLMStrategy(
     provider=genai_settings.provider,
     model_name=genai_settings.model_name,
     max_retries=2,
@@ -85,6 +113,8 @@ strategy = GenAIStrategy(
     output_schema=genai_settings.output_schema,
     provider_kwargs=genai_settings.provider_kwargs,
     timeout=genai_settings.timeout,
+    think=genai_settings.think,
+    exclude_selectors=settings.exclude_selectors,
     browser=browser,
 )
 content = await strategy.extract(url)
@@ -111,10 +141,10 @@ async def scrape_heuristic():
         concurrency=10,
         request_timeout=15
     )
-    
+
     async with Scraper(settings) as scraper:
         item = await scraper.run("https://example.com/article")
-    
+
     return item["result"]
 
 if __name__ == "__main__":
@@ -126,7 +156,7 @@ if __name__ == "__main__":
 
 ```python
 from pydantic import BaseModel
-from onecrawler import Settings, GenerativeAISettings, Scraper
+from onecrawler import Settings, LLMSettings, Scraper
 
 class Article(BaseModel):
     title: str
@@ -138,7 +168,7 @@ async def scrape_with_ai():
     settings = Settings(
         scraping_strategy="genai",
         scraping_output_format="json",
-        genai=GenerativeAISettings(
+        genai=LLMSettings(
             provider="openai",
             model_name="gpt-4o-mini",
             api_key="your-api-key",
@@ -147,10 +177,10 @@ async def scrape_with_ai():
         concurrency=2,
         request_timeout=30
     )
-    
+
     async with Scraper(settings) as scraper:
         item = await scraper.run("https://example.com/article")
-    
+
     return item["result"]  # an Article instance
 
 if __name__ == "__main__":
@@ -171,16 +201,16 @@ async def scrape_multiple():
         "https://example.com/article2",
         "https://example.com/article3"
     ]
-    
+
     settings = Settings(
         scraping_strategy="heuristic",
         concurrency=5,
         max_retries=3
     )
-    
+
     async with Scraper(settings) as scraper:
         results = await scraper.run(urls)  # [{"url": ..., "result": ...}, ...]
-    
+
     return results
 ```
 
@@ -196,8 +226,9 @@ Scraping behavior is controlled through `Settings`:
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `scraping_strategy` | `"heuristic"` or `"genai"` | `"heuristic"` |
-| `scraping_output_format` | Output format | `"json"` |
+| `scraping_strategy` | `"heuristic"`, `"genai"`, or `"markdownify"` | `"heuristic"` |
+| `scraping_output_format` | Output format (ignored by `"markdownify"`) | `"json"` |
+| `exclude_selectors` | CSS selectors to strip before conversion (`"markdownify"`/`"genai"`) | `None` |
 | `concurrency` | Number of parallel workers | `10` |
 | `request_timeout` | Per-request timeout | `10` |
 | `max_retries` | Retry attempts | `2` |
@@ -211,6 +242,11 @@ Scraping behavior is controlled through `Settings`:
 - **Markdown**: Clean text formatting
 - **XML**: Original TEI-agnostic XML structure
 - **XML-TEI**: TEI-conformant XML output
+
+### Markdownify Strategy
+
+- **Markdown only**: `scraping_output_format` is ignored; always returns a
+  plain Markdown string of the whole page, with no extracted metadata
 
 ### GenAI Strategy
 
@@ -286,7 +322,7 @@ from onecrawler.utils import writter
 
 async def scrape_and_save():
     settings = Settings(scraping_strategy="heuristic")
-    
+
     async with Scraper(settings) as scraper:
         item = await scraper.run("https://example.com/article")
 
@@ -300,11 +336,11 @@ from onecrawler import Settings, Scraper
 
 async def scrape_to_database():
     settings = Settings(scraping_strategy="heuristic")
-    
+
     async with Scraper(settings) as scraper:
         urls = ["https://example.com/page1", "https://example.com/page2"]
         results = await scraper.run(urls)
-    
+
     # Save to database
     for item in results:
         await save_to_database(item["url"], item["result"])
@@ -326,7 +362,6 @@ Enable detailed logging for troubleshooting:
 
 ```python
 settings = Settings(
-    enable_logging=True,
     logging_level="DEBUG"
 )
 ```

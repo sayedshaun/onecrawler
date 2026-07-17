@@ -34,14 +34,11 @@ async def human_scroll(page: Page, max_scrolls: int = 10) -> None:
         last_height = await page.evaluate("document.body.scrollHeight")
 
         for _ in range(max_scrolls):
-
             await page.evaluate(
+                """window.scrollTo( 0,
+
+                document.body.scrollHeight )
                 """
-                window.scrollTo(
-                    0,
-                    document.body.scrollHeight
-                )
-            """
             )
 
             await asyncio.sleep(1)
@@ -130,7 +127,6 @@ def wildcard_link_match(
             [],            # no filter → always True
         )  # True
     """
-
     if not isinstance(link, str) or not link.startswith(base_prefix):
         return False
 

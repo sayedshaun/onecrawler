@@ -46,7 +46,7 @@ from onecrawler import (
 
 ::: onecrawler.BrowserSettings
 
-::: onecrawler.GenerativeAISettings
+::: onecrawler.LLMSettings
 
 ::: onecrawler.HumanBehaviorSettings
 

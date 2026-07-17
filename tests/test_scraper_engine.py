@@ -11,8 +11,8 @@ from onecrawler.crawler.engine import Scraper
 
 
 def _make_scraper(extract):
-    """Builds a Scraper instance without going through __init__/start(),
-    which would require a live Settings/browser stack."""
+    """Builds a Scraper instance without going through __init__/start(), which would
+    require a live Settings/browser stack."""
     scraper = Scraper.__new__(Scraper)
     scraper._closed = False
     scraper.settings = types.SimpleNamespace(
@@ -80,9 +80,8 @@ async def test_process_returns_none_for_failed_extraction():
 
 @pytest.mark.asyncio
 async def test_stream_preserves_url_mapping_despite_out_of_order_completion():
-    """The first URL takes longest, so completion order differs from input
-    order — url tagging must not rely on positional/index correspondence."""
-
+    """The first URL takes longest, so completion order differs from input order — url
+    tagging must not rely on positional/index correspondence."""
     delays = {
         "https://example.com/slow": 0.05,
         "https://example.com/fast": 0.0,

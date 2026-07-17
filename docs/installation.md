@@ -38,21 +38,11 @@ python -m playwright install --with-deps chromium
     sandbox restrictions. Start with `python -m playwright install --with-deps
     chromium` in those environments.
 
-## Optional GenAI Dependencies
+## GenAI Extraction
 
-Install the GenAI extra when you use model-assisted extraction.
-
-```bash
-pip install "onecrawler[genai]"
-```
-
-This installs the optional LangGraph and markdownify dependencies used by the GenAI
-components.
-
-!!! tip "Install GenAI extras only when needed"
-    The default install is enough for sitemap discovery, link extraction, and
-    heuristic scraping. Add `onecrawler[genai]` only for model-assisted structured
-    extraction.
+GenAI extraction needs no extra install — its dependencies ship with the
+default package. It only requires access to a provider: an API key for
+OpenAI or Google, or a running Ollama instance.
 
 ## Install From Source
 

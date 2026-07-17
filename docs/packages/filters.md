@@ -279,7 +279,7 @@ keep = chain({"text": "python web scraping", "date": "2025-03-15"})
 
 ## Custom Filters
 
-You can easily write your own custom filters to implement advanced filtering logic (such as deep semantic similarity, content analysis, or third-party API integration). 
+You can easily write your own custom filters to implement advanced filtering logic (such as deep semantic similarity, content analysis, or third-party API integration).
 
 A custom filter is simply any callable that takes a `dict` (the extracted page item) and returns a `bool` (`True` to keep the item, `False` to discard it). If you want your filter to accept parameters, you can write a factory function that returns a closure.
 
@@ -299,7 +299,7 @@ def by_semantic_similarity(query: str, threshold: float = 0.3) -> Callable[[dict
         doc_text = item.get("content") or item.get("title") or item.get("text") or ""
         if not doc_text:
             return False
-        
+
         # Compute semantic similarity using embeddings
         doc_emb = model.encode(doc_text, convert_to_tensor=True)
         score = float(util.cos_sim(query_emb, doc_emb)[0][0])

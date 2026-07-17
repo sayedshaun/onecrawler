@@ -9,7 +9,6 @@ class BrowserSettings:
     """Settings for a browser instance.
 
     Attributes:
-        user_data_dir (str): Directory for browser profile data.
         proxy (Optional[ProxySettings]): Proxy configuration.
         viewport (Optional[Dict[str, int]]): The default viewport size for each page.
         screen (Optional[Dict[str, int]]): The screen size.
@@ -34,9 +33,13 @@ class BrowserSettings:
         env (Optional[Dict[str, str]]): Environment variables that will be visible to the browser.
         wait_until (str): When to consider navigation finished (e.g., "domcontentloaded").
         timeout (int): Timeout for browser operations in milliseconds.
+        settle_delay (int): Extra time in milliseconds to wait after navigation
+            before capturing the page, letting client-side/JS-rendered content
+            (e.g. prices or listings on SPA sites) hydrate. Defaults to 1500ms
+            so dynamic sites work out of the box; set ``0`` to disable it for
+            faster crawls on static sites.
     """
 
-    user_data_dir: str = ".chrome"
     proxy: Optional[ProxySettings] = None
 
     viewport: Optional[Dict[str, int]] = field(
@@ -81,3 +84,4 @@ class BrowserSettings:
 
     wait_until: str = "domcontentloaded"
     timeout: int = 30000
+    settle_delay: int = 1500

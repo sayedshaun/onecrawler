@@ -5,7 +5,7 @@ from typing import List, Literal, Optional
 
 from ..proxy.pool import ProxyPool
 from .browser import BrowserSettings
-from .genai import GenerativeAISettings
+from .genai import LLMSettings
 from .proxy import ProxyRotationMethod, ProxySettings
 from .simulation import HumanBehaviorSettings
 from .sitemap import SitemapSettings
@@ -14,22 +14,23 @@ from .sitemap import SitemapSettings
 class ScrapingStrategy(str, Enum):
     """Content-extraction strategy used by a crawl.
 
-    Subclasses ``str``, so it's interchangeable with the plain string
-    values (``"heuristic"``, ``"genai"``) that ``Settings.scraping_strategy``
-    has always accepted — existing code passing raw strings keeps working
-    unchanged, while internal code can compare against named members
-    instead of repeating string literals.
+    Subclasses ``str``, so it's interchangeable with the plain string values
+    (``"heuristic"``, ``"genai"``, ``"markdownify"``) that
+    ``Settings.scraping_strategy`` accepts — existing code passing raw strings keeps
+    working unchanged, while internal code can compare against named members instead of
+    repeating string literals.
     """
 
     HEURISTIC = "heuristic"
     GENAI = "genai"
+    MARKDOWNIFY = "markdownify"
 
 
 class LinkExtractionStrategy(str, Enum):
     """Strategy for finding links on a page.
 
-    Subclasses ``str``, so it's interchangeable with the plain string
-    values (``"shallow"``, ``"deep"``) this has always accepted.
+    Subclasses ``str``, so it's interchangeable with the plain string values
+    (``"shallow"``, ``"deep"``) this has always accepted.
     """
 
     SHALLOW = "shallow"
@@ -39,10 +40,10 @@ class LinkExtractionStrategy(str, Enum):
 class OutputFormat(str, Enum):
     """Output format for scraped content.
 
-    Subclasses ``str``, so it's interchangeable with the plain string
-    values (``"markdown"``, ``"json"``, ``"xml"``, ``"xmltei"``) this has
-    always accepted, and passes straight through to ``trafilatura``'s own
-    ``output_format`` argument, which expects these same string values.
+    Subclasses ``str``, so it's interchangeable with the plain string values
+    (``"markdown"``, ``"json"``, ``"xml"``, ``"xmltei"``) this has always accepted, and
+    passes straight through to ``trafilatura``'s own ``output_format`` argument, which
+    expects these same string values.
     """
 
     MARKDOWN = "markdown"
@@ -67,31 +68,36 @@ class Settings:
 
     Attributes:
         sitemap (SitemapSettings): Configuration for sitemap discovery.
-        verbose (bool): Whether to enable verbose output/logging.
         link_extraction_strategy (Literal["shallow", "deep"]): Strategy for finding links on pages.
         link_extraction_limit (int): Maximum number of valid links to extract per run.
         include_link_patterns (Optional[List[str]]): Wildcard patterns for links to include.
         exclude_link_patterns (Optional[List[str]]): Wildcard patterns for links to exclude.
-        scraping_strategy (Literal["heuristic", "genai"]): Strategy for content extraction.
+        scraping_strategy (Literal["heuristic", "genai", "markdownify"]): Strategy for content extraction.
         scraping_output_format (str): The desired format for scraped data.
-        genai (Optional[GenerativeAISettings]): Configuration for AI-powered scraping.
+        exclude_selectors (Optional[List[str]]): CSS selectors (e.g.
+            ``["nav", "footer", ".cookie-banner"]``) to strip before HTML-to-
+            Markdown conversion. Applies to the ``markdownify`` and ``genai``
+            strategies, which both convert whole-page HTML. ``None`` (the
+            default) converts the page as-is.
+        genai (Optional[LLMSettings]): Configuration for AI-powered scraping.
         concurrency (int): Number of concurrent workers/pages.
         max_retries (int): Number of retries for failed requests/actions.
         request_timeout (int): Timeout for requests in seconds.
         retry_delay (int): Delay between retries in seconds.
-        proxy (Optional[ProxySettings]): Single proxy configuration.
-        proxies (Optional[List[ProxySettings]]): List of proxies for rotation.
+        proxies (Optional[List[ProxySettings]]): Proxies to use. A single proxy
+            is just a one-element list; multiple proxies rotate per
+            ``proxy_rotation_method``.
         proxy_rotation_method (Literal["round_robin", "random"]): Strategy for proxy rotation.
         browser_settings (BrowserSettings): Configuration for the browser instance.
         show_progress (bool): Whether to display tqdm progress bars.
-        enable_logging (bool): Whether to enable standard logging.
-        logging_level (str): The logging level (e.g., "INFO").
-        enable_human_behaviors (bool): Whether to simulate human browsing patterns.
-        human_behavior_settings (HumanBehaviorSettings): Configuration for human simulation.
+        logging_level (Optional[str]): Log level (e.g., "INFO"). ``None`` (the
+            default) leaves logging unconfigured.
+        human_behavior_settings (Optional[HumanBehaviorSettings]): Human-browsing
+            simulation config. ``None`` (the default) disables simulation;
+            pass a ``HumanBehaviorSettings`` to enable it.
     """
 
     sitemap: SitemapSettings = field(default_factory=SitemapSettings)
-    verbose: bool = True
 
     link_extraction_strategy: Literal["shallow", "deep"] = "deep"
     link_extraction_limit: int = 50
@@ -99,17 +105,17 @@ class Settings:
     include_link_patterns: Optional[List[str]] = None
     exclude_link_patterns: Optional[List[str]] = None
 
-    scraping_strategy: Literal["heuristic", "genai"] = "heuristic"
+    scraping_strategy: Literal["heuristic", "genai", "markdownify"] = "heuristic"
     scraping_output_format: Literal["markdown", "json", "xml", "xmltei"] = "json"
+    exclude_selectors: Optional[List[str]] = None
 
-    genai: Optional[GenerativeAISettings] = None
+    genai: Optional[LLMSettings] = None
 
     concurrency: int = 10
     max_retries: int = 2
     request_timeout: int = 10
     retry_delay: int = 1
 
-    proxy: Optional[ProxySettings] = None
     proxies: Optional[List[ProxySettings]] = None
     proxy_rotation_method: Literal["round_robin", "random"] = "round_robin"
 
@@ -117,13 +123,9 @@ class Settings:
 
     show_progress: bool = True
 
-    enable_logging: bool = False
-    logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    logging_level: Optional[Literal["DEBUG", "INFO", "WARNING", "ERROR"]] = None
 
-    enable_human_behaviors: bool = False
-    human_behavior_settings: HumanBehaviorSettings = field(
-        default_factory=HumanBehaviorSettings
-    )
+    human_behavior_settings: Optional[HumanBehaviorSettings] = None
 
     def __post_init__(self):
         """Validates settings after initialization."""
@@ -147,9 +149,9 @@ class Settings:
                 "proxy_rotation_method must be one of "
                 f"{_PROXY_ROTATION_METHODS}, got {self.proxy_rotation_method!r}"
             )
-        if self.logging_level not in _LOGGING_LEVELS:
+        if self.logging_level is not None and self.logging_level not in _LOGGING_LEVELS:
             raise ValueError(
-                f"logging_level must be one of {_LOGGING_LEVELS}, "
+                f"logging_level must be one of {_LOGGING_LEVELS} or None, "
                 f"got {self.logging_level!r}"
             )
 
@@ -163,19 +165,12 @@ class Settings:
             raise ValueError(f"retry_delay must be >= 0, got {self.retry_delay}")
         if self.link_extraction_limit < 0:
             raise ValueError(
-                "link_extraction_limit must be >= 0, got "
-                f"{self.link_extraction_limit}"
+                f"link_extraction_limit must be >= 0, got {self.link_extraction_limit}"
             )
 
-        if self.enable_logging:
+        if self.logging_level is not None:
             logging.getLogger("onecrawler").setLevel(self.logging_level)
             logging.getLogger("trafilatura").setLevel(logging.ERROR)
-
-        if self.proxy and self.proxies:
-            raise ValueError("Use either proxy or proxies, not both")
-
-        if self.proxy and not self.browser_settings.proxy:
-            self.browser_settings.proxy = self.proxy
 
         if self.scraping_strategy == ScrapingStrategy.GENAI:
             if self.scraping_output_format != OutputFormat.JSON:
@@ -192,8 +187,6 @@ class Settings:
         """
         if self.proxies:
             proxies = self.proxies
-        elif self.proxy:
-            proxies = [self.proxy]
         elif self.browser_settings.proxy:
             proxies = [self.browser_settings.proxy]
         else:

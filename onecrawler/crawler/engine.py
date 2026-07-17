@@ -10,8 +10,9 @@ from .link.deep import BFSRuntime
 from .link.shallow import extract_url_from_current_page
 from .pool import BrowserPool
 from .scheduler import BFScheduler
-from .scraper.genai.executor import GenAIStrategy
+from .scraper.genai.executor import LLMStrategy
 from .scraper.heuristic.script import HeuristicStrategy
+from .scraper.markdown.script import MarkdownifyStrategy
 from .spider import LinkSpider
 
 
@@ -27,7 +28,7 @@ class Scraper(BaseEngine):
     Attributes:
         settings (Settings): Configuration settings for scraping.
         strategy (Optional[Any]): The content-extraction strategy in use
-            (``HeuristicStrategy`` or ``GenAIStrategy``); set on ``start()``.
+            (``HeuristicStrategy`` or ``LLMStrategy``); set on ``start()``.
         browser (Optional[GoogleChrome]): The shared browser instance; set on
             ``start()`` if ``settings.browser_settings`` is configured.
 
@@ -81,11 +82,17 @@ class Scraper(BaseEngine):
                 browser=self.browser,
             )
 
+        elif self.settings.scraping_strategy == ScrapingStrategy.MARKDOWNIFY:
+            self.strategy = MarkdownifyStrategy(
+                settings=self.settings,
+                browser=self.browser,
+            )
+
         elif self.settings.scraping_strategy == ScrapingStrategy.GENAI:
             if not self.settings.genai:
                 raise ValueError("GenAI settings are required for GenAI strategy")
 
-            self.strategy = GenAIStrategy(
+            self.strategy = LLMStrategy(
                 provider=self.settings.genai.provider,
                 model_name=self.settings.genai.model_name,
                 max_retries=self.settings.max_retries,
@@ -94,6 +101,8 @@ class Scraper(BaseEngine):
                 output_schema=self.settings.genai.output_schema,
                 provider_kwargs=self.settings.genai.provider_kwargs,
                 timeout=self.settings.genai.timeout,
+                think=self.settings.genai.think,
+                exclude_selectors=self.settings.exclude_selectors,
                 browser=self.browser,
             )
 
@@ -120,7 +129,6 @@ class Scraper(BaseEngine):
 
     async def _retry(self, fn):
         """Retries a coroutine with exponential backoff."""
-
         for attempt in range(self.retries):
             try:
                 return await fn()
@@ -144,10 +152,10 @@ class Scraper(BaseEngine):
     async def _process(self, url: str) -> Optional[dict]:
         """Processes a single URL.
 
-        Wraps the extracted content with its source ``url`` so results stay
-        traceable regardless of the extraction strategy's return shape (a
-        dict, plain text, or a GenAI ``output_schema`` model instance) and
-        regardless of completion order in ``stream()``.
+        Wraps the extracted content with its source ``url`` so results stay traceable
+        regardless of the extraction strategy's return shape (a dict, plain text, or a
+        GenAI ``output_schema`` model instance) and regardless of completion order in
+        ``stream()``.
         """
 
         async with self.semaphore:
@@ -177,7 +185,6 @@ class Scraper(BaseEngine):
             (a dict, plain text, or a GenAI ``output_schema`` model instance).
             URLs that fail extraction after retries are silently skipped.
         """
-
         self._ensure_open()
         links = link if isinstance(link, list) else [link]
 
@@ -231,7 +238,6 @@ class Scraper(BaseEngine):
             input if some URLs failed extraction); a single such dict (or
             ``None``) when ``link`` is a single URL.
         """
-
         results = []
         async for result in self.stream(link):
             results.append(result)
@@ -380,7 +386,7 @@ class LinkExtractor(BaseEngine):
             max_links=self.settings.link_extraction_limit,
             include_pattern=self.settings.include_link_patterns,
             exclude_pattern=self.settings.exclude_link_patterns,
-            enable_human_behaviors=self.settings.enable_human_behaviors,
+            enable_human_behaviors=self.settings.human_behavior_settings is not None,
             human_behavior_settings=self.settings.human_behavior_settings,
             concurrency=self.settings.concurrency,
             streaming=True,

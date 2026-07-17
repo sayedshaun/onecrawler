@@ -1,10 +1,33 @@
 repos:
-  - repo: https://github.com/psf/black
-    rev: 24.10.0
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
     hooks:
-      - id: black
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        # mkdocs.yml uses mkdocs-material's custom Python-object YAML tags
+        # (e.g. !!python/name:material.extensions.emoji.to_svg), which PyYAML's
+        # safe loader can't parse even though mkdocs itself loads it fine.
+        exclude: ^mkdocs\.yml$
+      - id: check-toml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: mixed-line-ending
 
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
+  - repo: https://github.com/PyCQA/docformatter
+    rev: v1.7.8
     hooks:
-      - id: isort
+      - id: docformatter
+        # docformatter reads pyproject.toml for config; on Python <3.11 it
+        # needs the tomli backport (tomllib is stdlib only from 3.11+).
+        # Without it, docformatter's fallback import silently leaves
+        # `tomllib` undefined and crashes with NameError on any pyproject.toml.
+        additional_dependencies: [tomli]
+        args: [--in-place, --wrap-descriptions=88, --wrap-summaries=88]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "onecrawler"
-version = "0.1.8"
+version = "0.1.9"
 description = "An async python crawling framework for discovering URLs, extracting links, and scraping structured content."
 readme = "README.md"
 license = "MIT"
@@ -33,13 +33,10 @@ dependencies = [
     "trafilatura>=2.0.0",
     "lxml>=5.4.0",
     "httpx>=0.28.1",
+    "html-to-markdown>=3.8.0",
 ]
 
 [project.optional-dependencies]
-genai = [
-    "langgraph>=1.1.10",
-    "markdownify>=1.2.2"
-]
 dev = [
     "toml>=0.10.2",
     "black>=26.3.1",
@@ -64,6 +61,15 @@ target-version = ["py310"]
 [tool.isort]
 profile = "black"
 line_length = 88
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint.per-file-ignores]
+# Barrel modules intentionally re-export names for the public API; the
+# imports are "unused" only from ruff's local-usage perspective.
+"__init__.py" = ["F401", "F403"]
 
 [project.urls]
 Homepage = "https://github.com/sayedshaun/onecrawler"

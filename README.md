@@ -50,6 +50,7 @@ async with Scraper(settings) as scraper_engine:
 | **Content filtering** | Composable post-extraction filters by date, keywords, file type, and cosine similarity with `AND`/`OR`/`NOT` logic |
 | **Async performance** | Tunable concurrency, retries, timeouts, and crawl limits |
 | **Content extraction** | Heuristic extraction with `trafilatura` for fast article-like content |
+| **Markdown conversion** | Whole-page HTML-to-Markdown fallback for pages heuristic extraction can't handle (non-article, e-commerce, dashboards) |
 | **GenAI extraction** | Optional model-assisted extraction for strongly typed Pydantic outputs |
 | **Output formats** | `markdown`, `json`, `xml`, `xmltei` |
 | **Proxy support** | Single proxy or rotating proxy pools for browser and sitemap workflows |
@@ -65,6 +66,7 @@ async with Scraper(settings) as scraper_engine:
 | Links from one listing page | Shallow `LinkExtractor` | Reads direct same-site links from the page |
 | Recursive discovery through navigation | Deep `LinkExtractor` | Follows internal links until your configured limit |
 | Bulk article or page text extraction | Heuristic `Scraper` | Deterministic and avoids model cost |
+| Non-article pages (product, docs, dashboards) | `markdownify` `Scraper` | Never returns empty; heuristic extraction is article-biased |
 | Typed fields or semantic normalization | GenAI extraction | Produces schema-shaped output for downstream systems |
 
 ---
@@ -81,14 +83,8 @@ Install Playwright browser binaries when you use browser-backed crawling or scra
 python -m playwright install chromium
 ```
 
-Install optional GenAI dependencies when you use model-assisted extraction:
-
-```bash
-pip install "onecrawler[genai]"
-```
-
 > [!NOTE]
-> GenAI extraction requires an API key from your chosen provider (OpenAI, Google) or a running Ollama instance. See [GenAI Extraction](#genai-extraction-with-a-schema) for details.
+> GenAI extraction works out of the box — no extra install is needed. It only requires an API key from your chosen provider (OpenAI, Google) or a running Ollama instance. See [GenAI Extraction](#genai-extraction-with-a-schema) for details.
 
 For local development:
 
@@ -164,7 +160,7 @@ if __name__ == "__main__":
 ## Separate Workflow
 
 ```python
-from onecrawler import Settings, LinkExtractor, Scraper
+from onecrawler import HumanBehaviorSettings, LinkExtractor, Scraper, Settings
 from onecrawler.utils import writter
 
 async def main():
@@ -174,7 +170,7 @@ async def main():
         concurrency=7,
         scraping_strategy="heuristic",
         scraping_output_format="json",
-        enable_human_behaviors=True,
+        human_behavior_settings=HumanBehaviorSettings(),
     )
 
     async with LinkExtractor(settings) as link_engine:
@@ -324,15 +320,11 @@ async with Crawler(settings) as engine:
 
 Use GenAI extraction when you need a strongly typed response shape instead of plain content.
 
-```bash
-pip install "onecrawler[genai]"
-```
-
 ```python
 import asyncio
 from typing import Optional
 from pydantic import BaseModel
-from onecrawler import Settings, GenerativeAISettings, Scraper
+from onecrawler import Settings, LLMSettings, Scraper
 
 
 class ArticleSummary(BaseModel):
@@ -347,7 +339,7 @@ async def main():
     settings = Settings(
         scraping_strategy="genai",
         scraping_output_format="json",
-        genai=GenerativeAISettings(
+        genai=LLMSettings(
             provider="openai",
             model_name="gpt-4o-mini",
             api_key="YOUR_API_KEY",
@@ -394,7 +386,7 @@ if __name__ == "__main__":
 ```python
 settings = Settings(
     scraping_strategy="genai",
-    genai=GenerativeAISettings(
+    genai=LLMSettings(
         provider="ollama",
         model_name="llama3:8b",
         base_url="http://localhost:11434/",
@@ -405,6 +397,9 @@ settings = Settings(
 
 > [!NOTE]
 > Ollama requires a running local instance. Install it from [ollama.com](https://ollama.com) and pull your model (`ollama pull llama3:8b`) before running.
+
+> [!WARNING]
+> For "thinking" models (qwen3, deepseek-r1, etc.), keep `LLMSettings(think=False)` (the default). Ollama returns an empty response for schema-constrained structured output when thinking is enabled. Set `think=True` only for free-form, non-schema use.
 
 ---
 
@@ -429,7 +424,7 @@ settings = Settings(
 )
 ```
 
-Use `proxy=ProxySettings(...)` for a single proxy, or `proxies=[...]` with `proxy_rotation_method` for a pool.
+Use `proxies=[ProxySettings(...)]` for a single proxy (a one-element list), or add more entries with `proxy_rotation_method` for a pool.
 
 > [!TIP]
 > `round_robin` rotation distributes requests evenly across your proxy pool. For rate-limited targets, pair this with a modest `concurrency` value and a `retry_delay` to avoid triggering bans.
@@ -446,6 +441,9 @@ Use `proxy=ProxySettings(...)` for a single proxy, or `proxies=[...]` with `prox
 
 > [!TIP]
 > Use heuristic scraping (`scraping_strategy="heuristic"`) for bulk content extraction. Reserve GenAI extraction for cases where you genuinely need structured, schema-shaped output — it adds latency and cost at scale.
+
+> [!TIP]
+> If heuristic extraction returns `None` or very little on non-article pages (product listings, dashboards, docs), switch to `scraping_strategy="markdownify"`. It never returns empty for a rendered page, at the cost of including page chrome (nav, footers) in the output.
 
 > [!CAUTION]
 > Respect `robots.txt` and a site's terms of service before crawling. Onecrawler does not enforce crawl policies automatically — you are responsible for staying within allowed access patterns.

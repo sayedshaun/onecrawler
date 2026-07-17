@@ -12,14 +12,14 @@ from tests._support import (
 
 
 def load_pipeline_modules():
-    """Load required modules for Crawler testing"""
+    """Load required modules for Crawler testing."""
     try:
         # Try to import from main package first
         import onecrawler
 
         if hasattr(onecrawler, "Crawler"):
             return onecrawler
-    except ImportError as e:
+    except ImportError:
         pass
 
     # If main package fails due to missing dependencies or has been stubbed by
@@ -78,7 +78,6 @@ class TestPipeline:
             concurrency=2,
             link_extraction_limit=5,
             include_link_patterns=["/news/*"],
-            enable_human_behaviors=False,
             human_behavior_settings=self.simulation_settings_module.HumanBehaviorSettings(),
         )
 
@@ -92,7 +91,6 @@ class TestPipeline:
         self.mock_settings.scraping_strategy = "heuristic"
         self.mock_settings.genai = None
         self.mock_settings.max_retries = 2
-        self.mock_settings.enable_human_behaviors = False
         self.mock_settings.human_behavior_settings = (
             self.simulation_settings_module.HumanBehaviorSettings()
         )
@@ -163,7 +161,7 @@ class TestPipeline:
 
         with (
             patch("onecrawler.crawler.crawl.GoogleChrome") as mock_chrome,
-            patch("onecrawler.crawler.crawl.GenAIStrategy") as mock_strategy,
+            patch("onecrawler.crawler.crawl.LLMStrategy") as mock_strategy,
             patch("onecrawler.crawler.crawl.HeuristicStrategy") as mock_heuristic,
         ):
             mock_chrome_instance = AsyncMock()
@@ -188,6 +186,8 @@ class TestPipeline:
                 output_schema=self.mock_settings.genai.output_schema,
                 provider_kwargs=self.mock_settings.genai.provider_kwargs,
                 timeout=self.mock_settings.genai.timeout,
+                think=self.mock_settings.genai.think,
+                exclude_selectors=self.mock_settings.exclude_selectors,
                 browser=mock_chrome_instance,
             )
             mock_strategy_instance.initialize.assert_called_once()
@@ -276,7 +276,8 @@ class TestPipeline:
 
     @pytest.mark.asyncio
     async def test_pipeline_runtime_date_filtering(self):
-        """Test CrawlerRuntime correctly filters content by date range via content_filter."""
+        """Test CrawlerRuntime correctly filters content by date range via
+        content_filter."""
         import datetime
 
         start_obj = datetime.datetime.strptime("2024-01-01", "%Y-%m-%d")
@@ -334,11 +335,9 @@ class TestPipeline:
 
     @pytest.mark.asyncio
     async def test_pipeline_runtime_invalid_date_format(self):
-        """Test CrawlerRuntime content_filter handles invalid date formats gracefully."""
+        """Test CrawlerRuntime content_filter handles invalid date formats
+        gracefully."""
         import datetime
-
-        start_obj = datetime.datetime.strptime("2024-01-01", "%Y-%m-%d")
-        end_obj = datetime.datetime.strptime("2024-12-31", "%Y-%m-%d")
 
         def date_filter(content):
             date_str = content.get("filedate") or content.get("date")
@@ -397,8 +396,8 @@ class TestPipeline:
 
     @pytest.mark.asyncio
     async def test_worker_reuses_loaded_page_html(self):
-        """The worker hands the already-loaded page's HTML to the strategy
-        instead of letting it navigate to the URL a second time."""
+        """The worker hands the already-loaded page's HTML to the strategy instead of
+        letting it navigate to the URL a second time."""
         html_marker = "<html><body>REUSED</body></html>"
 
         class FakePage:
@@ -450,12 +449,14 @@ class TestPipeline:
 
     @pytest.mark.asyncio
     async def test_run_never_exceeds_max_links_under_concurrency(self):
-        """Regression test: workers used to check the max_links cap only
-        AFTER unconditionally appending, so several concurrent workers could
-        all pass the cap simultaneously and overshoot it. A real (if tiny)
-        delay in extraction is required to force genuine task interleaving —
-        awaiting an already-resolved coroutine does not yield to sibling
-        tasks, so purely instant mocks would never exercise the race."""
+        """Regression test: workers used to check the max_links cap only AFTER
+        unconditionally appending, so several concurrent workers could all pass the cap
+        simultaneously and overshoot it.
+
+        A real (if tiny) delay in extraction is required to force genuine task
+        interleaving — awaiting an already-resolved coroutine does not yield to sibling
+        tasks, so purely instant mocks would never exercise the race.
+        """
         max_links = 5
         concurrency = 10
         pending = [f"https://example.com/page-{i}" for i in range(30)]
