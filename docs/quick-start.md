@@ -224,7 +224,6 @@ from onecrawler import HumanBehaviorSettings
 settings = Settings(
     link_extraction_limit=30,
     concurrency=3,
-    enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(
         max_scrolls=3,
         min_delay=1.0,

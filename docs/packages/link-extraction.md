@@ -103,7 +103,6 @@ from onecrawler import Settings, LinkExtractor, HumanBehaviorSettings
 
 settings = Settings(
     link_extraction_strategy="deep",
-    enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(
         min_delay=0.5,
         max_delay=1.5,
@@ -127,7 +126,7 @@ The link extraction behavior is controlled through `Settings`:
 | `include_link_patterns` | URL path patterns to include | `None` |
 | `exclude_link_patterns` | URL path patterns to exclude | `None` |
 | `concurrency` | Number of parallel browser workers | `10` |
-| `enable_human_behaviors` | Enable human-like interactions | `False` |
+| `human_behavior_settings` | Pass a `HumanBehaviorSettings` to enable human-like interactions | `None` |
 
 ## Performance Considerations
 

@@ -57,7 +57,6 @@ from onecrawler import Settings, HumanBehaviorSettings
 
 
 settings = Settings(
-    enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(max_scrolls=30),
 )
 ```

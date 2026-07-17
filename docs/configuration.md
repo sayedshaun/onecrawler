@@ -33,14 +33,14 @@ settings = Settings(
 | `link_extraction_limit` | `50` | Hard cap on collected links |
 | `include_link_patterns` | `None` | Allow-list URL paths such as `["/news/*"]` |
 | `exclude_link_patterns` | `None` | Deny-list URL paths such as `["/admin/*"]` |
-| `scraping_strategy` | `"heuristic"` | `heuristic` or `genai` extraction |
-| `scraping_output_format` | `"json"` | `markdown`, `json`, `xml`, or `xmltei` |
+| `scraping_strategy` | `"heuristic"` | `heuristic`, `genai`, or `markdownify` extraction |
+| `scraping_output_format` | `"json"` | `markdown`, `json`, `xml`, or `xmltei` (ignored by `markdownify`, which always returns markdown) |
+| `exclude_selectors` | `None` | CSS selectors (e.g. `["nav", "footer"]`) to strip before HTML-to-Markdown conversion; used by `markdownify` and `genai` |
 | `concurrency` | `10` | Number of async workers |
 | `max_retries` | `2` | Retry attempts for transient failures |
 | `request_timeout` | `10` | Per-request timeout in seconds |
 | `retry_delay` | `1` | Base delay between retries |
-| `enable_logging` | `False` | Whether your app should configure logging |
-| `logging_level` | `"INFO"` | Desired log level |
+| `logging_level` | `None` | Log level (e.g. `"INFO"`); `None` leaves logging unconfigured |
 
 ## Sitemap Settings
 
@@ -98,24 +98,26 @@ settings = Settings(
 
 ## Proxy Settings
 
-Use `proxy` for a single proxy or `proxies` for a rotating proxy pool. The top-level
-settings are the recommended API because they can be shared across sitemap discovery
-and browser-backed workflows.
+Use `proxies` for one or more proxies. A single proxy is just a one-element list;
+multiple proxies rotate per `proxy_rotation_method`. These top-level settings are
+shared across sitemap discovery and browser-backed workflows.
 
 ```python
 from onecrawler import Settings, ProxySettings
 
 
 settings = Settings(
-    proxy=ProxySettings(
-        server="http://proxy.example:8080",
-        username="user",
-        password="pass",
-    )
+    proxies=[
+        ProxySettings(
+            server="http://proxy.example:8080",
+            username="user",
+            password="pass",
+        )
+    ]
 )
 ```
 
-Multiple proxies can rotate with `round_robin` or `random`:
+Multiple proxies rotate with `round_robin` or `random`:
 
 ```python
 settings = Settings(
@@ -127,25 +129,17 @@ settings = Settings(
 )
 ```
 
-`proxy` and `proxies` are mutually exclusive. Use one proxy for a stable route and a
-proxy pool when sitemap discovery or future request-heavy workflows should spread
-traffic across multiple endpoints.
-
-!!! warning "Proxy settings are mutually exclusive"
-    Configure either `proxy` or `proxies`, not both. `Settings` raises a
-    validation error when both are provided.
-
 ## Human Behavior Settings
 
-`enable_human_behaviors` adds optional delay, scroll, and mouse-move simulation
-during deep browser link extraction.
+Passing `human_behavior_settings` adds delay, scroll, and mouse-move simulation
+during deep browser link extraction. Leaving it as `None` (the default) disables
+simulation.
 
 ```python
 from onecrawler import Settings, HumanBehaviorSettings
 
 
 settings = Settings(
-    enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(
         min_delay=0.5,
         max_delay=2.0,
@@ -169,14 +163,6 @@ plain deep crawling, then human behavior simulation only where needed.
 `GenerativeAISettings` is required when `scraping_strategy="genai"`. GenAI output is
 restricted to JSON because structured model responses should be explicit and
 machine-readable.
-
-### Installation
-
-First install the GenAI dependencies:
-
-```bash
-pip install "onecrawler[genai]"
-```
 
 ### Basic Configuration
 
@@ -293,8 +279,7 @@ settings = Settings(
 | `link_extraction_limit` | `50-200` | Controls total pages crawled in Crawler |
 | `include_link_patterns` | Strongly recommended | Scope crawling to relevant sections |
 | `concurrency` | `3-8` | Browser workers for link discovery |
-| `enable_human_behaviors` | `False` (default) or `True` | Simulate human browsing patterns |
-| `human_behavior_settings` | Customizable if enabled | Configure delays, scrolls, mouse movements |
+| `human_behavior_settings` | `None` (off) or a `HumanBehaviorSettings` | Simulate human browsing (delays, scrolls, mouse); presence enables it |
 
 ### Content Filtering
 
@@ -340,11 +325,10 @@ f = AND(by_date(start="2024-01-01"), NOT(by_files(["pdf"])))
 
 ### Human Behavior Settings
 
-When `enable_human_behaviors=True`, configure realistic browsing:
+Pass `human_behavior_settings` to enable and configure realistic browsing:
 
 ```python
 settings = Settings(
-    enable_human_behaviors=True,
     human_behavior_settings=HumanBehaviorSettings(
         min_delay=1.0,        # Minimum delay between actions (seconds)
         max_delay=3.0,        # Maximum delay between actions (seconds)

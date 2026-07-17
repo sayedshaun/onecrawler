@@ -36,8 +36,9 @@ settings = Settings(
 | `link_extraction_limit` | `int` | `50` | Maximum number of URLs to collect |
 | `include_link_patterns` | `List[str]` | `None` | URL path patterns to include |
 | `exclude_link_patterns` | `List[str]` | `None` | URL path patterns to exclude |
-| `scraping_strategy` | `str` | `"heuristic"` | Extraction strategy: `"heuristic"` or `"genai"` |
-| `scraping_output_format` | `str` | `"json"` | Output format for scraped content |
+| `scraping_strategy` | `str` | `"heuristic"` | Extraction strategy: `"heuristic"`, `"genai"`, or `"markdownify"` |
+| `scraping_output_format` | `str` | `"json"` | Output format for scraped content (ignored by `"markdownify"`) |
+| `exclude_selectors` | `List[str]` | `None` | CSS selectors to strip before HTML-to-Markdown conversion; used by `"markdownify"` and `"genai"` |
 | `concurrency` | `int` | `10` | Number of async workers |
 | `request_timeout` | `int` | `10` | Per-request timeout in seconds |
 | `max_retries` | `int` | `2` | Retry attempts for failed requests |
@@ -69,13 +70,12 @@ settings = Settings(
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `proxy` | `ProxySettings` | `None` | Single proxy configuration |
-| `proxies` | `List[ProxySettings]` | `None` | Multiple proxies for rotation |
+| `proxies` | `List[ProxySettings]` | `None` | Proxies to use; one element for a single proxy, more to rotate |
 | `proxy_rotation_method` | `str` | `"round_robin"` | Proxy rotation strategy |
 
 !!! note "Use top-level proxy settings"
-    Prefer `proxy` or `proxies` on `Settings` so sitemap, browser, and
-    Crawler workflows share the same network configuration.
+    Prefer `proxies` on `Settings` so sitemap, browser, and Crawler workflows
+    share the same network configuration.
 
 #### GenAI Settings
 
@@ -113,6 +113,7 @@ genai = GenerativeAISettings(
 | `base_url` | `str` | Optional | Custom endpoint URL (required for Ollama) |
 | `timeout` | `float` | Optional | Per-provider request timeout override in seconds (provider default when unset) |
 | `provider_kwargs` | `dict[str, Any]` | No | Provider-specific keyword arguments |
+| `think` | `bool` | No | Ollama only; default `False`. Enables the model's reasoning trace. Keep `False` for structured output — Ollama returns an empty response for schema-constrained calls when thinking is on. Ignored by OpenAI/Google |
 
 ### BrowserSettings
 
@@ -141,6 +142,9 @@ browser_settings = BrowserSettings(
 | `timezone_id` | `str` | `"Asia/Dhaka"` | Timezone identifier |
 | `user_agent` | `str` | Default | Custom user agent |
 | `storage_state` | `str` | `None` | Path to browser storage state |
+| `wait_until` | `str` | `"domcontentloaded"` | Navigation completion condition |
+| `timeout` | `int` | `30000` | Browser operation timeout in milliseconds |
+| `settle_delay` | `int` | `1500` | Extra wait (ms) after navigation for client-side/JS-rendered content (e.g. SPA prices, listings) to hydrate before the page is captured. Set `0` to disable for faster crawls on static sites |
 
 ### ProxySettings
 
@@ -277,13 +281,12 @@ except ValueError as e:
 ### Validation Rules
 
 1. **GenAI strategy**: Requires `genai` settings and JSON output format
-2. **Proxy configuration**: Cannot use both `proxy` and `proxies` simultaneously
-3. **Human behavior**: Only applies to deep link extraction
-4. **Output formats**: GenAI extraction limited to JSON format
+2. **Human behavior**: Only applies to deep link extraction; enabled by passing `human_behavior_settings`
+3. **Output formats**: GenAI extraction limited to JSON format
 
 !!! tip "Let validation fail early"
-    Build `Settings` near application startup. Invalid proxy combinations or
-    GenAI output formats will fail before a long crawl begins.
+    Build `Settings` near application startup. Invalid GenAI output formats or
+    logging levels will fail before a long crawl begins.
 
 ## Environment Variables
 
