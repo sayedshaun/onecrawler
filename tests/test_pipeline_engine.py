@@ -78,7 +78,6 @@ class TestPipeline:
             concurrency=2,
             link_extraction_limit=5,
             include_link_patterns=["/news/*"],
-            enable_human_behaviors=False,
             human_behavior_settings=self.simulation_settings_module.HumanBehaviorSettings(),
         )
 
@@ -92,7 +91,6 @@ class TestPipeline:
         self.mock_settings.scraping_strategy = "heuristic"
         self.mock_settings.genai = None
         self.mock_settings.max_retries = 2
-        self.mock_settings.enable_human_behaviors = False
         self.mock_settings.human_behavior_settings = (
             self.simulation_settings_module.HumanBehaviorSettings()
         )
@@ -163,7 +161,7 @@ class TestPipeline:
 
         with (
             patch("onecrawler.crawler.crawl.GoogleChrome") as mock_chrome,
-            patch("onecrawler.crawler.crawl.GenAIStrategy") as mock_strategy,
+            patch("onecrawler.crawler.crawl.GenerativeAIStrategy") as mock_strategy,
             patch("onecrawler.crawler.crawl.HeuristicStrategy") as mock_heuristic,
         ):
             mock_chrome_instance = AsyncMock()
@@ -188,6 +186,8 @@ class TestPipeline:
                 output_schema=self.mock_settings.genai.output_schema,
                 provider_kwargs=self.mock_settings.genai.provider_kwargs,
                 timeout=self.mock_settings.genai.timeout,
+                think=self.mock_settings.genai.think,
+                exclude_selectors=self.mock_settings.exclude_selectors,
                 browser=mock_chrome_instance,
             )
             mock_strategy_instance.initialize.assert_called_once()
