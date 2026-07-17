@@ -97,14 +97,14 @@ content = await strategy.extract(url)
   `["nav", "footer", ".cookie-banner"]`) to strip known chrome before
   conversion, at no LLM cost
 
-### GenerativeAIStrategy
+### LLMStrategy
 
 AI-powered content extraction using language models.
 
 ```python
-from onecrawler.crawler.scraper.genai.executor import GenerativeAIStrategy
+from onecrawler.crawler.scraper.genai.executor import LLMStrategy
 
-strategy = GenerativeAIStrategy(
+strategy = LLMStrategy(
     provider=genai_settings.provider,
     model_name=genai_settings.model_name,
     max_retries=2,
@@ -156,7 +156,7 @@ if __name__ == "__main__":
 
 ```python
 from pydantic import BaseModel
-from onecrawler import Settings, GenerativeAISettings, Scraper
+from onecrawler import Settings, LLMSettings, Scraper
 
 class Article(BaseModel):
     title: str
@@ -168,7 +168,7 @@ async def scrape_with_ai():
     settings = Settings(
         scraping_strategy="genai",
         scraping_output_format="json",
-        genai=GenerativeAISettings(
+        genai=LLMSettings(
             provider="openai",
             model_name="gpt-4o-mini",
             api_key="your-api-key",

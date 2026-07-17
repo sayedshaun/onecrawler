@@ -324,7 +324,7 @@ Use GenAI extraction when you need a strongly typed response shape instead of pl
 import asyncio
 from typing import Optional
 from pydantic import BaseModel
-from onecrawler import Settings, GenerativeAISettings, Scraper
+from onecrawler import Settings, LLMSettings, Scraper
 
 
 class ArticleSummary(BaseModel):
@@ -339,7 +339,7 @@ async def main():
     settings = Settings(
         scraping_strategy="genai",
         scraping_output_format="json",
-        genai=GenerativeAISettings(
+        genai=LLMSettings(
             provider="openai",
             model_name="gpt-4o-mini",
             api_key="YOUR_API_KEY",
@@ -386,7 +386,7 @@ if __name__ == "__main__":
 ```python
 settings = Settings(
     scraping_strategy="genai",
-    genai=GenerativeAISettings(
+    genai=LLMSettings(
         provider="ollama",
         model_name="llama3:8b",
         base_url="http://localhost:11434/",
@@ -399,7 +399,7 @@ settings = Settings(
 > Ollama requires a running local instance. Install it from [ollama.com](https://ollama.com) and pull your model (`ollama pull llama3:8b`) before running.
 
 > [!WARNING]
-> For "thinking" models (qwen3, deepseek-r1, etc.), keep `GenerativeAISettings(think=False)` (the default). Ollama returns an empty response for schema-constrained structured output when thinking is enabled. Set `think=True` only for free-form, non-schema use.
+> For "thinking" models (qwen3, deepseek-r1, etc.), keep `LLMSettings(think=False)` (the default). Ollama returns an empty response for schema-constrained structured output when thinking is enabled. Set `think=True` only for free-form, non-schema use.
 
 ---
 

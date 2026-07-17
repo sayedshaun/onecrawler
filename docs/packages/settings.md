@@ -81,16 +81,16 @@ settings = Settings(
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `genai` | `GenerativeAISettings` | `None` | AI extraction configuration |
+| `genai` | `LLMSettings` | `None` | AI extraction configuration |
 
-### GenerativeAISettings
+### LLMSettings
 
 Configuration for AI-powered content extraction.
 
 ```python
-from onecrawler import GenerativeAISettings
+from onecrawler import LLMSettings
 
-genai = GenerativeAISettings(
+genai = LLMSettings(
     provider="openai",
     model_name="gpt-4o-mini",
     api_key="your-api-key",
@@ -217,7 +217,7 @@ settings = Settings(
 
 ```python
 from pydantic import BaseModel
-from onecrawler import Settings, GenerativeAISettings
+from onecrawler import Settings, LLMSettings
 
 class Article(BaseModel):
     title: str
@@ -226,7 +226,7 @@ class Article(BaseModel):
 
 settings = Settings(
     scraping_strategy="genai",
-    genai=GenerativeAISettings(
+    genai=LLMSettings(
         provider="openai",
         model_name="gpt-4o-mini",
         api_key="your-api-key",
@@ -300,12 +300,12 @@ export OPENAI_API_KEY=your-api-key
 
 ```python
 import os
-from onecrawler import Settings, GenerativeAISettings
+from onecrawler import Settings, LLMSettings
 
 settings = Settings(
     concurrency=int(os.getenv("CRAWLER_CONCURRENCY", 10)),
     request_timeout=int(os.getenv("CRAWLER_REQUEST_TIMEOUT", 10)),
-    genai=GenerativeAISettings(
+    genai=LLMSettings(
         provider="openai",
         api_key=os.getenv("OPENAI_API_KEY"),
         model_name="gpt-4o-mini"

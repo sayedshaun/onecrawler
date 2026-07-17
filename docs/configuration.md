@@ -160,7 +160,7 @@ plain deep crawling, then human behavior simulation only where needed.
 
 ## GenAI Settings
 
-`GenerativeAISettings` is required when `scraping_strategy="genai"`. GenAI output is
+`LLMSettings` is required when `scraping_strategy="genai"`. GenAI output is
 restricted to JSON because structured model responses should be explicit and
 machine-readable.
 
@@ -168,7 +168,7 @@ machine-readable.
 
 ```python
 from pydantic import BaseModel
-from onecrawler import Settings, GenerativeAISettings
+from onecrawler import Settings, LLMSettings
 
 class Product(BaseModel):
     name: str
@@ -178,7 +178,7 @@ class Product(BaseModel):
 settings = Settings(
     scraping_strategy="genai",  # Required for GenAI extraction
     scraping_output_format="json",  # GenAI only supports JSON
-    genai=GenerativeAISettings(
+    genai=LLMSettings(
         provider="openai",  # Options: "openai", "google", "ollama"
         model_name="gpt-4o-mini",
         api_key="YOUR_API_KEY",  # Required for OpenAI/Google, optional for Ollama
@@ -193,7 +193,7 @@ settings = Settings(
 
 #### OpenAI
 ```python
-genai=GenerativeAISettings(
+genai=LLMSettings(
     provider="openai",
     model_name="gpt-4o-mini",
     api_key="sk-...",  # Your OpenAI API key
@@ -203,7 +203,7 @@ genai=GenerativeAISettings(
 
 #### Google
 ```python
-genai=GenerativeAISettings(
+genai=LLMSettings(
     provider="google",
     model_name="gemini-1.5-pro",
     api_key="AIza...",  # Your Google API key
@@ -213,7 +213,7 @@ genai=GenerativeAISettings(
 
 #### Ollama
 ```python
-genai=GenerativeAISettings(
+genai=LLMSettings(
     provider="ollama",
     model_name="llama3:8b",
     base_url="http://localhost:11434/",  # Your Ollama instance
@@ -247,7 +247,7 @@ strategy is faster, cheaper, and easier to reproduce.
 
 !!! warning "GenAI requires JSON output"
     When `scraping_strategy="genai"`, keep `scraping_output_format="json"` and
-    provide `GenerativeAISettings`. Other output formats are rejected during
+    provide `LLMSettings`. Other output formats are rejected during
     settings validation.
 
 ## Crawler Configuration

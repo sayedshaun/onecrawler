@@ -138,7 +138,7 @@ fields in a predefined shape.
 import asyncio
 from typing import Optional
 from pydantic import BaseModel
-from onecrawler import Settings, GenerativeAISettings, Scraper
+from onecrawler import Settings, LLMSettings, Scraper
 
 
 class ArticleSummary(BaseModel):
@@ -153,7 +153,7 @@ async def main():
     settings = Settings(
         scraping_strategy="genai",
         scraping_output_format="json",
-        genai=GenerativeAISettings(
+        genai=LLMSettings(
             provider="openai",
             model_name="gpt-4o-mini",
             api_key="YOUR_API_KEY",
