@@ -287,8 +287,7 @@ Crawler supports composable content filtering via the `filters` parameter on
 `.run()` and `.stream()`. Filters are applied after content extraction.
 
 ```python
-from onecrawler.filters import by_date, by_keywords
-from onecrawler.filters.chain import AND
+from onecrawler.filters import AND, by_date, by_keywords
 
 content_filter = AND(
     by_date(start="2024-01-01", end="2024-12-31"),
@@ -311,10 +310,10 @@ async with Crawler(settings) as engine:
 
 **Composing filters:**
 
-Use `AND`, `OR`, and `NOT` from `onecrawler.filters.chain`:
+Use `AND`, `OR`, and `NOT` from `onecrawler.filters`:
 
 ```python
-from onecrawler.filters.chain import AND, OR, NOT
+from onecrawler.filters import AND, OR, NOT
 
 f = AND(by_date(start="2024-01-01"), NOT(by_files(["pdf"])))
 ```

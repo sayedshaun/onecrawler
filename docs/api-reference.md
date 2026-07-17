@@ -66,11 +66,11 @@ Composable predicates over extracted content dicts. Build a filter, then pass it
 
 Combine filters with boolean logic.
 
-::: onecrawler.filters.chain.AND
+::: onecrawler.filters.AND
 
-::: onecrawler.filters.chain.OR
+::: onecrawler.filters.OR
 
-::: onecrawler.filters.chain.NOT
+::: onecrawler.filters.NOT
 
 ## Output writers
 

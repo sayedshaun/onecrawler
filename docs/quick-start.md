@@ -238,8 +238,7 @@ async with Crawler(settings) as engine:
 
 **With content filtering:**
 ```python
-from onecrawler.filters import by_date, by_cosine_similarity
-from onecrawler.filters.chain import AND
+from onecrawler.filters import AND, by_date, by_cosine_similarity
 
 content_filter = AND(
     by_date(start="2025-01-01"),
