@@ -1,34 +1,64 @@
-# Use an official Python slim image as the base
-FROM python:3.14-slim
+### Builder stage — compiles/installs onecrawler and downloads the Chromium
+### browser binary. Nothing from here lands in the final image except the
+### installed venv and the browser files copied explicitly below.
+FROM python:3.14-slim AS builder
 
-# Set environment variables
-# 1. Prevent Python from writing .pyc files
-# 2. Ensure stdout/stderr are flushed immediately
-# 3. Tell Playwright where to find the browsers
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# Set work directory
 WORKDIR /app
 
-# Install minimal system dependencies
+# build-essential is only needed to compile C-extension dependencies that
+# don't ship a prebuilt wheel for this Python version; it never reaches
+# the final image.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Install into an isolated venv so it can be copied wholesale into the
+# final stage without dragging along build tooling or pip's cache.
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy the full library source before installing, so setuptools'
 # package auto-discovery actually finds the onecrawler package
 COPY . .
 
-# Install onecrawler and its dependencies
 RUN pip install --no-cache-dir .
 
-# Install Playwright browsers and their specific system dependencies
-# OneCrawler primarily uses Chromium
-RUN playwright install chromium --with-deps
+# Download only the Chromium browser bundle here; its OS-level shared-lib
+# dependencies are installed separately in the final stage via
+# `playwright install-deps`, so they aren't duplicated across stages.
+RUN playwright install chromium
+
+
+### Final stage — slim runtime image: no compiler, no repo source, no
+### package-manager caches. Just the installed venv, the browser binary,
+### and the OS libraries Chromium actually needs to run headless.
+FROM python:3.14-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+    PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /ms-playwright /ms-playwright
+
+# Installs the OS shared libraries Chromium needs at runtime, without
+# re-downloading the browser binary itself (already copied in above).
+RUN playwright install-deps chromium \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Optional: Set a non-root user for security
 # This is recommended for production crawlers
