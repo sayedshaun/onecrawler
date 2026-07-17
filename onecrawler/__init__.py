@@ -3,7 +3,7 @@ from .crawler.map.sitemap import SiteMap, SitemapStats, UniversalSiteMap
 from .settings import (
     BrowserSettings,
     GenAIProvider,
-    GenerativeAISettings,
+    LLMSettings,
     HumanBehaviorSettings,
     LinkExtractionStrategy,
     OutputFormat,

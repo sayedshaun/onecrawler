@@ -20,7 +20,7 @@ class TestCrawlerSettings:
             crawler_module.Settings(scraping_strategy="genai")
 
     def test_genai_strategy_requires_json_output(self):
-        settings = genai_module.GenerativeAISettings(
+        settings = genai_module.LLMSettings(
             provider="openai",
             model_name="test-model",
             api_key="test-key",
@@ -34,7 +34,7 @@ class TestCrawlerSettings:
             )
 
     def test_valid_genai_settings_are_accepted(self):
-        genai_settings = genai_module.GenerativeAISettings(
+        genai_settings = genai_module.LLMSettings(
             provider="google",
             model_name="gemini-test",
             api_key="test-key",

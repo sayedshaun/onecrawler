@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class GenerativeAIStrategy:
+class LLMStrategy:
     """Extracts structured content from a page using an LLM.
 
     The extraction pipeline is a straight line with a bounded retry loop:
@@ -68,7 +68,7 @@ class GenerativeAIStrategy:
 
     async def extract(self, url: str, html: Optional[str] = None) -> Optional[Any]:
         if self.llm.schema is None:
-            logger.warning("GenerativeAIStrategy.extract: schema is missing")
+            logger.warning("LLMStrategy.extract: schema is missing")
             return None
 
         # A caller-supplied `html` is reused across every retry; only
@@ -86,13 +86,13 @@ class GenerativeAIStrategy:
                 return response
 
             if attempt < self.max_retries - 1:
-                logger.debug("GenerativeAIStrategy.extract: retrying %s", url)
+                logger.debug("LLMStrategy.extract: retrying %s", url)
 
         return None
 
     async def _fetch_html(self, url: str) -> Optional[str]:
         if self.browser is None:
-            logger.warning("GenerativeAIStrategy._fetch_html: browser is missing")
+            logger.warning("LLMStrategy._fetch_html: browser is missing")
             return None
 
         page = None
@@ -122,7 +122,7 @@ class GenerativeAIStrategy:
             return await page.content()
 
         except Exception as exc:
-            logger.warning("GenerativeAIStrategy._fetch_html failed for %s: %s", url, exc)
+            logger.warning("LLMStrategy._fetch_html failed for %s: %s", url, exc)
             return None
 
         finally:
@@ -142,7 +142,7 @@ class GenerativeAIStrategy:
 
     async def _structured_output(self, markdown: Optional[str]) -> Optional[Any]:
         if not markdown:
-            logger.warning("GenerativeAIStrategy._structured_output: markdown is empty")
+            logger.warning("LLMStrategy._structured_output: markdown is empty")
             return None
 
         schema = self.llm.schema
@@ -155,7 +155,7 @@ class GenerativeAIStrategy:
             return response
         except Exception as exc:
             logger.error(
-                "GenerativeAIStrategy._structured_output failed: %s", exc, exc_info=True
+                "LLMStrategy._structured_output failed: %s", exc, exc_info=True
             )
             return None
 

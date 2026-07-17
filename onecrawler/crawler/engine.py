@@ -10,7 +10,7 @@ from .link.deep import BFSRuntime
 from .link.shallow import extract_url_from_current_page
 from .pool import BrowserPool
 from .scheduler import BFScheduler
-from .scraper.genai.executor import GenerativeAIStrategy
+from .scraper.genai.executor import LLMStrategy
 from .scraper.heuristic.script import HeuristicStrategy
 from .scraper.markdown.script import MarkdownifyStrategy
 from .spider import LinkSpider
@@ -28,7 +28,7 @@ class Scraper(BaseEngine):
     Attributes:
         settings (Settings): Configuration settings for scraping.
         strategy (Optional[Any]): The content-extraction strategy in use
-            (``HeuristicStrategy`` or ``GenerativeAIStrategy``); set on ``start()``.
+            (``HeuristicStrategy`` or ``LLMStrategy``); set on ``start()``.
         browser (Optional[GoogleChrome]): The shared browser instance; set on
             ``start()`` if ``settings.browser_settings`` is configured.
 
@@ -92,7 +92,7 @@ class Scraper(BaseEngine):
             if not self.settings.genai:
                 raise ValueError("GenAI settings are required for GenAI strategy")
 
-            self.strategy = GenerativeAIStrategy(
+            self.strategy = LLMStrategy(
                 provider=self.settings.genai.provider,
                 model_name=self.settings.genai.model_name,
                 max_retries=self.settings.max_retries,

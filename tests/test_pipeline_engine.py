@@ -161,7 +161,7 @@ class TestPipeline:
 
         with (
             patch("onecrawler.crawler.crawl.GoogleChrome") as mock_chrome,
-            patch("onecrawler.crawler.crawl.GenerativeAIStrategy") as mock_strategy,
+            patch("onecrawler.crawler.crawl.LLMStrategy") as mock_strategy,
             patch("onecrawler.crawler.crawl.HeuristicStrategy") as mock_heuristic,
         ):
             mock_chrome_instance = AsyncMock()

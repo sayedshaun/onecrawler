@@ -19,7 +19,7 @@ class GenAIProvider(str, Enum):
 
 
 @dataclass
-class GenerativeAISettings:
+class LLMSettings:
     """Configuration for Generative AI providers and models.
 
     Attributes:

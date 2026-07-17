@@ -19,7 +19,7 @@ from .link.helper import (
 from .navigation import goto
 from .pool import BrowserPool, BrowserPoolExhausted
 from .scheduler import BFScheduler
-from .scraper.genai.executor import GenerativeAIStrategy
+from .scraper.genai.executor import LLMStrategy
 from .scraper.heuristic.script import HeuristicStrategy
 from .scraper.markdown.script import MarkdownifyStrategy
 from .spider import LinkSpider
@@ -397,7 +397,7 @@ class Crawler(BaseEngine):
     Attributes:
         settings (Settings): Configuration for the crawl.
         strategy (Optional[Any]): The content-extraction strategy in use
-            (``HeuristicStrategy`` or ``GenerativeAIStrategy``); set on ``start()``.
+            (``HeuristicStrategy`` or ``LLMStrategy``); set on ``start()``.
         browser (Optional[GoogleChrome]): The shared browser instance; set on
             ``start()``.
 
@@ -474,7 +474,7 @@ class Crawler(BaseEngine):
                 browser=self.browser,
             )
         else:
-            strategy = GenerativeAIStrategy(
+            strategy = LLMStrategy(
                 provider=self.settings.genai.provider,
                 model_name=self.settings.genai.model_name,
                 max_retries=self.settings.max_retries,

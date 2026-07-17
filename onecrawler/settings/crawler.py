@@ -5,7 +5,7 @@ from typing import List, Literal, Optional
 
 from ..proxy.pool import ProxyPool
 from .browser import BrowserSettings
-from .genai import GenerativeAISettings
+from .genai import LLMSettings
 from .proxy import ProxyRotationMethod, ProxySettings
 from .simulation import HumanBehaviorSettings
 from .sitemap import SitemapSettings
@@ -79,7 +79,7 @@ class Settings:
             Markdown conversion. Applies to the ``markdownify`` and ``genai``
             strategies, which both convert whole-page HTML. ``None`` (the
             default) converts the page as-is.
-        genai (Optional[GenerativeAISettings]): Configuration for AI-powered scraping.
+        genai (Optional[LLMSettings]): Configuration for AI-powered scraping.
         concurrency (int): Number of concurrent workers/pages.
         max_retries (int): Number of retries for failed requests/actions.
         request_timeout (int): Timeout for requests in seconds.
@@ -109,7 +109,7 @@ class Settings:
     scraping_output_format: Literal["markdown", "json", "xml", "xmltei"] = "json"
     exclude_selectors: Optional[List[str]] = None
 
-    genai: Optional[GenerativeAISettings] = None
+    genai: Optional[LLMSettings] = None
 
     concurrency: int = 10
     max_retries: int = 2
