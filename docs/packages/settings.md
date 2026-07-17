@@ -57,7 +57,7 @@ settings = Settings(
 | `sitemap.max_depth` | `int` | `3` | Depth limit for HTML fallback |
 | `sitemap.max_pages` | `int` | `500` | Page limit for HTML fallback |
 | `sitemap.user_agent` | `str` | Custom | User agent for sitemap requests |
-| `sitemap.respect_robots` | `bool` | `True` | Enforced by `UniversalSiteMap`: filters sitemap URLs and gates HTML fallback via `robots.txt` (the lower-level `SiteMap` class does not enforce it) |
+| `sitemap.respect_robots` | `bool` | `True` | Enforced by `SiteMap`: filters sitemap URLs and gates HTML fallback via `robots.txt` |
 | `sitemap.deduplicate` | `bool` | `True` | Remove duplicate URLs |
 
 #### Browser Settings

@@ -1,11 +1,10 @@
 import asyncio
 import logging
 import re
-import time
 import warnings
 import zlib
 from datetime import date
-from typing import Callable, List, Optional, Set, Tuple
+from typing import Callable, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
 
@@ -62,189 +61,6 @@ def _safe_gzip_decompress(
             f"Decompressed sitemap exceeds the {max_size}-byte safety limit"
         )
     return output
-
-
-class SitemapStats:
-    """Tracks statistics for sitemap processing.
-
-    Attributes:
-        start_time (float): The timestamp when processing started.
-        urls (int): Number of URLs discovered.
-        sitemaps (int): Number of sitemaps parsed.
-        errors (int): Number of errors encountered.
-    """
-
-    def __init__(self):
-        """Initializes SitemapStats."""
-        self.start_time = time.time()
-        self.urls = 0
-        self.sitemaps = 0
-        self.errors = 0
-
-    def elapsed(self) -> float:
-        """Calculates the elapsed time since initialization.
-
-        Returns:
-            float: Elapsed time in seconds.
-        """
-        return time.time() - self.start_time
-
-    def rate(self) -> float:
-        """Calculates the rate of URL discovery.
-
-        Returns:
-            float: URLs discovered per second.
-        """
-        e = self.elapsed()
-        return self.urls / e if e > 0 else 0
-
-
-class SiteMap:
-    """Base sitemap parser for individual site crawling.
-
-    Deprecated:
-        Use ``UniversalSiteMap`` instead. ``SiteMap`` only walks the raw
-        sitemap XML tree — it doesn't discover sitemaps via robots.txt or
-        common paths, doesn't respect robots.txt, and has no HTML-crawl
-        fallback or date/pattern filtering. ``UniversalSiteMap`` covers
-        everything this class does plus those, so this class will be removed
-        in a future major version.
-
-    Attributes:
-        semaphore (asyncio.Semaphore): Concurrency control.
-        visited_sitemaps (Set[str]): Track visited sitemap URLs.
-        urls (Set[str]): Track discovered URLs.
-        stats (SitemapStats): Execution statistics.
-        timeout (int): Request timeout in seconds.
-        filter_pattern (Optional[List[str]]): URL inclusion patterns.
-        base_prefix (str): Domain prefix for origin checks.
-    """
-
-    def __init__(self, settings: Settings):
-        """Initializes SiteMap.
-
-        Args:
-            settings (Settings): The configuration object.
-        """
-        warnings.warn(
-            "SiteMap is deprecated and will be removed in a future major "
-            "version; use UniversalSiteMap instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.settings = settings
-        self.visited_sitemaps: Set[str] = set()
-        self.urls: Set[str] = set()
-        self.stats = SitemapStats()
-        self.timeout = settings.request_timeout
-        self.filter_pattern = settings.include_link_patterns
-        self.follow_index = settings.sitemap.follow_index
-        self.base_prefix = ""
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        return False
-
-    def _sitemap_url(self, url: str) -> str:
-        """Constructs a default sitemap URL if needed."""
-        return (
-            url.rstrip("/") + "/sitemap.xml" if not url.endswith("sitemap.xml") else url
-        )
-
-    async def _fetch(self, client: "HTTPClient", url: str) -> Optional[bytes]:
-        """Fetches a URL using the shared sitemap HTTP client."""
-        try:
-            return await client.get(url)
-        except Exception:
-            self.stats.errors += 1
-        return None
-
-    async def _parse(self, client: "HTTPClient", sitemap_url: str):
-        """Recursively parses sitemaps and sitemap indexes."""
-        if sitemap_url in self.visited_sitemaps:
-            return
-
-        self.visited_sitemaps.add(sitemap_url)
-        self.stats.sitemaps += 1
-
-        data = await self._fetch(client, sitemap_url)
-        if not data:
-            return
-
-        try:
-            root = etree.fromstring(
-                data, parser=etree.XMLParser(**_SAFE_XML_PARSER_KWARGS)
-            )
-        except Exception:
-            self.stats.errors += 1
-            return
-
-        tag = root.tag.lower()
-
-        if "sitemapindex" in tag:
-            if not self.follow_index:
-                return
-            tasks = []
-            for sm in root:
-                loc = sm.find(".//{*}loc")
-                if loc is not None and loc.text:
-                    tasks.append(self._parse(client, loc.text.strip()))
-            await asyncio.gather(*tasks)
-
-        elif "urlset" in tag:
-            for u in root:
-                loc = u.find(".//{*}loc")
-                if loc is None or not loc.text:
-                    continue
-
-                url = loc.text.strip()
-
-                if self.filter_pattern:
-                    if not wildcard_link_match(
-                        url, self.base_prefix, self.filter_pattern
-                    ):
-                        continue
-
-                if url not in self.urls:
-                    self.urls.add(url)
-                    self.stats.urls += 1
-
-    async def fetch(self, url: str) -> Tuple[List[str], SitemapStats]:
-        """Fetches and parses sitemaps for a given site URL.
-
-        Args:
-            url (str): The site URL to probe for sitemaps.
-
-        Returns:
-            Tuple[List[str], SitemapStats]: A tuple of discovered URLs and stats.
-        """
-        self.sitemap_url = self._sitemap_url(url)
-        parsed = urlparse(url)
-        self.base_prefix = f"{parsed.scheme}://{parsed.netloc}"
-        async with HTTPClient(
-            self.settings.concurrency,
-            self.settings.request_timeout,
-            self.settings.sitemap.user_agent,
-            self.settings.max_retries,
-            self.settings.retry_delay,
-            self.settings.create_proxy_pool(),
-        ) as client:
-            await self._parse(client, self.sitemap_url)
-        return list(self.urls), self.stats
-
-    async def run(self, url: str) -> List[str]:
-        """Entry point for running sitemap discovery.
-
-        Args:
-            url (str): The site URL.
-
-        Returns:
-            List[str]: A list of discovered URLs.
-        """
-        urls, _ = await self.fetch(url)
-        return urls
 
 
 class HTTPClient:
@@ -711,7 +527,7 @@ class HTMLCrawler:
         return links
 
 
-class UniversalSiteMap:
+class SiteMap:
     """The high-level orchestrator for site discovery.
 
     Combines robots.txt parsing, common path probing, XML sitemap traversal,
@@ -722,7 +538,7 @@ class UniversalSiteMap:
     """
 
     def __init__(self, settings: Settings):
-        """Initializes UniversalSiteMap."""
+        """Initializes SiteMap."""
         self.settings = settings
 
     @staticmethod

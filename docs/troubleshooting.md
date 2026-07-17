@@ -30,7 +30,7 @@ Then try:
 - start from the canonical origin, such as `https://www.example.com`
 
 Some sites put sitemaps on a different host or subdomain. If `robots.txt` points
-there, use the main site URL and let `UniversalSiteMap` follow the sitemap directive.
+there, use the main site URL and let `SiteMap` follow the sitemap directive.
 
 !!! note "Try the canonical host"
     `https://example.com`, `https://www.example.com`, and regional subdomains can

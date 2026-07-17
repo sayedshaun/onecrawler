@@ -19,7 +19,7 @@ Install the Playwright browser only when you plan to use browser-backed link
 extraction or browser-backed scraping.
 
 !!! tip "Start with the lightest workflow"
-    If a site has a sitemap, use `UniversalSiteMap` before opening browser pages.
+    If a site has a sitemap, use `SiteMap` before opening browser pages.
     Browser workflows are more flexible, but they cost more time, memory, and
     operational care.
 
@@ -57,7 +57,7 @@ Use this pattern when the target site publishes a sitemap. It is the preferred
 starting point for most crawls because it avoids unnecessary browser navigation.
 
 ```python
-from onecrawler import Settings, Scraper, UniversalSiteMap
+from onecrawler import Settings, Scraper, SiteMap
 from onecrawler.utils import writter
 
 
@@ -72,7 +72,7 @@ async def main():
         max_retries=3,
     )
 
-    sitemap = UniversalSiteMap(settings)
+    sitemap = SiteMap(settings)
     urls = await sitemap.run("https://example.com")
 
     async with Scraper(settings) as scraper:

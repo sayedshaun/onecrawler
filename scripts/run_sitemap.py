@@ -1,4 +1,4 @@
-"""Manually exercise the real UniversalSiteMap class against a live URL.
+"""Manually exercise the real SiteMap class against a live URL.
 
 Defaults to https://quotes.toscrape.com, a free site built for scraping
 practice, so you only need to pass --limit/--concurrency. Pass --url to
@@ -12,7 +12,7 @@ Example:
 
 No browser required — sitemap discovery uses curl_cffi/lxml directly.
 
-Note: UniversalSiteMap has no async-context-manager support (no
+Note: SiteMap has no async-context-manager support (no
 __aenter__/__aexit__), unlike Crawler/LinkExtractor/Scraper, so it's used
 directly here rather than via `async with`.
 """
@@ -20,7 +20,7 @@ directly here rather than via `async with`.
 import argparse
 import asyncio
 
-from onecrawler import Settings, UniversalSiteMap
+from onecrawler import Settings, SiteMap
 
 DEFAULT_URL = "https://quotes.toscrape.com"
 
@@ -60,7 +60,7 @@ async def main():
 
     print(f"Discovering URLs from {url}  (limit={limit}, concurrency={concurrency})")
 
-    sitemap = UniversalSiteMap(settings)
+    sitemap = SiteMap(settings)
     urls = await sitemap.run(url)
 
     print(f"\nDiscovered {len(urls)} URL(s):")

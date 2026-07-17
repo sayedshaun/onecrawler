@@ -1,7 +1,7 @@
 """Manually exercise the real Scraper class against a live URL.
 
 Scraper extracts content from an already-known URL list, so this discovers
-up to --limit URLs via UniversalSiteMap first, then scrapes them —
+up to --limit URLs via SiteMap first, then scrapes them —
 mirroring the project's recommended sitemap-then-scrape workflow.
 
 Defaults to https://quotes.toscrape.com, a free site built for scraping
@@ -21,7 +21,7 @@ chromium). Uses the markdownify strategy, so no API key is needed.
 import argparse
 import asyncio
 
-from onecrawler import Scraper, Settings, UniversalSiteMap
+from onecrawler import Scraper, Settings, SiteMap
 from onecrawler.utils import writter
 
 DEFAULT_URL = "https://quotes.toscrape.com"
@@ -62,7 +62,7 @@ async def main():
         logging_level="INFO",
     )
 
-    sitemap = UniversalSiteMap(settings)
+    sitemap = SiteMap(settings)
     urls = await sitemap.run(url)
 
     async with Scraper(settings) as scraper:

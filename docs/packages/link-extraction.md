@@ -10,7 +10,7 @@ pages using browser automation.
 !!! note "Use this after sitemaps"
     Browser link extraction is best when sitemaps are missing, incomplete, or unable
     to expose JavaScript-rendered links. If a sitemap is available, start with
-    `UniversalSiteMap`.
+    `SiteMap`.
 
 ## Classes
 
@@ -141,7 +141,7 @@ The link extraction behavior is controlled through `Settings`:
 
 ## Best Practices
 
-1. **Use sitemaps first**: Prefer `UniversalSiteMap` when available
+1. **Use sitemaps first**: Prefer `SiteMap` when available
 2. **Filter early**: Use `include_link_patterns` to limit scope
 3. **Set limits**: Always specify `link_extraction_limit`
 4. **Monitor resources**: Watch memory and CPU usage

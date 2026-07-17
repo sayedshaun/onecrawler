@@ -19,7 +19,6 @@ from onecrawler import (
     LinkExtractor,
     Scraper,
     Settings,
-    UniversalSiteMap,
     SiteMap,
 )
 ```
@@ -34,11 +33,7 @@ from onecrawler import (
 
 ## Sitemap discovery
 
-::: onecrawler.UniversalSiteMap
-
 ::: onecrawler.SiteMap
-
-::: onecrawler.SitemapStats
 
 ## Settings
 

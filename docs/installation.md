@@ -29,9 +29,9 @@ python -m playwright install --with-deps chromium
 ```
 
 !!! note "Sitemap-only installs do not need a browser"
-    If your application only uses `UniversalSiteMap` or direct `SiteMap` parsing,
-    you can skip Playwright browser installation until you add browser-backed
-    crawling or scraping.
+    If your application only uses `SiteMap` for sitemap discovery, you can skip
+    Playwright browser installation until you add browser-backed crawling or
+    scraping.
 
 !!! warning "Containers often need system dependencies"
     Browser launch failures in Docker and CI are usually missing system libraries or
@@ -78,7 +78,7 @@ dependencies, and crawler versions are controlled.
 In CI or Docker, cache Playwright browsers if possible. Browser installation is often
 the slowest part of a fresh environment.
 
-If you only use `UniversalSiteMap`, you do not need to launch a browser. Sitemap
+If you only use `SiteMap`, you do not need to launch a browser. Sitemap
 discovery uses HTTP clients and XML parsing, so it is lighter than browser crawling.
 
 !!! tip "Pin versions for repeatable jobs"

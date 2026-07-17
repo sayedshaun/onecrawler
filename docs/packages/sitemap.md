@@ -13,14 +13,14 @@ collection.
 
 ## Classes
 
-### UniversalSiteMap
+### SiteMap
 
 High-level sitemap resolver that automatically discovers sitemaps through multiple methods.
 
 ```python
-from onecrawler import Settings, UniversalSiteMap
+from onecrawler import Settings, SiteMap
 
-sitemap = UniversalSiteMap(settings)
+sitemap = SiteMap(settings)
 urls = await sitemap.run("https://example.com")
 ```
 
@@ -33,51 +33,8 @@ urls = await sitemap.run("https://example.com")
 - **Compression support**: Handles .xml.gz compressed sitemaps
 
 !!! note "Use the public import"
-    Most user code should import `UniversalSiteMap` from `onecrawler`, not from an
+    Most user code should import `SiteMap` from `onecrawler`, not from an
     internal package path.
-
-### SiteMap
-
-Lower-level sitemap parser for direct sitemap URL processing.
-
-!!! warning "Deprecated"
-    `SiteMap` will be removed in a future major version. It only walks raw
-    sitemap XML — it doesn't discover sitemaps via robots.txt or common
-    paths, doesn't enforce `respect_robots`, and has no HTML-crawl fallback
-    or date/pattern filtering. Use `UniversalSiteMap` instead, which covers
-    everything `SiteMap` does plus those.
-
-```python
-from onecrawler import Settings, SiteMap
-
-sitemap = SiteMap(settings)
-urls = await sitemap.run("https://example.com/sitemap.xml")
-```
-
-#### Features
-
-- **Direct parsing**: Parse specific sitemap URLs
-- **URL validation**: Validates and normalizes URLs
-- **Metadata extraction**: Extracts lastmod, changefreq, priority
-
-### SitemapStats
-
-Statistics tracking for sitemap operations.
-
-```python
-from onecrawler import SitemapStats
-
-stats = SitemapStats()
-print(f"Discovered {stats.urls} URLs")
-```
-
-#### Properties
-
-- `urls`: Total URLs discovered
-- `sitemaps`: Number of sitemaps processed
-- `errors`: Number of errors encountered
-- `elapsed()`: Elapsed processing time in seconds
-- `rate()`: URLs discovered per second
 
 ## Usage Examples
 
@@ -85,7 +42,7 @@ print(f"Discovered {stats.urls} URLs")
 
 ```python
 import asyncio
-from onecrawler import Settings, UniversalSiteMap
+from onecrawler import Settings, SiteMap
 
 async def discover_urls():
     settings = Settings(
@@ -93,7 +50,7 @@ async def discover_urls():
         include_link_patterns=["/articles/*"]
     )
 
-    sitemap = UniversalSiteMap(settings)
+    sitemap = SiteMap(settings)
     urls = await sitemap.run("https://example.com")
 
     return urls
@@ -105,7 +62,7 @@ if __name__ == "__main__":
 ### Advanced Configuration
 
 ```python
-from onecrawler import Settings, UniversalSiteMap
+from onecrawler import Settings, SiteMap
 from onecrawler.settings import SitemapSettings
 
 settings = Settings(
@@ -120,29 +77,13 @@ settings = Settings(
     )
 )
 
-sitemap = UniversalSiteMap(settings)
+sitemap = SiteMap(settings)
 ```
 
 !!! warning "HTML fallback can broaden scope"
     `sitemap.html_fallback=True` is useful during exploration, but it can crawl
     same-origin pages when XML sitemaps are missing. Pair it with
     `link_extraction_limit` and `include_link_patterns`.
-
-### Direct Sitemap Parsing
-
-!!! warning "Deprecated — use UniversalSiteMap"
-    See the note under [SiteMap](#sitemap) above.
-
-```python
-from onecrawler import Settings, SiteMap
-
-async def parse_specific_sitemap():
-    settings = Settings()
-    sitemap = SiteMap(settings)
-
-    urls = await sitemap.run("https://example.com/sitemap.xml")
-    return urls
-```
 
 ## Configuration
 
@@ -160,7 +101,7 @@ Sitemap behavior is controlled through `Settings`:
 
 ## Discovery Process
 
-UniversalSiteMap follows this discovery order:
+SiteMap follows this discovery order:
 
 1. **robots.txt**: Check for `Sitemap:` directives
 2. **Common paths**: Try standard locations:
