@@ -10,7 +10,9 @@ hide:
 
 # OneCrawler
 
-**An async Python framework for discovering URLs, extracting links, and scraping structured content.**
+### Crawling hard? Not anymore.
+
+**Async Python crawling library with sitemap discovery, browser-based extraction, and LLM-powered structured output — one Settings object drives it all.**
 
 [![PyPI](https://img.shields.io/badge/pypi-onecrawler-6B45A7.svg)](https://pypi.org/project/onecrawler/)
 [![CI](https://img.shields.io/badge/CI-passing-brightgreen.svg)](https://github.com/sayedshaun/onecrawler/actions/workflows/ci.yml)

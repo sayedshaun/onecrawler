@@ -11,7 +11,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="onecrawler",
         description=(
-            "OneCrawler is an async Python crawling framework. Run a crawl "
+            "OneCrawler is an async Python crawling library. Run a crawl "
             "directly from the command line, or use it as a library:\n\n"
             "    import onecrawler\n"
             "    crawler = onecrawler.Crawler(...)\n\n"
