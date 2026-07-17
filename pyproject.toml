@@ -33,13 +33,10 @@ dependencies = [
     "trafilatura>=2.0.0",
     "lxml>=5.4.0",
     "httpx>=0.28.1",
+    "html-to-markdown>=3.8.0",
 ]
 
 [project.optional-dependencies]
-genai = [
-    "langgraph>=1.1.10",
-    "markdownify>=1.2.2"
-]
 dev = [
     "toml>=0.10.2",
     "black>=26.3.1",
