@@ -156,9 +156,7 @@ class TestSitemapParser:
             == "https://example.com"
         )
         assert (
-            self.sitemap_module.SiteMap._normalize_base(
-                "http://example.com/path"
-            )
+            self.sitemap_module.SiteMap._normalize_base("http://example.com/path")
             == "http://example.com"
         )
 
