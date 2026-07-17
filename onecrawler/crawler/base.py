@@ -1,5 +1,5 @@
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any, Optional, Type
 
 
@@ -52,16 +52,16 @@ class BaseEngine(ABC):
     async def start(self):
         """Initializes engine resources.
 
-        Override this method in subclasses to perform any necessary setup
-        before the engine starts running.
+        Override this method in subclasses to perform any necessary setup before the
+        engine starts running.
         """
         pass
 
     async def close(self):
         """Cleans up engine resources.
 
-        Override this method in subclasses to perform any necessary cleanup
-        after the engine finishes running.
+        Override this method in subclasses to perform any necessary cleanup after the
+        engine finishes running.
         """
         pass
 

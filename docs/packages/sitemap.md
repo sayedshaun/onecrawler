@@ -92,10 +92,10 @@ async def discover_urls():
         link_extraction_limit=1000,
         include_link_patterns=["/articles/*"]
     )
-    
+
     sitemap = UniversalSiteMap(settings)
     urls = await sitemap.run("https://example.com")
-    
+
     return urls
 
 if __name__ == "__main__":
@@ -139,7 +139,7 @@ from onecrawler import Settings, SiteMap
 async def parse_specific_sitemap():
     settings = Settings()
     sitemap = SiteMap(settings)
-    
+
     urls = await sitemap.run("https://example.com/sitemap.xml")
     return urls
 ```

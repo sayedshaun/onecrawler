@@ -28,7 +28,6 @@ def by_date(
         Callable[[dict], bool]: A predicate accepting items whose resolved
         date falls within ``[start, end]``.
     """
-
     start_dt = datetime.datetime.strptime(start, "%Y-%m-%d") if start else None
     end_dt = datetime.datetime.strptime(end, "%Y-%m-%d") if end else None
 

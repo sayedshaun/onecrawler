@@ -14,11 +14,11 @@ from .sitemap import SitemapSettings
 class ScrapingStrategy(str, Enum):
     """Content-extraction strategy used by a crawl.
 
-    Subclasses ``str``, so it's interchangeable with the plain string
-    values (``"heuristic"``, ``"genai"``, ``"markdownify"``) that
-    ``Settings.scraping_strategy`` accepts — existing code passing raw
-    strings keeps working unchanged, while internal code can compare against
-    named members instead of repeating string literals.
+    Subclasses ``str``, so it's interchangeable with the plain string values
+    (``"heuristic"``, ``"genai"``, ``"markdownify"``) that
+    ``Settings.scraping_strategy`` accepts — existing code passing raw strings keeps
+    working unchanged, while internal code can compare against named members instead of
+    repeating string literals.
     """
 
     HEURISTIC = "heuristic"
@@ -29,8 +29,8 @@ class ScrapingStrategy(str, Enum):
 class LinkExtractionStrategy(str, Enum):
     """Strategy for finding links on a page.
 
-    Subclasses ``str``, so it's interchangeable with the plain string
-    values (``"shallow"``, ``"deep"``) this has always accepted.
+    Subclasses ``str``, so it's interchangeable with the plain string values
+    (``"shallow"``, ``"deep"``) this has always accepted.
     """
 
     SHALLOW = "shallow"
@@ -40,10 +40,10 @@ class LinkExtractionStrategy(str, Enum):
 class OutputFormat(str, Enum):
     """Output format for scraped content.
 
-    Subclasses ``str``, so it's interchangeable with the plain string
-    values (``"markdown"``, ``"json"``, ``"xml"``, ``"xmltei"``) this has
-    always accepted, and passes straight through to ``trafilatura``'s own
-    ``output_format`` argument, which expects these same string values.
+    Subclasses ``str``, so it's interchangeable with the plain string values
+    (``"markdown"``, ``"json"``, ``"xml"``, ``"xmltei"``) this has always accepted, and
+    passes straight through to ``trafilatura``'s own ``output_format`` argument, which
+    expects these same string values.
     """
 
     MARKDOWN = "markdown"

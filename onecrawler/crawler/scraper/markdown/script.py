@@ -34,9 +34,7 @@ class MarkdownifyStrategy:
         self._conversion_options = htm.ConversionOptions(
             heading_style="atx",
             bullets="-",
-            exclude_selectors=list(
-                getattr(settings, "exclude_selectors", None) or []
-            ),
+            exclude_selectors=list(getattr(settings, "exclude_selectors", None) or []),
         )
 
     async def extract(self, url: str, html: Optional[str] = None) -> Optional[Any]:

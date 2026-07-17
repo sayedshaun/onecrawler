@@ -35,8 +35,8 @@ DEFAULT_URL = "https://quotes.toscrape.com"
 
 
 class NavigationCounter:
-    """Counts calls to the module-level `goto` used by the worker and the
-    heuristic strategy's own fetch path."""
+    """Counts calls to the module-level `goto` used by the worker and the heuristic
+    strategy's own fetch path."""
 
     def __init__(self):
         self.count = 0
@@ -138,7 +138,7 @@ async def main():
     o_pages, o_time, o_nav = optimized
     print("\n[comparison]")
     if o_nav:
-        print(f"  navigations   : {l_nav} -> {o_nav}  " f"({l_nav / o_nav:.2f}x fewer)")
+        print(f"  navigations   : {l_nav} -> {o_nav}  ({l_nav / o_nav:.2f}x fewer)")
     if o_time:
         print(
             f"  wall-clock    : {l_time:.2f}s -> {o_time:.2f}s  "

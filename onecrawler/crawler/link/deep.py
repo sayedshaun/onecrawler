@@ -77,8 +77,8 @@ class BFSRuntime:
     async def worker(self):
         """A worker task that processes URLs and discovers new links.
 
-        Workers acquire pages, navigate to URLs, simulate human behavior,
-        and enqueue newly found links back into the scheduler.
+        Workers acquire pages, navigate to URLs, simulate human behavior, and enqueue
+        newly found links back into the scheduler.
         """
         while not self.stop_event.is_set():
             url = await self.scheduler.next()

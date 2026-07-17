@@ -38,8 +38,8 @@ class LinkSpider:
         return same_origin
 
     async def parse(self, page) -> List[str]:
-        """Returns all same-origin links found on ``page``, deduplicated of
-        URL fragments (but not of each other — callers dedupe as needed)."""
+        """Returns all same-origin links found on ``page``, deduplicated of URL
+        fragments (but not of each other — callers dedupe as needed)."""
         raw = await page.eval_on_selector_all(
             "a", "els => els.map(e => e.href).filter(Boolean)"
         )

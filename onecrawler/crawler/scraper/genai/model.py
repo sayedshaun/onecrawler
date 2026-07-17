@@ -10,8 +10,7 @@ from .llms.base import BaseLLM
 
 
 class ModelManager:
-    """
-    Provider-agnostic LLM factory + runtime wrapper.
+    """Provider-agnostic LLM factory + runtime wrapper.
 
     - Keeps provider isolation
     - Prevents invalid kwargs leaking across providers

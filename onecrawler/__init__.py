@@ -3,9 +3,9 @@ from .crawler.map.sitemap import SiteMap, SitemapStats, UniversalSiteMap
 from .settings import (
     BrowserSettings,
     GenAIProvider,
-    LLMSettings,
     HumanBehaviorSettings,
     LinkExtractionStrategy,
+    LLMSettings,
     OutputFormat,
     ProxyRotationMethod,
     ProxySettings,

@@ -7,9 +7,9 @@ from urllib.parse import quote, urlsplit, urlunsplit
 class ProxyRotationMethod(str, Enum):
     """Strategy for picking the next proxy from a :class:`ProxyPool`.
 
-    Subclasses ``str``, so it's interchangeable with the plain string
-    values (``"round_robin"``, ``"random"``) accepted everywhere this has
-    always been configured.
+    Subclasses ``str``, so it's interchangeable with the plain string values
+    (``"round_robin"``, ``"random"``) accepted everywhere this has always been
+    configured.
     """
 
     ROUND_ROBIN = "round_robin"
@@ -44,7 +44,8 @@ class ProxySettings:
         return proxy
 
     def as_requests_proxies(self) -> Dict[str, str]:
-        """Converts proxy settings to a dictionary format expected by the requests library.
+        """Converts proxy settings to a dictionary format expected by the requests
+        library.
 
         Returns:
             Dict[str, str]: A dictionary with 'http' and 'https' keys mapping to the proxy URL.

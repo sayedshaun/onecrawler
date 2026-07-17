@@ -66,8 +66,8 @@ def parse_args():
 
 
 async def discover_urls(url, limit, concurrency):
-    """Sitemap first (matches onecrawler's recommended workflow); shallow
-    link extraction as a fallback when a site has no usable sitemap."""
+    """Sitemap first (matches onecrawler's recommended workflow); shallow link
+    extraction as a fallback when a site has no usable sitemap."""
     settings = Settings(
         link_extraction_limit=limit,
         concurrency=concurrency,
@@ -89,8 +89,8 @@ async def discover_urls(url, limit, concurrency):
 def extract_text(result):
     """Normalizes a strategy's result shape to plain text for measurement.
 
-    Heuristic (json format) returns a dict with a 'text' key; markdownify
-    returns a plain markdown string.
+    Heuristic (json format) returns a dict with a 'text' key; markdownify returns a
+    plain markdown string.
     """
     if result is None:
         return None
@@ -141,7 +141,9 @@ def report(label, per_url, elapsed, total_urls, min_chars):
     rate = total_urls / elapsed if elapsed else 0.0
 
     print(f"\n[{label}]")
-    print(f"  success rate       : {success_rate:.0f}%  ({len(successes)}/{total_urls} non-empty)")
+    print(
+        f"  success rate       : {success_rate:.0f}%  ({len(successes)}/{total_urls} non-empty)"
+    )
     print(
         f"  likely-failed rate : {failed_rate:.0f}%  "
         f"({len(likely_failed)}/{total_urls} shorter than {min_chars} chars)"
@@ -172,8 +174,20 @@ async def main():
         "markdownify", urls, args.concurrency
     )
 
-    report("heuristic (trafilatura)", heuristic_per_url, heuristic_elapsed, len(urls), args.min_chars)
-    report("markdownify", markdownify_per_url, markdownify_elapsed, len(urls), args.min_chars)
+    report(
+        "heuristic (trafilatura)",
+        heuristic_per_url,
+        heuristic_elapsed,
+        len(urls),
+        args.min_chars,
+    )
+    report(
+        "markdownify",
+        markdownify_per_url,
+        markdownify_elapsed,
+        len(urls),
+        args.min_chars,
+    )
 
 
 if __name__ == "__main__":

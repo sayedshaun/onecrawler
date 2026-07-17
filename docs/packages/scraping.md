@@ -141,10 +141,10 @@ async def scrape_heuristic():
         concurrency=10,
         request_timeout=15
     )
-    
+
     async with Scraper(settings) as scraper:
         item = await scraper.run("https://example.com/article")
-    
+
     return item["result"]
 
 if __name__ == "__main__":
@@ -177,10 +177,10 @@ async def scrape_with_ai():
         concurrency=2,
         request_timeout=30
     )
-    
+
     async with Scraper(settings) as scraper:
         item = await scraper.run("https://example.com/article")
-    
+
     return item["result"]  # an Article instance
 
 if __name__ == "__main__":
@@ -201,16 +201,16 @@ async def scrape_multiple():
         "https://example.com/article2",
         "https://example.com/article3"
     ]
-    
+
     settings = Settings(
         scraping_strategy="heuristic",
         concurrency=5,
         max_retries=3
     )
-    
+
     async with Scraper(settings) as scraper:
         results = await scraper.run(urls)  # [{"url": ..., "result": ...}, ...]
-    
+
     return results
 ```
 
@@ -322,7 +322,7 @@ from onecrawler.utils import writter
 
 async def scrape_and_save():
     settings = Settings(scraping_strategy="heuristic")
-    
+
     async with Scraper(settings) as scraper:
         item = await scraper.run("https://example.com/article")
 
@@ -336,11 +336,11 @@ from onecrawler import Settings, Scraper
 
 async def scrape_to_database():
     settings = Settings(scraping_strategy="heuristic")
-    
+
     async with Scraper(settings) as scraper:
         urls = ["https://example.com/page1", "https://example.com/page2"]
         results = await scraper.run(urls)
-    
+
     # Save to database
     for item in results:
         await save_to_database(item["url"], item["result"])

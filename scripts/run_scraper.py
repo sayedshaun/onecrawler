@@ -78,5 +78,6 @@ async def main():
     # Write results to a file
     writter.dump_json(results, "scraped_results.json")
 
+
 if __name__ == "__main__":
     asyncio.run(main())

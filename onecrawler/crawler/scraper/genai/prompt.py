@@ -1,9 +1,8 @@
 """Prompt templates for the GenAI extraction strategy.
 
-Keeping prompts here (rather than inline in ``executor.py``) makes them easy
-to find, review, and tweak without touching pipeline logic. Fill the
-placeholders with ``str.format`` at call sites, e.g.
-``STRUCTURED_PROMPT.format(markdown=markdown)``.
+Keeping prompts here (rather than inline in ``executor.py``) makes them easy to find,
+review, and tweak without touching pipeline logic. Fill the placeholders with
+``str.format`` at call sites, e.g. ``STRUCTURED_PROMPT.format(markdown=markdown)``.
 """
 
 STRUCTURED_PROMPT = """

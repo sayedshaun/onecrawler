@@ -54,8 +54,8 @@ class GoogleChrome:
         self._lifecycle_lock = asyncio.Lock()
 
     def _rotates_proxies(self) -> bool:
-        """Whether new_page() creates a dedicated per-page context instead of
-        sharing the default one (i.e. more than one proxy is configured)."""
+        """Whether new_page() creates a dedicated per-page context instead of sharing
+        the default one (i.e. more than one proxy is configured)."""
         return bool(self.proxy_pool and len(self.proxy_pool.proxies) > 1)
 
     def _context_kwargs(self, proxy: Optional[ProxySettings]) -> dict:
@@ -89,6 +89,7 @@ class GoogleChrome:
         Returns:
             None
         """
+
         async with self._lifecycle_lock:
             if self._started:
                 return
@@ -183,6 +184,7 @@ class GoogleChrome:
         Returns:
             None
         """
+
         async with self._lifecycle_lock:
             if self._closed:
                 return

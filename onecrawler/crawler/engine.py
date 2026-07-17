@@ -129,7 +129,6 @@ class Scraper(BaseEngine):
 
     async def _retry(self, fn):
         """Retries a coroutine with exponential backoff."""
-
         for attempt in range(self.retries):
             try:
                 return await fn()
@@ -153,10 +152,10 @@ class Scraper(BaseEngine):
     async def _process(self, url: str) -> Optional[dict]:
         """Processes a single URL.
 
-        Wraps the extracted content with its source ``url`` so results stay
-        traceable regardless of the extraction strategy's return shape (a
-        dict, plain text, or a GenAI ``output_schema`` model instance) and
-        regardless of completion order in ``stream()``.
+        Wraps the extracted content with its source ``url`` so results stay traceable
+        regardless of the extraction strategy's return shape (a dict, plain text, or a
+        GenAI ``output_schema`` model instance) and regardless of completion order in
+        ``stream()``.
         """
 
         async with self.semaphore:
@@ -186,7 +185,6 @@ class Scraper(BaseEngine):
             (a dict, plain text, or a GenAI ``output_schema`` model instance).
             URLs that fail extraction after retries are silently skipped.
         """
-
         self._ensure_open()
         links = link if isinstance(link, list) else [link]
 
@@ -240,7 +238,6 @@ class Scraper(BaseEngine):
             input if some URLs failed extraction); a single such dict (or
             ``None``) when ``link`` is a single URL.
         """
-
         results = []
         async for result in self.stream(link):
             results.append(result)

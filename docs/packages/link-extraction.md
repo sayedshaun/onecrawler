@@ -58,10 +58,10 @@ async def extract_shallow():
         link_extraction_limit=50,
         include_link_patterns=["/articles/*"]
     )
-    
+
     async with LinkExtractor(settings) as engine:
         links = await engine.run("https://example.com/latest")
-    
+
     return links
 
 if __name__ == "__main__":
@@ -81,10 +81,10 @@ async def extract_deep():
         include_link_patterns=["/docs/*"],
         concurrency=5
     )
-    
+
     async with LinkExtractor(settings) as engine:
         links = await engine.run("https://example.com/docs")
-    
+
     return links
 
 if __name__ == "__main__":

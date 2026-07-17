@@ -31,19 +31,19 @@ class CrawlerRuntime:
     """Runs one breadth-first crawl of a single site to completion.
 
     A ``CrawlerRuntime`` is a short-lived, single-use worker pool: it owns a
-    :class:`BFScheduler` (the URL queue), a :class:`BrowserPool` (pages to
-    navigate with), a :class:`LinkSpider` (link discovery), and a scraping
-    strategy (content extraction). ``concurrency`` workers pull URLs from
-    the scheduler, navigate to each, extract its content, and feed newly
-    discovered same-origin links back into the scheduler — until either
-    ``max_links`` pages have been collected or the site runs out of links.
+    :class:`BFScheduler` (the URL queue), a :class:`BrowserPool` (pages to navigate
+    with), a :class:`LinkSpider` (link discovery), and a scraping strategy (content
+    extraction). ``concurrency`` workers pull URLs from the scheduler, navigate to each,
+    extract its content, and feed newly discovered same-origin links back into the
+    scheduler — until either ``max_links`` pages have been collected or the site runs
+    out of links.
 
-    Call :meth:`run` to crawl to completion and get back a list of
-    extracted content dicts, or :meth:`stream` to get an async generator
-    that yields each content dict as soon as it's extracted.
+    Call :meth:`run` to crawl to completion and get back a list of extracted content
+    dicts, or :meth:`stream` to get an async generator that yields each content dict as
+    soon as it's extracted.
 
-    A single instance is meant to be used for exactly one crawl; create a
-    new ``CrawlerRuntime`` (via ``Crawler._create_runtime``) per crawl.
+    A single instance is meant to be used for exactly one crawl; create a new
+    ``CrawlerRuntime`` (via ``Crawler._create_runtime``) per crawl.
     """
 
     def __init__(
@@ -109,8 +109,8 @@ class CrawlerRuntime:
     async def _next_url(self) -> Optional[str]:
         """Pulls the next URL from the scheduler, tracking active-worker count.
 
-        Returns None if there is currently no URL to process (which may or
-        may not mean the crawl is finished).
+        Returns None if there is currently no URL to process (which may or may not mean
+        the crawl is finished).
         """
         url = await self.scheduler.next()
         async with self._active_lock:
@@ -126,8 +126,11 @@ class CrawlerRuntime:
             self._active_workers -= 1
 
     async def _acquire_page(self, url: str):
-        """Acquires a page from the pool, or returns None if this attempt
-        should be skipped. Raises if the pool is permanently exhausted."""
+        """Acquires a page from the pool, or returns None if this attempt should be
+        skipped.
+
+        Raises if the pool is permanently exhausted.
+        """
         try:
             return await self.pool.acquire()
         except BrowserPoolExhausted as e:
@@ -161,8 +164,9 @@ class CrawlerRuntime:
         )
 
     async def _claim_for_extraction(self, url: str) -> bool:
-        """Atomically checks whether url still needs extracting, and if so
-        marks it as claimed so no other worker duplicates the work."""
+        """Atomically checks whether url still needs extracting, and if so marks it as
+        claimed so no other worker duplicates the work."""
+
         async with self.lock:
             should_extract = (
                 not self.stop_event.is_set() and url not in self.results_set
@@ -172,8 +176,11 @@ class CrawlerRuntime:
         return should_extract
 
     async def _record_content(self, url: str, content: dict) -> bool:
-        """Stores extracted content if under max_links. Returns True if it
-        was appended (and thus should be streamed/logged)."""
+        """Stores extracted content if under max_links.
+
+        Returns True if it was appended (and thus should be streamed/logged).
+        """
+
         async with self.lock:
             appended = len(self.results) < self.max_links
             if appended:

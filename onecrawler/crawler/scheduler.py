@@ -41,6 +41,7 @@ class BFScheduler:
         Returns:
             Optional[str]: The next URL, or None if queues are empty.
         """
+
         async with self.lock:
             if self.priority:
                 url = self.priority.popleft()
