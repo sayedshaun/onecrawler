@@ -1,10 +1,10 @@
 from .crawler import Crawler, LinkExtractor, Scraper
-from .crawler.map.sitemap import SiteMap, SitemapStats, UniversalSiteMap
+from .crawler.map.sitemap import SiteMap
 from .settings import (
     BrowserSettings,
-    GenAIProvider,
     HumanBehaviorSettings,
     LinkExtractionStrategy,
+    LLMProvider,
     LLMSettings,
     OutputFormat,
     ProxyRotationMethod,
