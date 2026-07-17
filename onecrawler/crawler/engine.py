@@ -10,8 +10,9 @@ from .link.deep import BFSRuntime
 from .link.shallow import extract_url_from_current_page
 from .pool import BrowserPool
 from .scheduler import BFScheduler
-from .scraper.genai.executor import GenAIStrategy
+from .scraper.genai.executor import GenerativeAIStrategy
 from .scraper.heuristic.script import HeuristicStrategy
+from .scraper.markdown.script import MarkdownifyStrategy
 from .spider import LinkSpider
 
 
@@ -27,7 +28,7 @@ class Scraper(BaseEngine):
     Attributes:
         settings (Settings): Configuration settings for scraping.
         strategy (Optional[Any]): The content-extraction strategy in use
-            (``HeuristicStrategy`` or ``GenAIStrategy``); set on ``start()``.
+            (``HeuristicStrategy`` or ``GenerativeAIStrategy``); set on ``start()``.
         browser (Optional[GoogleChrome]): The shared browser instance; set on
             ``start()`` if ``settings.browser_settings`` is configured.
 
@@ -81,11 +82,17 @@ class Scraper(BaseEngine):
                 browser=self.browser,
             )
 
+        elif self.settings.scraping_strategy == ScrapingStrategy.MARKDOWNIFY:
+            self.strategy = MarkdownifyStrategy(
+                settings=self.settings,
+                browser=self.browser,
+            )
+
         elif self.settings.scraping_strategy == ScrapingStrategy.GENAI:
             if not self.settings.genai:
                 raise ValueError("GenAI settings are required for GenAI strategy")
 
-            self.strategy = GenAIStrategy(
+            self.strategy = GenerativeAIStrategy(
                 provider=self.settings.genai.provider,
                 model_name=self.settings.genai.model_name,
                 max_retries=self.settings.max_retries,
@@ -94,6 +101,8 @@ class Scraper(BaseEngine):
                 output_schema=self.settings.genai.output_schema,
                 provider_kwargs=self.settings.genai.provider_kwargs,
                 timeout=self.settings.genai.timeout,
+                think=self.settings.genai.think,
+                exclude_selectors=self.settings.exclude_selectors,
                 browser=self.browser,
             )
 
@@ -380,7 +389,7 @@ class LinkExtractor(BaseEngine):
             max_links=self.settings.link_extraction_limit,
             include_pattern=self.settings.include_link_patterns,
             exclude_pattern=self.settings.exclude_link_patterns,
-            enable_human_behaviors=self.settings.enable_human_behaviors,
+            enable_human_behaviors=self.settings.human_behavior_settings is not None,
             human_behavior_settings=self.settings.human_behavior_settings,
             concurrency=self.settings.concurrency,
             streaming=True,

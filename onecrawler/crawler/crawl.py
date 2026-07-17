@@ -19,8 +19,9 @@ from .link.helper import (
 from .navigation import goto
 from .pool import BrowserPool, BrowserPoolExhausted
 from .scheduler import BFScheduler
-from .scraper.genai.executor import GenAIStrategy
+from .scraper.genai.executor import GenerativeAIStrategy
 from .scraper.heuristic.script import HeuristicStrategy
+from .scraper.markdown.script import MarkdownifyStrategy
 from .spider import LinkSpider
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,7 @@ class CrawlerRuntime:
         content_filter: Optional[Callable[[dict], bool]] = None,
         wait_until: Optional[str] = None,
         timeout: Optional[int] = None,
+        settle_delay: int = 0,
         show_progress: bool = True,
         *args,
         **kwargs,
@@ -94,6 +96,7 @@ class CrawlerRuntime:
         self.streaming = streaming
         self.wait_until = wait_until or browser_settings.wait_until
         self.timeout = timeout or browser_settings.timeout
+        self.settle_delay = settle_delay
         self.show_progress = show_progress
 
         self._active_workers = 0
@@ -245,7 +248,13 @@ class CrawlerRuntime:
 
     async def _process_url(self, url: str, page):
         try:
-            await goto(page, url, wait_until=self.wait_until, timeout=self.timeout)
+            await goto(
+                page,
+                url,
+                wait_until=self.wait_until,
+                timeout=self.timeout,
+                settle_delay=self.settle_delay,
+            )
         except Exception as e:
             logger.warning("Failed to load %s: %s", url, e)
             return
@@ -388,7 +397,7 @@ class Crawler(BaseEngine):
     Attributes:
         settings (Settings): Configuration for the crawl.
         strategy (Optional[Any]): The content-extraction strategy in use
-            (``HeuristicStrategy`` or ``GenAIStrategy``); set on ``start()``.
+            (``HeuristicStrategy`` or ``GenerativeAIStrategy``); set on ``start()``.
         browser (Optional[GoogleChrome]): The shared browser instance; set on
             ``start()``.
 
@@ -442,7 +451,10 @@ class Crawler(BaseEngine):
         if scraping_strategy == ScrapingStrategy.GENAI:
             if not getattr(self.settings, "genai", None):
                 raise ValueError("GenAI settings is required for GenAI strategy")
-        elif scraping_strategy != ScrapingStrategy.HEURISTIC:
+        elif scraping_strategy not in (
+            ScrapingStrategy.HEURISTIC,
+            ScrapingStrategy.MARKDOWNIFY,
+        ):
             raise ValueError(f"Unknown strategy: {scraping_strategy}")
 
         self.browser = GoogleChrome(
@@ -456,8 +468,13 @@ class Crawler(BaseEngine):
                 settings=self.settings,
                 browser=self.browser,
             )
+        elif scraping_strategy == ScrapingStrategy.MARKDOWNIFY:
+            strategy = MarkdownifyStrategy(
+                settings=self.settings,
+                browser=self.browser,
+            )
         else:
-            strategy = GenAIStrategy(
+            strategy = GenerativeAIStrategy(
                 provider=self.settings.genai.provider,
                 model_name=self.settings.genai.model_name,
                 max_retries=self.settings.max_retries,
@@ -466,6 +483,8 @@ class Crawler(BaseEngine):
                 output_schema=self.settings.genai.output_schema,
                 provider_kwargs=self.settings.genai.provider_kwargs,
                 timeout=self.settings.genai.timeout,
+                think=self.settings.genai.think,
+                exclude_selectors=self.settings.exclude_selectors,
                 browser=self.browser,
             )
             await strategy.initialize()
@@ -503,13 +522,14 @@ class Crawler(BaseEngine):
             max_links=self.settings.link_extraction_limit,
             include_pattern=self.settings.include_link_patterns,
             exclude_pattern=self.settings.exclude_link_patterns,
-            enable_human_behaviors=self.settings.enable_human_behaviors,
+            enable_human_behaviors=self.settings.human_behavior_settings is not None,
             human_behavior_settings=self.settings.human_behavior_settings,
             concurrency=self.settings.concurrency,
             streaming=streaming,
             content_filter=content_filter,
             wait_until=self.settings.browser_settings.wait_until,
             timeout=self.settings.browser_settings.timeout,
+            settle_delay=self.settings.browser_settings.settle_delay,
             show_progress=self.settings.show_progress,
         )
         return runtime, pool
