@@ -9,11 +9,15 @@ wall-clock time and throughput:
     legacy     -> simulates the pre-fix behavior by stripping the prefetched
                   HTML, forcing the strategy to re-navigate every URL.
 
+Defaults to https://quotes.toscrape.com, a free site built for scraping
+practice, so you only need to pass --limit/--concurrency. Pass --url to
+target a different site.
+
 Usage:
-    python benchmarks/bench_page_reuse.py <url> [max_links] [concurrency]
+    python scripts/bench_page_reuse.py [--url <url>] [--limit N] [--concurrency N]
 
 Example:
-    python benchmarks/bench_page_reuse.py https://quotes.toscrape.com 20 5
+    python scripts/bench_page_reuse.py --limit 20 --concurrency 5
 
 Requires a working Playwright/Chromium install (python -m playwright install
 chromium). Uses the heuristic strategy, so no API key is needed.
@@ -26,6 +30,8 @@ import time
 from onecrawler import Crawler, Settings
 from onecrawler.crawler import crawl as crawl_module
 from onecrawler.crawler.scraper.heuristic import script as heuristic_module
+
+DEFAULT_URL = "https://quotes.toscrape.com"
 
 
 class NavigationCounter:
@@ -85,17 +91,19 @@ def _report(label, pages, elapsed, navigations):
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("url", help="URL to crawl")
     parser.add_argument(
-        "max_links",
-        nargs="?",
+        "--url",
+        default=DEFAULT_URL,
+        help=f"URL to crawl (default: {DEFAULT_URL})",
+    )
+    parser.add_argument(
+        "--limit",
         type=int,
         default=15,
         help="maximum number of links to extract (default: 15)",
     )
     parser.add_argument(
-        "concurrency",
-        nargs="?",
+        "--concurrency",
         type=int,
         default=5,
         help="number of concurrent workers/pages (default: 5)",
@@ -105,18 +113,18 @@ def parse_args():
 
 async def main():
     args = parse_args()
-    url, max_links, concurrency = args.url, args.max_links, args.concurrency
+    url, limit, concurrency = args.url, args.limit, args.concurrency
 
     settings = Settings(
         scraping_strategy="heuristic",
         scraping_output_format="markdown",
-        link_extraction_limit=max_links,
+        link_extraction_limit=limit,
         concurrency=concurrency,
         show_progress=False,
-        enable_logging=False,
+        logging_level=None,
     )
 
-    print(f"Benchmarking {url}  (max_links={max_links}, concurrency={concurrency})")
+    print(f"Benchmarking {url}  (limit={limit}, concurrency={concurrency})")
 
     # Legacy first, optimized second. If anything, warm caches favor the second
     # run, so an optimized win here is a conservative estimate.
