@@ -208,6 +208,15 @@ Invert a single filter:
 f = NOT(by_files(["pdf"]))
 ```
 
+!!! warning "NOT on a field-dependent filter includes items missing that field"
+    Built-in filters like `by_keywords` and `by_date` are fail-closed: they
+    return `False` both when an item doesn't match *and* when the item is
+    missing the field they check (e.g. no `text` or `date` key). `NOT` can't
+    distinguish those two cases, so `NOT(by_keywords(["python"]))` will
+    *include* items that have no `text` field at all, not just items whose
+    text didn't contain `"python"`. If that distinction matters, add an
+    explicit field-presence check alongside `NOT`.
+
 ### Nested Composition
 
 Operators can be nested for complex logic:
