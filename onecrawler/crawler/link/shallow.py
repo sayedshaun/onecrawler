@@ -55,7 +55,11 @@ async def extract_url_from_current_page(
 
         logger.debug(f"Found {len(hrefs)} anchor elements")
 
-        parsed_base = urlparse(url)
+        # The page may have landed somewhere else (a bare domain redirecting to
+        # www, http to https); its links belong to where it landed, not to where
+        # the navigation was aimed.
+        landed_url = page.url or url
+        parsed_base = urlparse(landed_url)
         base_domain = parsed_base.netloc
         base_prefix = f"{parsed_base.scheme}://{parsed_base.netloc}"
 
@@ -71,7 +75,7 @@ async def extract_url_from_current_page(
             if parsed.netloc != base_domain:
                 continue
 
-            if href.rstrip("/") == url.rstrip("/"):
+            if href.rstrip("/") == landed_url.rstrip("/"):
                 continue
 
             logger.debug(f"Considering URL: {href}")

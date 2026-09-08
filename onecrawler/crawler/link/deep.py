@@ -7,7 +7,7 @@ from ...settings.simulation import HumanBehaviorSettings
 from ...utils.progress import make_progress_bar
 from ..pool import BrowserPool, BrowserPoolExhausted
 from ..scheduler import BFScheduler
-from ..spider import LinkSpider
+from ..spider import LinkSpider, redirected_origin
 from .helper import human_delay, human_mouse_move, human_scroll, wildcard_link_match
 
 logger = logging.getLogger(__name__)
@@ -73,6 +73,26 @@ class BFSRuntime:
         self.stream_queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1000)
         self.streaming: bool = streaming
         self._fatal_error: Optional[BaseException] = None
+        self._origin_settled = False
+
+    def _settle_origin(self, final_url: str) -> None:
+        """Re-anchors the crawl on the origin the first page actually landed on.
+
+        A seed that redirects — an apex domain sent to its ``www`` host, say — would
+        otherwise leave every link on the landing page looking cross-origin, and every
+        include/exclude pattern unmatchable, since those are tested against
+        ``base_prefix``. The crawl would stop after that one page.
+        """
+        self._origin_settled = True
+        origin = redirected_origin(self.base_prefix, final_url)
+        if origin is None:
+            return
+
+        logger.info(
+            "%s redirected to %s; crawling that origin", self.base_prefix, origin
+        )
+        self.base_prefix = origin
+        self.spider.retarget(origin)
 
     async def worker(self):
         """A worker task that processes URLs and discovers new links.
@@ -125,6 +145,9 @@ class BFSRuntime:
                 except Exception as e:
                     logger.warning("Failed to load %s: %s", url, e)
                     continue
+
+                if not self._origin_settled:
+                    self._settle_origin(page.url)
 
                 if self.enable_human_behaviors:
                     await human_delay(

@@ -22,7 +22,7 @@ from .scheduler import BFScheduler
 from .scraper.genai.executor import LLMStrategy
 from .scraper.heuristic.script import HeuristicStrategy
 from .scraper.markdown.script import MarkdownifyStrategy
-from .spider import LinkSpider
+from .spider import LinkSpider, redirected_origin
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +105,7 @@ class CrawlerRuntime:
         self.content_filter = content_filter
         self._fatal_error: Optional[BaseException] = None
         self._link_allowed_cache: dict = {}
+        self._origin_settled = False
 
     async def _next_url(self) -> Optional[str]:
         """Pulls the next URL from the scheduler, tracking active-worker count.
@@ -253,6 +254,26 @@ class CrawlerRuntime:
                 continue
             await self.scheduler.add(link)
 
+    def _settle_origin(self, final_url: str) -> None:
+        """Re-anchors the crawl on the origin the first page actually landed on.
+
+        A seed that redirects — an apex domain sent to its ``www`` host, say — would
+        otherwise leave every link on the landing page looking cross-origin, and every
+        include/exclude pattern unmatchable, since those are tested against
+        ``base_prefix``. The crawl would stop after that one page.
+        """
+        self._origin_settled = True
+        origin = redirected_origin(self.base_prefix, final_url)
+        if origin is None:
+            return
+
+        logger.info(
+            "%s redirected to %s; crawling that origin", self.base_prefix, origin
+        )
+        self.base_prefix = origin
+        self.spider.retarget(origin)
+        self._link_allowed_cache.clear()
+
     async def _process_url(self, url: str, page):
         try:
             await goto(
@@ -265,6 +286,9 @@ class CrawlerRuntime:
         except Exception as e:
             logger.warning("Failed to load %s: %s", url, e)
             return
+
+        if not self._origin_settled:
+            self._settle_origin(page.url)
 
         if self.enable_human_behaviors:
             await self._simulate_human_behavior_before_parse(page)
