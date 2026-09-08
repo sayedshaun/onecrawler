@@ -401,6 +401,8 @@ class TestPipeline:
         html_marker = "<html><body>REUSED</body></html>"
 
         class FakePage:
+            url = "https://example.com/news/1"
+
             async def goto(self, *args, **kwargs):
                 return None
 
@@ -469,6 +471,8 @@ class TestPipeline:
         scheduler.has_next = AsyncMock(side_effect=lambda: bool(pending))
 
         class FakePage:
+            url = "https://example.com/news/1"
+
             async def goto(self, *args, **kwargs):
                 return None
 

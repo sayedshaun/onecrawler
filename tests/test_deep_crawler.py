@@ -8,10 +8,11 @@ _, deep_module = load_link_modules()
 
 
 class FakePage:
-    def __init__(self, links=None):
+    def __init__(self, links=None, url="https://example.com"):
         self.links = links or []
         self.closed = False
         self.visited = []
+        self.url = url
 
     async def goto(self, url, **kwargs):
         self.visited.append((url, kwargs))
@@ -176,3 +177,75 @@ class TestDeepCrawler:
         result = await asyncio.wait_for(runtime.run(), timeout=1)
 
         assert result == []
+
+
+class TestSeedRedirect:
+    pytestmark = pytest.mark.asyncio
+
+    async def test_spider_retarget_switches_origin(self):
+        spider = deep_module.LinkSpider("https://example.com")
+        page = FakePage(["https://www.example.com/a", "https://example.com/b"])
+
+        assert await spider.parse(page) == ["https://example.com/b"]
+
+        spider.retarget("https://www.example.com")
+
+        assert await spider.parse(page) == ["https://www.example.com/a"]
+
+    async def test_runtime_follows_a_seed_redirect_to_www(self):
+        """A bare domain that redirects to www would otherwise see every link on the
+        landing page as cross-origin and stop after one page."""
+
+        class Pool:
+            def __init__(self):
+                self.page = FakePage(url="https://www.example.com")
+
+            async def acquire(self):
+                return self.page
+
+            async def release(self, page):
+                return None
+
+        runtime = deep_module.BFSRuntime(
+            scheduler=deep_module.BFScheduler("https://example.com"),
+            pool=Pool(),
+            spider=deep_module.LinkSpider("https://example.com"),
+            base_prefix="https://example.com",
+            max_links=1,
+            human_behavior_settings=deep_module.HumanBehaviorSettings(),
+            include_pattern=None,
+            enable_human_behaviors=False,
+            concurrency=1,
+        )
+
+        await asyncio.wait_for(runtime.run(), timeout=1)
+
+        assert runtime.base_prefix == "https://www.example.com"
+        assert runtime.spider.base_netloc == "www.example.com"
+
+    async def test_runtime_keeps_its_origin_without_a_redirect(self):
+        class Pool:
+            def __init__(self):
+                self.page = FakePage(url="https://example.com")
+
+            async def acquire(self):
+                return self.page
+
+            async def release(self, page):
+                return None
+
+        runtime = deep_module.BFSRuntime(
+            scheduler=deep_module.BFScheduler("https://example.com"),
+            pool=Pool(),
+            spider=deep_module.LinkSpider("https://example.com"),
+            base_prefix="https://example.com",
+            max_links=1,
+            human_behavior_settings=deep_module.HumanBehaviorSettings(),
+            include_pattern=None,
+            enable_human_behaviors=False,
+            concurrency=1,
+        )
+
+        await asyncio.wait_for(runtime.run(), timeout=1)
+
+        assert runtime.base_prefix == "https://example.com"
