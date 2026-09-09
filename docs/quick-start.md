@@ -254,6 +254,59 @@ async with Crawler(settings) as engine:
     to refine extracted content. Together they keep crawls focused and results
     relevant.
 
+## Exposing OneCrawler to an LLM Agent (MCP)
+
+OneCrawler is a plain async library, so wrapping it as an [MCP](https://modelcontextprotocol.io)
+server for an LLM client is a few lines with [FastMCP](https://gofastmcp.com):
+
+```bash
+pip install onecrawler fastmcp
+python -m playwright install chromium
+```
+
+```python
+from fastmcp import FastMCP
+from onecrawler import Settings, LinkExtractor, Scraper
+from onecrawler.crawler.map.sitemap import SiteMap
+
+mcp = FastMCP("onecrawler")
+
+
+@mcp.tool
+async def discover_sitemap(url: str) -> list[str]:
+    """Discovers a site's URLs via robots.txt and sitemap traversal."""
+    return await SiteMap(Settings()).run(url)
+
+
+@mcp.tool
+async def extract_links(url: str, strategy: str = "shallow", limit: int = 50) -> list[str]:
+    """Extracts links from a page using a real browser."""
+    settings = Settings(link_extraction_strategy=strategy, link_extraction_limit=limit)
+    async with LinkExtractor(settings) as engine:
+        return await engine.run(url)
+
+
+@mcp.tool
+async def scrape(urls: list[str], output_format: str = "markdown") -> list[dict]:
+    """Scrapes one or more URLs and extracts their content."""
+    settings = Settings(scraping_strategy="markdownify", scraping_output_format=output_format)
+    async with Scraper(settings) as engine:
+        return await engine.run(urls)
+
+
+if __name__ == "__main__":
+    mcp.run(transport="http", host="0.0.0.0", port=8000)
+```
+
+Run it (`python server.py`) and point any MCP-compatible client at `http://localhost:8000/mcp`.
+
+!!! note "Deploying it publicly"
+    `mcp.run(transport="http", ...)` serves plain HTTP with no authentication —
+    fine on `localhost`, but add an API-key check before exposing it beyond
+    your own machine. A deep `extract_links`/`Crawler` call can also run long
+    inside a single tool call; keep `limit` conservative for a synchronous
+    server like this one.
+
 ## Practical Defaults
 
 Start conservative:
