@@ -74,3 +74,5 @@ target-version = "py310"
 [project.urls]
 Homepage = "https://github.com/sayedshaun/onecrawler"
 Documentation = "https://sayedshaun.github.io/onecrawler/"
+Repository = "https://github.com/sayedshaun/onecrawler"
+Issues = "https://github.com/sayedshaun/onecrawler/issues"
