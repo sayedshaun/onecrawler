@@ -1,18 +1,16 @@
 .DEFAULT_GOAL := help
 .PHONY: help install test test-matrix lint format precommit docs docs-build build clean
 
-PYTHON ?= python
-
 help:  ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
 		| awk -F':.*?## ' '{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
 install:  ## Install the package with its dev extras, plus the git hooks
-	$(PYTHON) -m pip install -e ".[dev]"
-	pre-commit install
+	uv sync --extra dev
+	uv run pre-commit install
 
 test:  ## Run the test suite
-	pytest
+	uv run pytest
 
 test-matrix:  ## Run the suite on every supported Python version, in Docker
 	docker build -t onecrawler-test -f test.Dockerfile .
@@ -27,16 +25,16 @@ format:  ## Apply the fixes lint only reports
 	ruff format .
 
 precommit:  ## Run every pre-commit hook over the whole tree
-	pre-commit run --all-files
+	uv run pre-commit run --all-files
 
 docs:  ## Serve the documentation with live reload
-	mkdocs serve
+	uv run mkdocs serve
 
 docs-build:  ## Build the documentation into site/
-	mkdocs build
+	uv run mkdocs build
 
 build:  ## Build the sdist and wheel into dist/
-	$(PYTHON) -m build
+	uv build
 
 clean:  ## Remove build artifacts and caches
 	rm -rf build dist site .pytest_cache .ruff_cache *.egg-info

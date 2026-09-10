@@ -24,18 +24,22 @@ RUN apt-get install -y \
     python3.13 python3.13-venv python3.13-dev \
     python3.14 python3.14-venv python3.14-dev
 
-# 3. Set up workspace
+# 3. Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+# 4. Set up workspace
 WORKDIR /app
 COPY . .
 
-# 4. Install Playwright system dependencies
+# 5. Install Playwright system dependencies
 # This ensures that even if tests use browsers, they won't fail due to missing libraries
 RUN apt-get install -y \
     libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
     libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
     libgbm1 libasound2 libpango-1.0-0 libcairo2
 
-# 5. Create a container-specific test script
+# 6. Create a container-specific test script
 # This script is similar to version_test.sh but specifically targets system-installed pythons
 RUN echo '#!/bin/bash\n\
 VERSIONS=("3.10" "3.11" "3.12" "3.13" "3.14")\n\
@@ -44,24 +48,20 @@ ALL_PASSED=true\n\
 for VER in "${VERSIONS[@]}"; do\n\
     echo "--------------------------------------------------"\n\
     echo "🧪 Testing Python $VER..."\n\
-    PYTHON_EXE="python$VER"\n\
     VENV_NAME="venv-$VER"\n\
     \n\
-    $PYTHON_EXE -m venv $VENV_NAME\n\
-    source $VENV_NAME/bin/activate\n\
-    pip install --upgrade pip &> /dev/null\n\
-    pip install -e ".[dev]" &> /dev/null\n\
+    uv venv "$VENV_NAME" --python "$VER" &> /dev/null\n\
+    uv pip install --python "$VENV_NAME/bin/python" -e ".[dev]" &> /dev/null\n\
     # Install playwright browsers (chromium) for this venv\n\
-    playwright install chromium &> /dev/null\n\
+    "$VENV_NAME/bin/playwright" install chromium &> /dev/null\n\
     \n\
-    if pytest; then\n\
+    if "$VENV_NAME/bin/pytest"; then\n\
         echo "✅ Python $VER tests passed!"\n\
     else\n\
         echo "❌ Python $VER tests failed!"\n\
         ALL_PASSED=false\n\
     fi\n\
-    deactivate\n\
-    rm -rf $VENV_NAME\n\
+    rm -rf "$VENV_NAME"\n\
 done\n\
 \n\
 if [ "$ALL_PASSED" = true ]; then\n\

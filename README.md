@@ -88,13 +88,13 @@ python -m playwright install chromium
 > [!NOTE]
 > GenAI extraction works out of the box — no extra install is needed. It only requires an API key from your chosen provider (OpenAI, Google) or a running Ollama instance. See [GenAI Extraction](#genai-extraction-with-a-schema) for details.
 
-For local development:
+For local development (requires [uv](https://docs.astral.sh/uv/)):
 
 ```bash
 git clone https://github.com/sayedshaun/onecrawler.git
 cd onecrawler
-python -m pip install -e ".[dev]"
-python -m playwright install chromium
+uv sync --extra dev
+uv run playwright install chromium
 ```
 
 ---

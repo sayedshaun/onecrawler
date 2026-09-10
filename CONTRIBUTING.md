@@ -10,25 +10,21 @@ First off, thank you for considering contributing to OneCrawler! It's people lik
     cd onecrawler
     ```
 
-2.  **Create a virtual environment**:
+2.  **Install dependencies** (requires [uv](https://docs.astral.sh/uv/)):
     ```bash
-    python -m venv .venv
-    source .venv/bin/activate
+    uv sync --extra dev
     ```
-
-3.  **Install dependencies**:
-    ```bash
-    pip install -e ".[dev]"
-    ```
+    This creates `.venv` and installs the package with its dev extras from
+    `uv.lock`, so every contributor gets the same resolved versions.
 
 ## Testing
 
 We take testing seriously. Before submitting a pull request, please ensure all tests pass.
 
 ### Local Testing
-You can run tests using `pytest`:
+You can run tests using `make test` (or `uv run pytest` directly):
 ```bash
-pytest
+make test
 ```
 
 ### Multi-version Testing
